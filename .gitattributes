@@ -1,0 +1,22 @@
+# 팀원마다 OS가 달라도(Windows/macOS/Linux) 저장소에는 항상 LF 로 저장합니다.
+# 이게 없으면 Windows 에서 커밋한 파일이 CI(Linux)에서 통째로 "변경됨"으로 보이거나
+# Prettier 의 endOfLine 검사에서 전부 실패합니다.
+* text=auto eol=lf
+
+# 바이너리로 취급 (줄바꿈 변환 금지)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp3 binary
+*.mp4 binary
+*.pdf binary
+
+# GitHub 의 diff 노이즈를 줄입니다
+package-lock.json linguist-generated=true -diff

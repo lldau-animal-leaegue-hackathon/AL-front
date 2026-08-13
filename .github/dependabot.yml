@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # 보안 패치를 자동으로 PR 로 올려줍니다.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      # 자잘한 업데이트는 PR 하나로 묶어서 리뷰 부담을 줄입니다.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

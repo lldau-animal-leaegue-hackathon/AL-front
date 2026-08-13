@@ -1,0 +1,47 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+
+    /* Windows(개발) -> Linux(CI/배포) 에서 대소문자 차이로 import가 깨지는 것을 방지 */
+    "forceConsistentCasingInFileNames": true,
+    /* 실수하기 쉬운 버그를 잡아주는, 부담 없는 추가 검사 */
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* 더 엄격하게 가고 싶어지면 아래 두 줄의 주석을 해제하세요.
+       (기존 코드에서 타입 에러가 많이 발생할 수 있으니 프로젝트 초반에만 켜는 걸 권장)
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    */
+
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
