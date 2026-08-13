@@ -1,0 +1,20 @@
+/* 홈 화면 벤토 박스들이 공유하는 카드 모양.
+   각 컴포넌트가 이 모듈을 import해 .card 를 붙이고,
+   내부 배치만 자기 모듈에서 정의한다. */
+
+.card {
+  padding: 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+}
+
+.cardTitle {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.label {
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}

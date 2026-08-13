@@ -1,0 +1,90 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.routine {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.product {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.thumb {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 96px;
+  border-radius: var(--radius);
+  background: var(--surface-container);
+  color: var(--primary-container);
+}
+
+.detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.productName {
+  margin-bottom: 4px;
+  font: var(--text-body-lg);
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.instruction {
+  margin-bottom: 12px;
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+}
+
+.tag {
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--secondary-container) 20%, transparent);
+  color: var(--on-secondary-container);
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.track {
+  flex: 1;
+  overflow: hidden;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--surface-variant);
+}
+
+.bar {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+}
+
+.percent {
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+}

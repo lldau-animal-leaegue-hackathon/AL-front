@@ -1,0 +1,18 @@
+.icon {
+  /* 폰트 로딩 전에는 아이콘 이름이 그대로 보이므로 넘치지 않게 잘라둔다 */
+  overflow: hidden;
+  line-height: 1;
+  user-select: none;
+}
+
+.md {
+  font-size: 24px;
+}
+
+.sm {
+  font-size: 16px;
+}
+
+.filled {
+  font-variation-settings: "FILL" 1;
+}
