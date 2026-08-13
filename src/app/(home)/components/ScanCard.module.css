@@ -1,0 +1,86 @@
+.section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 24px;
+  border-radius: var(--radius-xl);
+  background: var(--primary-container);
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+.section:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+/* 목업의 점 패턴 배경 — 이미지 대신 그라디언트로 그린다 */
+.section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at 2px 2px,
+    rgb(255 255 255 / 10%) 1.5px,
+    transparent 0
+  );
+  background-size: 20px 20px;
+}
+
+.body {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 24px;
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-full);
+  background: var(--on-primary-container);
+  color: var(--primary-container);
+  transition: transform 0.3s ease;
+}
+
+.section:hover .badge {
+  transform: scale(1.1);
+}
+
+.heading {
+  margin-bottom: 8px;
+  font: var(--text-headline-md);
+  color: var(--on-primary-container);
+}
+
+.description {
+  font: var(--text-body-md);
+  color: var(--primary-fixed-dim);
+}
+
+.cta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--on-primary-container);
+  color: var(--primary-container);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  transition: background 0.2s ease;
+}
+
+.cta:hover {
+  background: #ffffff;
+}

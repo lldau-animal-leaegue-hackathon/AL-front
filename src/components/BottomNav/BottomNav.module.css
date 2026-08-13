@@ -1,0 +1,56 @@
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+  padding: 8px 8px calc(24px + env(safe-area-inset-bottom));
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: 0 -4px 20px rgb(26 43 68 / 4%);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  border-radius: var(--radius-md);
+  color: var(--on-surface-variant);
+  transition:
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.item:active {
+  transform: scale(0.9);
+}
+
+.active {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* 아직 화면이 없는 탭 — 눌러도 이동하지 않는다 */
+.pending {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.label {
+  margin-top: 4px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+/* 데스크톱에서는 하단 탭 대신 넓은 그리드를 쓴다 (목업의 md:hidden) */
+@media (min-width: 768px) {
+  .nav {
+    display: none;
+  }
+}

@@ -19,10 +19,12 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // 클릭재킹 방지 (다른 사이트가 우리 페이지를 iframe 으로 못 감쌈)
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
-  // 쓰지 않는 브라우저 기능은 기본 차단
+  // 쓰지 않는 브라우저 기능은 기본 차단.
+  // camera 는 같은 오리진(self)에만 허용 — OCR 화면이 getUserMedia 를 쓴다.
+  // `camera=()` 로 두면 사용자가 권한을 허용해도 NotAllowedError 가 난다.
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    value: "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
   },
 ];
 
