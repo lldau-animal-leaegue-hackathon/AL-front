@@ -50,7 +50,11 @@ export function WeekStrip() {
               {DAY_LABELS[index]}
             </span>
             <span className={`${styles.marker} ${styles[day.state]}`}>
-              {day.state === "done" ? <Icon name="check" size="sm" /> : day.date}
+              {day.state === "done" ? (
+                <Icon name="check" size="sm" />
+              ) : (
+                day.date
+              )}
             </span>
           </li>
         ))}
