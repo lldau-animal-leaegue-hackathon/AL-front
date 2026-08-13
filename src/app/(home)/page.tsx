@@ -6,7 +6,8 @@ import { NextStepCard } from "./components/NextStepCard";
 import { RoutineStarter } from "./components/RoutineStarter";
 import { ScanCard } from "./components/ScanCard";
 import { SkinHealthCard } from "./components/SkinHealthCard";
-import { TopAppBar } from "./components/TopAppBar";
+
+import { TopAppBar } from "@/components/TopAppBar/TopAppBar";
 
 import styles from "./page.module.css";
 
@@ -15,15 +16,14 @@ const USER_NAME = "Glow";
 
 const SKIN_HEALTH = {
   score: 82,
-  summary:
-    "Your hydration levels are optimal. Consider focusing on barrier repair this evening.",
+  summary: "수분 상태가 아주 좋아요. 오늘 저녁엔 장벽 회복에 집중해 보세요.",
   weeklyDelta: 5,
 };
 
 const NEXT_STEP = {
-  productName: "Hyaluronic Acid Serum",
-  instruction: "Apply 2-3 drops to damp skin for maximum hydration retention.",
-  tags: ["Hydration"],
+  productName: "히알루론산 세럼",
+  instruction: "촉촉한 피부에 2~3방울 발라 수분을 가둬 주세요.",
+  tags: ["수분"],
   step: 2,
   totalSteps: 4,
 };
@@ -31,13 +31,14 @@ const NEXT_STEP = {
 const ALERTS: readonly IngredientAlert[] = [
   {
     kind: "warning",
-    title: "Alcohol Denat.",
-    detail: "Found in recently scanned 'Matte Sunscreen'. May cause dryness.",
+    title: "변성 알코올",
+    detail:
+      "최근 스캔한 '매트 선크림'에 들어 있어요. 건조함을 유발할 수 있습니다.",
   },
   {
     kind: "conflict",
-    title: "Retinol + AHA",
-    detail: "Conflict detected in Evening Routine. Avoid using together.",
+    title: "레티놀 + AHA",
+    detail: "나이트 루틴에서 충돌이 감지됐어요. 함께 사용하지 마세요.",
   },
 ];
 

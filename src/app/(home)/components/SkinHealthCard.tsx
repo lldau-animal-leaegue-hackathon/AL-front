@@ -19,12 +19,12 @@ export function SkinHealthCard({ score, summary, weeklyDelta }: Props) {
   return (
     <section className={`${card.card} ${styles.section}`}>
       <div className={styles.info}>
-        <h2 className={styles.heading}>Skin Health</h2>
+        <h2 className={styles.heading}>피부 건강</h2>
         <p className={styles.summary}>{summary}</p>
         <p className={`${card.label} ${styles.delta}`}>
           <Icon name="trending_up" size="sm" />
-          {weeklyDelta > 0 ? "+" : ""}
-          {weeklyDelta}% since last week
+          지난주 대비 {weeklyDelta > 0 ? "+" : ""}
+          {weeklyDelta}%
         </p>
       </div>
 

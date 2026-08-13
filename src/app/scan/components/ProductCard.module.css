@@ -1,0 +1,62 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-4px);
+}
+
+.thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-high);
+  color: var(--primary-container);
+}
+
+.image {
+  object-fit: cover;
+}
+
+.name {
+  margin-bottom: 4px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface);
+  /* 상품명이 길어도 카드 높이가 들쭉날쭉해지지 않게 두 줄로 자른다 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.brand {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--outline);
+}
+
+.price {
+  margin-top: 8px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--primary);
+}

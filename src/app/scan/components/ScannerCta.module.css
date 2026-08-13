@@ -1,0 +1,114 @@
+.section {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 32px;
+  border: 1px solid var(--surface-variant);
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card-hover);
+  transition: box-shadow 0.5s ease;
+}
+
+.section:hover {
+  box-shadow: 0 12px 40px rgb(26 43 68 / 10%);
+}
+
+.blob {
+  position: absolute;
+  border-radius: var(--radius-full);
+  opacity: 0.3;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.section:hover .blob {
+  opacity: 0.5;
+}
+
+.blobPrimary {
+  top: -80px;
+  right: -80px;
+  width: 256px;
+  height: 256px;
+  background: var(--primary-fixed);
+  filter: blur(64px);
+}
+
+.blobSecondary {
+  bottom: -40px;
+  left: -40px;
+  width: 160px;
+  height: 160px;
+  background: var(--secondary-fixed);
+  filter: blur(40px);
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  text-align: center;
+}
+
+.heading {
+  margin-bottom: 8px;
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.description {
+  max-width: 24rem;
+  margin: 0 auto;
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.cta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 32px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow-card);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cta:hover {
+  background: var(--primary-container);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.cta:active {
+  transform: scale(0.95);
+}
+
+@media (min-width: 768px) {
+  .section {
+    flex-direction: row;
+  }
+
+  .copy {
+    text-align: left;
+  }
+
+  .description {
+    margin: 0;
+  }
+}

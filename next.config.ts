@@ -41,7 +41,8 @@ const nextConfig: NextConfig = {
     // next/image 로 불러올 외부 이미지 도메인을 여기에 화이트리스트로 등록합니다.
     // 예시이므로 실제 사용하는 도메인으로 교체하세요.
     remotePatterns: [
-      // { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      // 네이버 쇼핑 검색 결과의 상품 썸네일
+      { protocol: "https", hostname: "**.pstatic.net" },
     ],
   },
 

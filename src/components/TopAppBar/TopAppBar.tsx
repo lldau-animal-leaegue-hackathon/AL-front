@@ -10,7 +10,7 @@ export function TopAppBar({ userName }: { userName: string }) {
         <div className={styles.avatar} aria-hidden="true">
           {userName.charAt(0)}
         </div>
-        <h1 className={styles.title}>Welcome, {userName}</h1>
+        <h1 className={styles.title}>{userName}님, 안녕하세요</h1>
       </div>
 
       <button className={styles.bell} type="button" aria-label="알림">

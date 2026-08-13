@@ -23,10 +23,10 @@ export function NextStepCard({
   return (
     <section className={card.card}>
       <div className={styles.header}>
-        <h3 className={card.cardTitle}>Next Step</h3>
+        <h3 className={card.cardTitle}>다음 단계</h3>
         <span className={`${card.label} ${styles.routine}`}>
           <Icon name="wb_sunny" size="sm" />
-          Morning Routine
+          모닝 루틴
         </span>
       </div>
 
@@ -46,7 +46,7 @@ export function NextStepCard({
               </li>
             ))}
             <li className={`${card.label} ${styles.tag}`}>
-              Step {step} of {totalSteps}
+              {totalSteps}단계 중 {step}번째
             </li>
           </ul>
         </div>
@@ -64,7 +64,7 @@ export function NextStepCard({
           <div className={styles.bar} style={{ width: `${percent}%` }} />
         </div>
         <span className={`${card.label} ${styles.percent}`}>
-          {percent}% Complete
+          {percent}% 완료
         </span>
       </div>
     </section>

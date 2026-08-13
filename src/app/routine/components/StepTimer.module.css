@@ -1,0 +1,85 @@
+.timer {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border: 3px solid var(--surface-container-low);
+  border-radius: var(--radius-full);
+  background: color-mix(
+    in srgb,
+    var(--surface-container-lowest) 90%,
+    transparent
+  );
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-card-hover);
+  transition:
+    border-color 0.3s ease,
+    transform 0.15s ease;
+}
+
+.timer:active {
+  transform: scale(0.95);
+}
+
+/* 돌아가는 동안만 상단 테두리를 강조해 회전시킨다 */
+.running {
+  border-top-color: var(--primary);
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running {
+    animation: none;
+    border-color: var(--primary);
+  }
+}
+
+.finished {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.time {
+  font: var(--text-body-lg);
+  font-weight: 700;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+}
+
+.finished .time,
+.finished .label {
+  color: var(--on-primary);
+}
+
+/* 회전 중에는 안쪽 글자가 같이 돌지 않게 되돌린다 */
+.running .time,
+.running .label {
+  animation: spin 2s linear infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running .time,
+  .running .label {
+    animation: none;
+  }
+}
