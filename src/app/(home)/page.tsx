@@ -6,7 +6,8 @@ import { NextStepCard } from "./components/NextStepCard";
 import { RoutineStarter } from "./components/RoutineStarter";
 import { ScanCard } from "./components/ScanCard";
 import { SkinHealthCard } from "./components/SkinHealthCard";
-import { TopAppBar } from "./components/TopAppBar";
+
+import { TopAppBar } from "@/components/TopAppBar/TopAppBar";
 
 import styles from "./page.module.css";
 

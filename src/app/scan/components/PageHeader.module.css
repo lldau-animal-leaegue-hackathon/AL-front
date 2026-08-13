@@ -1,0 +1,44 @@
+.bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 12px var(--margin-mobile);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-card);
+}
+
+.back {
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border-radius: var(--radius-full);
+  color: var(--on-surface);
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.back:hover {
+  background: var(--surface-container);
+  opacity: 0.8;
+}
+
+.title {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+@media (min-width: 768px) {
+  .bar {
+    padding: 16px var(--margin-desktop);
+  }
+}

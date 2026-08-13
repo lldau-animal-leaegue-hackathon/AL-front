@@ -18,7 +18,7 @@ export function ScanCard() {
         </p>
       </div>
 
-      <Link href="/testCamera" className={styles.cta}>
+      <Link href="/scan" className={styles.cta}>
         <span>Start Scan</span>
         <Icon name="arrow_forward" size="sm" />
       </Link>

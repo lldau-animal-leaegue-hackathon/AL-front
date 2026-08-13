@@ -11,8 +11,8 @@ import styles from "./BottomNav.module.css";
 // 화면이 생기기 전까지는 이동하지 않는 항목으로 그린다.
 const TABS = [
   { icon: "home", label: "Home", href: "/" },
-  { icon: "center_focus_strong", label: "Scan", href: "/testCamera" },
-  { icon: "event_repeat", label: "Routine" },
+  { icon: "center_focus_strong", label: "Scan", href: "/scan" },
+  { icon: "event_repeat", label: "Routine", href: "/routine" },
   { icon: "person", label: "Profile" },
 ] as const;
 

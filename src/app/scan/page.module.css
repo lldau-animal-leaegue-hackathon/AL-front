@@ -1,0 +1,15 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--container-max);
+  /* 상단 고정 헤더 + 하단 고정 탭바를 피한다 */
+  margin: 0 auto;
+  padding: 96px var(--margin-mobile) 128px;
+}
+
+@media (min-width: 768px) {
+  .main {
+    padding: 96px var(--margin-desktop) 40px;
+  }
+}
