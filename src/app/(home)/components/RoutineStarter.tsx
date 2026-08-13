@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/Icon";
@@ -34,13 +35,13 @@ export function RoutineStarter() {
       <div className={styles.clock}>
         {/* 마운트 전에는 자리만 잡아둔다 — 서버/클라이언트 시각 불일치 방지 */}
         <div className={styles.time}>{now ?? "--:--"}</div>
-        <p className={`${card.label} ${styles.caption}`}>Current Time</p>
+        <p className={`${card.label} ${styles.caption}`}>현재 시각</p>
       </div>
 
-      <button className={styles.cta} type="button">
+      <Link href="/routine/am/1" className={styles.cta}>
         <Icon name="wb_sunny" />
-        <span>Start Morning Routine</span>
-      </button>
+        <span>모닝 루틴 시작하기</span>
+      </Link>
     </section>
   );
 }

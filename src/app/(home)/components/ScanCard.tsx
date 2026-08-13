@@ -12,14 +12,14 @@ export function ScanCard() {
         <div className={styles.badge}>
           <Icon name="center_focus_strong" filled />
         </div>
-        <h3 className={styles.heading}>Scan Your Products</h3>
+        <h3 className={styles.heading}>제품 성분 스캔</h3>
         <p className={styles.description}>
-          Instantly analyze ingredients and compatibility.
+          성분과 조합 궁합을 바로 분석해 드려요.
         </p>
       </div>
 
       <Link href="/scan" className={styles.cta}>
-        <span>Start Scan</span>
+        <span>스캔 시작</span>
         <Icon name="arrow_forward" size="sm" />
       </Link>
     </section>

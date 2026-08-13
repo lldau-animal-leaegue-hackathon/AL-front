@@ -7,7 +7,7 @@ import { WeekStrip } from "./components/WeekStrip";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Routine",
+  title: "루틴",
 };
 
 // 주간 스트립이 "오늘"을 표시한다. 정적 프리렌더하면 빌드 시점 날짜가 박히므로

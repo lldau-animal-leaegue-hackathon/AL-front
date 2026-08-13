@@ -2,7 +2,7 @@ import { Icon } from "@/components/Icon";
 
 import styles from "./WeekStrip.module.css";
 
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 type Day = { date: number; state: "done" | "today" | "upcoming" };
 
@@ -39,7 +39,7 @@ export function WeekStrip() {
 
   return (
     <section className={styles.card}>
-      <h2 className={styles.heading}>This Week&apos;s Progress</h2>
+      <h2 className={styles.heading}>이번 주 진행 상황</h2>
 
       <ol className={styles.days}>
         {week.map((day, index) => (

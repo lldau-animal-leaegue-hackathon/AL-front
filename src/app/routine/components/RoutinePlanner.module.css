@@ -36,6 +36,33 @@
   box-shadow: var(--shadow-card);
 }
 
+.start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-lg);
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.start:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.start:active {
+  transform: scale(0.98);
+}
+
 .steps {
   display: flex;
   flex-direction: column;

@@ -10,14 +10,20 @@ import styles from "./BottomNav.module.css";
 // href가 없는 탭은 아직 화면이 없다. Link로 두면 존재하지 않는 경로로 보내므로
 // 화면이 생기기 전까지는 이동하지 않는 항목으로 그린다.
 const TABS = [
-  { icon: "home", label: "Home", href: "/" },
-  { icon: "center_focus_strong", label: "Scan", href: "/scan" },
-  { icon: "event_repeat", label: "Routine", href: "/routine" },
-  { icon: "person", label: "Profile" },
+  { icon: "home", label: "홈", href: "/" },
+  { icon: "center_focus_strong", label: "스캔", href: "/scan" },
+  { icon: "event_repeat", label: "루틴", href: "/routine" },
+  { icon: "person", label: "프로필" },
 ] as const;
+
+// 루틴 수행 화면(/routine/am/1 …)은 한 가지 일에 집중시키는 화면이라
+// 탭바를 감춘다. 빠져나가는 길은 헤더의 닫기 버튼이다.
+const IMMERSIVE = /^\/routine\/(am|pm)\//;
 
 export function BottomNav() {
   const pathname = usePathname();
+
+  if (IMMERSIVE.test(pathname)) return null;
 
   return (
     <nav className={styles.nav} aria-label="주요 메뉴">

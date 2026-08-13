@@ -23,7 +23,7 @@ export function IngredientAlerts({
   return (
     <section className={card.card}>
       <div className={styles.header}>
-        <h3 className={card.cardTitle}>Ingredient Alerts</h3>
+        <h3 className={card.cardTitle}>성분 알림</h3>
         <span className={styles.info}>
           <Icon name="info" />
         </span>

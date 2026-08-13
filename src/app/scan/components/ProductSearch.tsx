@@ -31,7 +31,7 @@ export function ProductSearch() {
 
       <section className={styles.results}>
         <h2 className={styles.heading}>
-          {results ? "Search Results" : "Popular Products"}
+          {results ? "검색 결과" : "인기 제품"}
           {results && <span className={styles.status}>{results.length}개</span>}
         </h2>
 

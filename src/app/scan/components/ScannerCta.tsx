@@ -19,16 +19,15 @@ export function ScannerCta() {
       />
 
       <div className={styles.copy}>
-        <h3 className={styles.heading}>Can&apos;t find your product?</h3>
+        <h3 className={styles.heading}>찾는 제품이 없나요?</h3>
         <p className={styles.description}>
-          Scan your bottle to analyze ingredients instantly and add it to your
-          shelf.
+          용기를 촬영하면 성분을 바로 분석해서 선반에 담아 드려요.
         </p>
       </div>
 
       <Link href="/testCamera" className={styles.cta}>
         <Icon name="photo_camera" filled />
-        <span>Open Camera</span>
+        <span>카메라 열기</span>
       </Link>
     </section>
   );

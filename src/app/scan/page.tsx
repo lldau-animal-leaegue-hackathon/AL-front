@@ -6,13 +6,13 @@ import { ScannerCta } from "./components/ScannerCta";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Add to My Shelf",
+  title: "내 선반에 추가",
 };
 
 export default function ScanPage() {
   return (
     <>
-      <PageHeader title="Add to My Shelf" />
+      <PageHeader title="내 선반에 추가" />
 
       <main className={styles.main}>
         <ProductSearch />

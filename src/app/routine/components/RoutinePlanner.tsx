@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import type { Route } from "next";
 import { useState } from "react";
 
 import { Icon } from "@/components/Icon";
@@ -9,8 +11,8 @@ import { RoutineStepCard } from "./RoutineStepCard";
 import styles from "./RoutinePlanner.module.css";
 
 const TABS: { slot: Slot; label: string; icon: string }[] = [
-  { slot: "am", label: "AM Routine", icon: "light_mode" },
-  { slot: "pm", label: "PM Routine", icon: "dark_mode" },
+  { slot: "am", label: "모닝 루틴", icon: "light_mode" },
+  { slot: "pm", label: "나이트 루틴", icon: "dark_mode" },
 ];
 
 export function RoutinePlanner() {
@@ -49,6 +51,11 @@ export function RoutinePlanner() {
           </button>
         ))}
       </div>
+
+      <Link href={`/routine/${slot}/1` as Route} className={styles.start}>
+        <Icon name="play_arrow" filled />
+        <span>{slot === "am" ? "모닝" : "나이트"} 루틴 시작하기</span>
+      </Link>
 
       <ol className={styles.steps}>
         {steps.map((step, index) => (
