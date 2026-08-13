@@ -7,31 +7,112 @@
  * --------------------------------------------------------------- */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --muted: #6b7280;
-  --border: #e5e7eb;
+  /* ── 색 (DESIGN.md frontmatter 그대로) ───────────────────────────
+     라이트 전용 팔레트다. 다크 팔레트는 DESIGN.md에 정의돼 있지 않다. */
 
-  /* Pretendard는 layout.tsx에서 CDN으로 불러온다.
-     로딩 전/실패 시를 대비해 OS 기본 한글 폰트까지 폴백을 깔아둔다. */
+  /* surface / 배경 계층 */
+  --surface: #f8f9fa;
+  --surface-dim: #d9dadb;
+  --surface-bright: #f8f9fa;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f3f4f5;
+  --surface-container: #edeeef;
+  --surface-container-high: #e7e8e9;
+  --surface-container-highest: #e1e3e4;
+  --surface-variant: #e1e3e4;
+  --surface-tint: #496455;
+  --on-surface: #191c1d;
+  --on-surface-variant: #424844;
+  --inverse-surface: #2e3132;
+  --inverse-on-surface: #f0f1f2;
+  --outline: #727973;
+  --outline-variant: #c2c8c2;
+
+  /* primary — Sage Green: 주요 액션·성공·진행 표시 */
+  --primary: #466253;
+  --on-primary: #ffffff;
+  --primary-container: #5f7b6b;
+  --on-primary-container: #f5fff6;
+  --inverse-primary: #afcebb;
+  --primary-fixed: #cbead6;
+  --primary-fixed-dim: #afcebb;
+  --on-primary-fixed: #052014;
+  --on-primary-fixed-variant: #314c3e;
+
+  /* secondary — Warm Sand: 보조 UI·칩 배경 */
+  --secondary: #705b43;
+  --on-secondary: #ffffff;
+  --secondary-container: #fbdec0;
+  --on-secondary-container: #766149;
+  --secondary-fixed: #fbdec0;
+  --secondary-fixed-dim: #ddc2a5;
+  --on-secondary-fixed: #271907;
+  --on-secondary-fixed-variant: #56432e;
+
+  /* tertiary — Deep Navy: 정보·인증 배지 */
+  --tertiary: #4c5d78;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #657592;
+  --on-tertiary-container: #fefcff;
+  --tertiary-fixed: #d5e3ff;
+  --tertiary-fixed-dim: #b6c7e7;
+  --on-tertiary-fixed: #091c34;
+  --on-tertiary-fixed-variant: #374762;
+
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+
+  /* 기존 화면이 쓰던 이름 — 위 토큰의 별칭이다. 새 코드는 원본 이름을 쓸 것 */
+  --background: #f8f9fa;
+  --foreground: #191c1d;
+  --muted: #424844;
+  --border: #c2c8c2;
+
+  /* ── 타이포그래피 ────────────────────────────────────────────────
+     DESIGN.md는 Inter를 명시하지만 이 앱은 한글이 주 언어라 Pretendard를 유지한다.
+     Pretendard는 layout.tsx에서 CDN으로 불러오고, 실패 시 OS 기본 한글 폰트로 폴백한다.
+     각 스케일은 font 단축 속성용 값이다: `font: var(--text-body-md)`. */
   --font-sans:
     "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
     system-ui, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",
     "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* 간격·모서리 — 화면마다 제각각인 값이 늘어나는 걸 막는다 */
-  --radius: 8px;
-  --radius-full: 9999px;
-}
+  --text-display-lg: 700 48px/56px var(--font-sans);
+  --text-headline-lg: 600 32px/40px var(--font-sans);
+  --text-headline-lg-mobile: 600 24px/32px var(--font-sans);
+  --text-headline-md: 600 24px/32px var(--font-sans);
+  --text-body-lg: 400 18px/28px var(--font-sans);
+  --text-body-md: 400 16px/24px var(--font-sans);
+  --text-label-sm: 600 12px/16px var(--font-sans);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --muted: #9ca3af;
-    --border: #262626;
-  }
+  /* font 단축 속성에는 letter-spacing이 들어가지 않아 따로 둔다 */
+  --tracking-display-lg: -0.02em;
+  --tracking-headline-lg: -0.01em;
+  --tracking-label-sm: 0.05em;
+
+  /* ── 모서리 ──────────────────────────────────────────────────── */
+  --radius-sm: 0.25rem;
+  --radius: 0.5rem; /* 기본 — 버튼·인풋 등 표준 컴포넌트 */
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem; /* 카드·모달 등 주요 컨테이너 */
+  --radius-full: 9999px;
+
+  /* ── 간격 ────────────────────────────────────────────────────── */
+  --space-base: 8px; /* 8px 베이스라인. 나머지 간격은 이 배수로 */
+  --space-gutter: 16px;
+  --margin-mobile: 20px;
+  --margin-desktop: 40px;
+  --container-max: 1200px;
+
+  /* ── 그림자 ──────────────────────────────────────────────────── */
+  --shadow-card: 0 4px 20px rgb(26 43 68 / 4%);
+  --shadow-card-hover: 0 8px 32px rgb(26 43 68 / 8%);
+  --glass-blur: 12px;
+  --glass-fill: rgb(255 255 255 / 85%);
 }
 
 /* ---------------------------------------------------------------
