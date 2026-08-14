@@ -36,12 +36,6 @@
   color: var(--on-primary-container);
 }
 
-/* 아직 화면이 없는 탭 — 눌러도 이동하지 않는다 */
-.pending {
-  opacity: 0.45;
-  cursor: default;
-}
-
 .label {
   margin-top: 4px;
   font: var(--text-label-sm);

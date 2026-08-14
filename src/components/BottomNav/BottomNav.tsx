@@ -7,13 +7,11 @@ import { Icon } from "@/components/Icon";
 
 import styles from "./BottomNav.module.css";
 
-// href가 없는 탭은 아직 화면이 없다. Link로 두면 존재하지 않는 경로로 보내므로
-// 화면이 생기기 전까지는 이동하지 않는 항목으로 그린다.
 const TABS = [
   { icon: "home", label: "홈", href: "/" },
   { icon: "center_focus_strong", label: "스캔", href: "/scan" },
   { icon: "event_repeat", label: "루틴", href: "/routine" },
-  { icon: "person", label: "프로필" },
+  { icon: "person", label: "프로필", href: "/profile" },
 ] as const;
 
 // 루틴 수행 화면(/routine/am/1 …)은 한 가지 일에 집중시키는 화면이라
@@ -28,25 +26,7 @@ export function BottomNav() {
   return (
     <nav className={styles.nav} aria-label="주요 메뉴">
       {TABS.map((tab) => {
-        const active = "href" in tab && pathname === tab.href;
-        const content = (
-          <>
-            <Icon name={tab.icon} filled={active} />
-            <span className={styles.label}>{tab.label}</span>
-          </>
-        );
-
-        if (!("href" in tab)) {
-          return (
-            <span
-              key={tab.label}
-              className={`${styles.item} ${styles.pending}`}
-              aria-disabled="true"
-            >
-              {content}
-            </span>
-          );
-        }
+        const active = pathname === tab.href;
 
         return (
           <Link
@@ -55,7 +35,8 @@ export function BottomNav() {
             className={`${styles.item} ${active ? styles.active : ""}`}
             aria-current={active ? "page" : undefined}
           >
-            {content}
+            <Icon name={tab.icon} filled={active} />
+            <span className={styles.label}>{tab.label}</span>
           </Link>
         );
       })}
