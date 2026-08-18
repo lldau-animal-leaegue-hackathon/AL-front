@@ -23,9 +23,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Node**: 24 LTS 권장 (`engines`는 Next 최소값인 `>=20.9.0`). **Node 20은 2026-04-30 EOL**
 - **로컬 경로**: 프론트 `C:\Work\AL-front` · 백엔드 `C:\Work\animal-league-04-back` (Spring Boot)
 - **원격**: `github.com/lldau-animal-leaegue-hackathon/AL-front`
-- **도메인**(백엔드 패키지 `com.animal_league.main`에서 확인된 범위): 계정/인증, 점수(학교별 집계),
-  상점·아이템, 채팅, 확성기(loudspeaker), SSE 실시간 푸시, 관리자 통계
-  — _이 목록은 백엔드 구조에서 유추한 것이다. 실제 기획과 다르면 이 줄을 고칠 것._
+- **도메인**(2026-08-18 확정 — `presentation/SERVICE.md`·`docs/plans/2026-08-18-skincare-core/` 기준):
+  **스킨케어 루틴 앱.** 제품 등록(성분표 사진 → AI 성분 추출) · AI 루틴 생성(피부 고민 + 가용 시간 +
+  보유 제품) · 루틴 수행(단계별 안내·타이머) · 수행 기록. 저장은 localStorage,
+  AI는 헤드리스 Claude(`claude -p`)를 Route Handler가 감싼다.
+  — _구 설명(점수/상점/채팅)은 `animal-league-04-back` 구조에서 유추한 오류였다.
+  그 백엔드는 이 앱과 무관하다(실측 지식은 `ai-contract-check` 스킬 부록에 보존)._
 
 ## 명령어
 
@@ -87,13 +90,14 @@ App Router에서 가장 사고가 잦은 지점이다.
 - **응답 변환 정책**: `src/api/`는 백엔드 raw 응답을 **그대로 반환**한다.
   키 이름 변경·한글화·derived 필드 같은 화면용 변환은 **훅/컴포넌트에서** 한다. API 계층에 넣지 않는다.
 - **에러 처리**: 도메인별 `try/catch` + 상태 null 세팅. 사용자에게 보일 메시지는 화면 단에서 결정한다.
-- **SSE**: 백엔드에 `SseController`가 있다. `EventSource`는 클라이언트 컴포넌트에서만 쓰고,
+- **SSE**: 현재 이 앱에는 SSE가 없다. 도입한다면 `EventSource`는 클라이언트 컴포넌트에서만 쓰고,
   `useEffect` cleanup에서 반드시 `close()` 한다 (라우트 이동 시 커넥션 누수).
 
-### 백엔드 응답 매핑
+### AI 응답 매핑
 
-백엔드 응답을 프론트 모델로 변환하기 전엔 **`backend-dto-check` 스킬**을 따른다(관련 작업 시 자동 발동).
-추측하지 말고 `animal-league-04-back`의 실제 Java 클래스를 읽어 필드·타입을 확인한다.
+헤드리스 Claude 응답을 프론트 모델로 변환하기 전엔 **`ai-contract-check` 스킬**을 따른다(관련 작업 시 자동 발동).
+추측하지 말고 `src/lib/prompts/*.ts`의 프롬프트 원문을 읽어 출력 필드·타입을 확인한다.
+**LLM은 스키마를 보장하지 않으므로** 프롬프트 대조와 런타임 검증을 둘 다 한다.
 자격 증명 파일·디렉토리는 열지 않는다(아래 "보안" 참조).
 
 ## 스타일링
@@ -204,12 +208,28 @@ App Router에서 가장 사고가 잦은 지점이다.
 
 ## 스킬
 
-| 스킬                         | 언제 발동                                         |
-| ---------------------------- | ------------------------------------------------- |
-| `backend-dto-check`          | 백엔드 응답을 프론트 모델로 변환하는 코드 작성 전 |
-| `plan-md`                    | 여러 파일·여러 세션에 걸치는 큰 작업 시작 전      |
-| `refactor-equivalence-check` | 동작 보존 리팩토링을 마친 뒤, 커밋 전             |
-| `adversarial-code-review`    | 도메인 이상 범위의 광역 코드리뷰 요청 시          |
+| 스킬                         | 언제 발동                                     |
+| ---------------------------- | --------------------------------------------- |
+| `ai-contract-check`          | AI 응답을 프론트 모델로 변환하는 코드 작성 전 |
+| `plan-md`                    | 여러 파일·여러 세션에 걸치는 큰 작업 시작 전  |
+| `refactor-equivalence-check` | 동작 보존 리팩토링을 마친 뒤, 커밋 전         |
+| `adversarial-code-review`    | 도메인 이상 범위의 광역 코드리뷰 요청 시      |
+
+### ponytail (전역 플러그인, 2026-08-18 도입)
+
+`ponytail@ponytail`이 사용자 전역에 설치돼 **모든 세션에 상시 적용**된다(스킬 6개 + 훅 3개).
+"가장 단순하고 짧은, 실제로 동작하는 해법"을 강제한다 — 코드 쓰기 전 7단 사다리를 밟는다:
+필요한가 → 코드베이스에 있나 → 표준 라이브러리 → 네이티브 기능 → 이미 깔린 의존성 → 한 줄로 되나 → 최소 구현.
+
+이 레포에 특히 잘 맞는다. UI가 AI로 대량 생성돼 **데이터 출처 없는 카드**(`SkinHealthCard` 등)와
+쓰이지 않는 시드가 남아 있고, 앞으로 신규 파일이 20개 이상 추가될 예정이라 과설계 억제 효과가 크다.
+
+**충돌 시 우선순위 — 이 문서(프로젝트 규칙)가 ponytail보다 우선한다.** 알려진 충돌:
+
+- ponytail은 "프레임워크 없는 assert 기반 검증 파일"을 요구하지만,
+  **이 레포는 테스트 러너를 두지 않는다.** `npm run check` + `npm run build`가 검증 수단이다.
+- `/ponytail-review`·`/ponytail-audit`은 `adversarial-code-review`·`refactor-equivalence-check`와
+  범위가 겹친다. **도메인 이상 광역 리뷰는 프로젝트 스킬을, 과설계 점검은 ponytail을** 쓴다.
 
 > jikjikjik 레포의 `sidebar-isolation-check`·`be-changelog-impact`는 이 프로젝트에 대응 개념이
 > 없어서 가져오지 않았다. 사이드바 담당자 분리 구조나 BE 변경 로그 공유 프로세스가 생기면 그때 이식한다.

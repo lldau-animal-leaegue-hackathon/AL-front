@@ -61,7 +61,7 @@ ALWAYS 다음 구조를 사용한다:
 - `npm run check` 통과 (타입 + 린트 + 포맷)
 - `npm run build` 통과
 - 서버/클라이언트 컴포넌트 경계 확인 — `"use client"`가 필요한 곳에만 붙었는지
-- 백엔드 응답을 다뤘다면 `backend-dto-check`로 DTO 대조 완료
+- AI 응답을 다뤘다면 `ai-contract-check`로 프롬프트 출력 스키마 대조 완료
 - dev 서버 UI 수동 확인 (진입 경로 명시)
 
 ## 비범위 (Out of Scope)

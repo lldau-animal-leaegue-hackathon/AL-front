@@ -10,7 +10,7 @@
 ## 이어받는 세션을 위한 작업 규칙
 
 - **커밋은 사용자가 명시 요청할 때만.** 수정 묶음이 끝나면 커밋 메시지 후보 + 테스트 가이드만 자동 제시. push는 사용자가 직접.
-- <항목별 선행 스킬 발동 지점 — 예: M2 수정 전 `backend-dto-check`로 응답 클래스 필드 재확인>.
+- <항목별 선행 스킬 발동 지점 — 예: M2 수정 전 `ai-contract-check`로 프롬프트 출력 필드 재확인>.
 - 리팩토링성 수정 후에는 `refactor-equivalence-check` 발동.
 - **테스트 러너 없음** — 검증은 ①`npm run check`(typegen→tsc→eslint→prettier) ②`npm run build`(라우트 표 전후 비교) ③dev 서버 수동 확인 ④DevTools 네트워크 탭.
 - `npm run dev`는 **백그라운드로만** 실행하고 확인 후 종료한다.
