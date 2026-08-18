@@ -1,4 +1,13 @@
+"use client";
+
+import Link from "next/link";
+
 import { Icon } from "@/components/Icon";
+import { weeklyAchievement } from "@/lib/achievement";
+import { RUNS_KEY } from "@/lib/storage/history";
+import { ROUTINES_KEY } from "@/lib/storage/routines";
+import { useStored } from "@/lib/storage/useStored";
+import type { Routine, RoutineRun } from "@/types/skincare";
 
 import card from "./card.module.css";
 import styles from "./SkinHealthCard.module.css";
@@ -7,24 +16,102 @@ import styles from "./SkinHealthCard.module.css";
 const RADIUS = 40;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-type Props = {
-  score: number;
-  summary: string;
-  weeklyDelta: number;
-};
+/** 인라인 `[]` 는 매 렌더 새 배열이라 useStored 의 memo 를 무력화한다. */
+const NO_ROUTINES: Routine[] = [];
+const NO_RUNS: RoutineRun[] = [];
 
-export function SkinHealthCard({ score, summary, weeklyDelta }: Props) {
-  const filled = (CIRCUMFERENCE * score) / 100;
+function summaryText(percent: number): string {
+  if (percent >= 80) return "정말 잘하고 있어요! 이대로만 이어가 보세요.";
+  if (percent >= 50) return "절반 넘게 해냈어요. 남은 단계도 채워보세요.";
+  return "이번 주 루틴을 조금 더 챙겨보면 좋아요.";
+}
+
+/**
+ * 지난주 대비 문구. `delta` 는 %p(퍼센트포인트) 단위다 — % 와 섞어 쓰면
+ * "82% 대비 5%"처럼 단위가 헷갈린다.
+ *
+ * `null` 은 "지난주 기록 없음"이지 "변화 없음(0)"이 아니다 — 구분해서 보여준다.
+ */
+function deltaInfo(delta: number | null): { icon: string; text: string } {
+  if (delta === null) return { icon: "history", text: "지난주 기록 없음" };
+  if (delta > 0)
+    return { icon: "trending_up", text: `지난주보다 ${delta}%p 올랐어요` };
+  if (delta < 0)
+    return {
+      icon: "trending_down",
+      text: `지난주보다 ${Math.abs(delta)}%p 줄었어요`,
+    };
+  return { icon: "trending_flat", text: "지난주와 같아요" };
+}
+
+/**
+ * "이번 주 루틴 달성률" (Q10).
+ *
+ * 예전엔 "피부 건강 점수"였지만 산출 근거가 없었다 — 실제 수행 기록에서
+ * 계산되는 달성률로 이름과 내용을 맞췄다. 계산 자체는 순수 함수인
+ * `weeklyAchievement`(src/lib/achievement.ts)가 갖고 있어 여기서는
+ * 저장소만 읽어 넘기고, 표시만 담당한다.
+ */
+export function SkinHealthCard() {
+  const { ready, value: routines } = useStored<Routine[]>(
+    ROUTINES_KEY,
+    NO_ROUTINES,
+  );
+  const { value: runs } = useStored<RoutineRun[]>(RUNS_KEY, NO_RUNS);
+
+  // 서버 렌더 단계에서는 저장소를 모른다. 여기서 "없음"을 그리면
+  // 빈 상태가 한 번 깜빡였다가 사라진다.
+  if (!ready) return null;
+
+  const { percent, delta, hasRuns } = weeklyAchievement(runs, routines);
+
+  // 루틴이 아직 없어 예정 단계가 0 — 달성률을 계산할 수 없다.
+  if (percent === null) {
+    return (
+      <section className={`${card.card} ${styles.empty}`}>
+        <Icon name="auto_awesome" filled className={styles.emptyIcon} />
+        <h2 className={card.cardTitle}>이번 주 루틴 달성률</h2>
+        <p className={styles.emptyText}>
+          아직 만든 루틴이 없어요. 루틴을 만들면 달성률을 보여드려요.
+        </p>
+        <Link className={styles.emptyCta} href="/routine/new">
+          <Icon name="add_circle" filled size="sm" />
+          루틴 만들기
+        </Link>
+      </section>
+    );
+  }
+
+  // 이번 주 수행 기록이 하나도 없다 — 0%로 그리면 "실패"처럼 보인다.
+  if (!hasRuns) {
+    return (
+      <section className={`${card.card} ${styles.empty}`}>
+        <Icon name="auto_awesome" filled className={styles.emptyIcon} />
+        <h2 className={card.cardTitle}>이번 주 루틴 달성률</h2>
+        <p className={styles.emptyText}>
+          이번 주엔 아직 기록이 없어요. 첫 루틴을 시작해 보세요.
+        </p>
+        <Link className={styles.emptyCta} href="/routine">
+          <Icon name="play_arrow" filled size="sm" />
+          루틴 시작하기
+        </Link>
+      </section>
+    );
+  }
+
+  const filled = (CIRCUMFERENCE * percent) / 100;
+  const { icon, text } = deltaInfo(delta);
 
   return (
     <section className={`${card.card} ${styles.section}`}>
       <div className={styles.info}>
-        <h2 className={styles.heading}>피부 건강</h2>
-        <p className={styles.summary}>{summary}</p>
+        <h2 className={`${card.cardTitle} ${styles.heading}`}>
+          이번 주 루틴 달성률
+        </h2>
+        <p className={styles.summary}>{summaryText(percent)}</p>
         <p className={`${card.label} ${styles.delta}`}>
-          <Icon name="trending_up" size="sm" />
-          지난주 대비 {weeklyDelta > 0 ? "+" : ""}
-          {weeklyDelta}%
+          <Icon name={icon} size="sm" />
+          {text}
         </p>
       </div>
 
@@ -44,7 +131,9 @@ export function SkinHealthCard({ score, summary, weeklyDelta }: Props) {
             cy="50"
             r={RADIUS}
             fill="transparent"
-            stroke="var(--primary-container)"
+            /* --primary-container 는 컨테이너 배경 역할이라 이 카드(surface-container-lowest)
+               같은 유동 표면 위 강조색으로 쓰면 다크에서 대비가 무너진다 → --primary */
+            stroke="var(--primary)"
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={`${filled} ${CIRCUMFERENCE}`}
@@ -53,8 +142,8 @@ export function SkinHealthCard({ score, summary, weeklyDelta }: Props) {
         </svg>
 
         <div className={styles.readout}>
-          <span className={styles.score}>{score}</span>
-          <span className={`${card.label} ${styles.total}`}>/ 100</span>
+          <span className={styles.score}>{percent}</span>
+          <span className={`${card.label} ${styles.total}`}>%</span>
         </div>
       </div>
     </section>

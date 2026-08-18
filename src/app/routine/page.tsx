@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 
 import { TopAppBar } from "@/components/TopAppBar/TopAppBar";
 
-import { RoutineCard } from "./components/RoutineCard";
+import { RoutineList } from "./components/RoutineList";
 import { WeekStrip } from "./components/WeekStrip";
-import { ROUTINES } from "./routines";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -15,6 +14,12 @@ export const metadata: Metadata = {
 // 요청마다 렌더한다.
 export const dynamic = "force-dynamic";
 
+/**
+ * 루틴 목록.
+ *
+ * 루틴 자체는 localStorage 에 있어 `RoutineList` 만 클라이언트다 —
+ * `"use client"` 를 페이지가 아니라 한 단계 아래 leaf 에 둔다.
+ */
 export default function RoutinePage() {
   return (
     <>
@@ -22,20 +27,7 @@ export default function RoutinePage() {
 
       <main className={styles.main}>
         <WeekStrip />
-
-        <section>
-          <h2 className={styles.heading}>내 루틴 {ROUTINES.length}개</h2>
-          <p className={styles.lead}>
-            피부 상태와 상황에 맞춰 만들어 둔 루틴이에요. 카드를 펼치면 단계를
-            볼 수 있습니다.
-          </p>
-
-          <ul className={styles.list}>
-            {ROUTINES.map((routine) => (
-              <RoutineCard key={routine.id} routine={routine} />
-            ))}
-          </ul>
-        </section>
+        <RoutineList />
       </main>
     </>
   );

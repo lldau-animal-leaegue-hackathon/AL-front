@@ -1,0 +1,114 @@
+.section {
+  border: 1px solid color-mix(in srgb, var(--surface-variant) 50%, transparent);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.badge {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.subtitle {
+  margin-top: 2px;
+  color: var(--on-surface-variant);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+/* 왼쪽 세로선으로 인사이트를 구분한다 */
+.insight {
+  margin-bottom: 20px;
+  padding-left: 16px;
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-sm);
+}
+
+.insightTitle {
+  margin-bottom: 4px;
+  font: var(--text-body-lg);
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.insightBody {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+/* 주의 성분이 없을 때 — 중립 표면 위에 안전한 on-surface-variant 짝을 쓴다.
+   primary-container 를 반투명으로 섞으면 다크에서 대비가 흔들릴 수 있어 피한다. */
+.safe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface-container-low);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+}
+
+.safeIcon {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--error) 10%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--error-container) 30%, transparent);
+}
+
+.alertIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--error);
+}
+
+.alertTitle {
+  margin-bottom: 4px;
+  font: var(--text-body-lg);
+  font-weight: 600;
+  color: var(--error);
+}
+
+.warningList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  list-style: none;
+}
+
+.alertCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 터치 타깃 44px */
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: 1px solid color-mix(in srgb, var(--error) 20%, transparent);
+  border-radius: var(--radius);
+  background: var(--surface-container-lowest);
+  color: var(--error);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.alertCta:hover {
+  background: var(--error-container);
+}

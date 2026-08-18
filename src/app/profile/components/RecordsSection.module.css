@@ -1,0 +1,75 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.achievement {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.achievementLabel {
+  margin-bottom: 4px;
+  color: var(--on-surface-variant);
+}
+
+.achievementValue {
+  font: var(--text-headline-lg);
+  color: var(--primary);
+}
+
+/* SkinHealthCard 의 delta 배지와 같은 짝(-fixed 계열은 스킴이 바뀌어도 고정이라
+   불투명하게 쓰면 안전하다). 투명도를 섞지 않는다. */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed-variant);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.entryIcon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.entryBody {
+  min-width: 0;
+}
+
+.entryName {
+  font: var(--text-body-md);
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.entryMeta {
+  margin-top: 2px;
+  color: var(--on-surface-variant);
+}

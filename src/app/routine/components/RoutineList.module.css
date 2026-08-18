@@ -1,0 +1,105 @@
+/* 목록 헤더·빈 상태. 옛 page.module.css 에서 옮겨왔다 —
+   저장소를 읽는 조각이 클라이언트로 내려가면서 스타일도 같이 따라왔다. */
+
+.heading {
+  /* --text-headline-lg 가 R-Step 1 에서 clamp 로 유동화돼 -mobile 토큰과
+     미디어 쿼리 스위칭이 필요 없어졌다. */
+  font: var(--text-headline-lg);
+  letter-spacing: var(--tracking-headline-lg);
+  color: var(--on-surface);
+}
+
+.lead {
+  margin-top: 4px;
+  font: var(--text-body-md);
+  font-size: 14px;
+  color: var(--on-surface-variant);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+  list-style: none;
+}
+
+.regenerate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 터치 타깃 44px (R7 과 같은 기준) */
+  min-height: 44px;
+  margin-top: 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  font-weight: 500;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.regenerate:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── 빈 상태 ────────────────────────────────────────────────────
+   루틴 0개는 실패가 아니라 "아직 안 만듦"이다. 다음 행동을 바로 제시한다. */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  color: var(--primary);
+}
+
+.emptyTitle {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.emptyText {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.emptyCta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  margin-top: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+}
+
+.emptyCta:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .regenerate {
+    transition: none;
+  }
+}

@@ -11,10 +11,9 @@
   text-align: center;
 }
 
+/* 타이포그래피는 card.cardTitle 을 공유하고, 여긴 이 카드에서만 필요한 여백만 얹는다 */
 .heading {
   margin-bottom: 8px;
-  font: var(--text-headline-md);
-  color: var(--on-surface);
 }
 
 .summary {
@@ -97,5 +96,53 @@
 
   .info {
     text-align: left;
+  }
+}
+
+/* ── 빈 상태 (루틴 없음 / 이번 주 기록 없음) ─────────────────────
+   RoutineList.module.css 의 .empty 와 같은 언어 — 아이콘 + 제목 + 안내문 + CTA. */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 40px;
+  color: var(--primary);
+}
+
+.emptyText {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 터치 타깃 44px */
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.emptyCta:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emptyCta {
+    transition: none;
   }
 }

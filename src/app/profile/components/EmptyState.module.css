@@ -1,0 +1,47 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.icon {
+  font-size: 40px;
+  color: var(--primary);
+}
+
+.title {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.text {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 터치 타깃 44px */
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+}
+
+.cta:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}

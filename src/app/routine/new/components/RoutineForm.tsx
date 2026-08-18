@@ -1,0 +1,230 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
+
+import { Icon } from "@/components/Icon";
+import { listProducts } from "@/lib/storage/products";
+
+import { useRoutineGenerate } from "../../hooks/useRoutineGenerate";
+import styles from "./RoutineForm.module.css";
+
+/** 프롬프트의 `usable_time` 은 자유 문자열이지만, 고르게 하면 오타·모호한 값이 안 들어온다. */
+const TIME_OPTIONS = ["3분", "5분", "10분", "15분", "20분"] as const;
+
+/** 실측 약 90초. 이 시점부터는 "정상입니다"라고 알려 줘야 사용자가 안 떠난다. */
+const LONG_WAIT_SECONDS = 20;
+
+/*
+ * localStorage 는 React 바깥의 스토어다. effect 에서 setState 로 끌어오면
+ * cascading render 가 생기고(React 19 린터가 막는다) 하이드레이션도 어긋난다.
+ * `useSyncExternalStore` 가 정확히 이 용도다 — 서버 스냅샷을 따로 줄 수 있어
+ * "서버에서는 아직 모른다(null)"를 그대로 표현할 수 있다.
+ * 이 화면에서 선반이 바뀌지는 않으므로 구독은 no-op 이다.
+ */
+const subscribeShelf = () => () => {};
+const getShelfCount = () => listProducts().length;
+const getServerShelfCount = () => null;
+
+export function RoutineForm() {
+  const wonderId = useId();
+  const morningId = useId();
+  const eveningId = useId();
+
+  const [wonder, setWonder] = useState("");
+  const [morning, setMorning] = useState("5분");
+  const [evening, setEvening] = useState("10분");
+
+  /** 선반이 비었으면 폼을 보여줄 이유가 없다. `null` 은 "서버라 아직 모름". */
+  const shelfCount = useSyncExternalStore(
+    subscribeShelf,
+    getShelfCount,
+    getServerShelfCount,
+  );
+
+  const { status, error, saved, generate, reset } = useRoutineGenerate();
+  const working = status === "working";
+
+  // 진행 표시 — 스피너만 돌면 멈춘 줄 안다(ProductForm 과 같은 이유·같은 방식).
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!working) return;
+    const startedAt = Date.now();
+    const id = setInterval(
+      () => setElapsed(Math.round((Date.now() - startedAt) / 1000)),
+      1000,
+    );
+    return () => clearInterval(id);
+  }, [working]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await generate({ wonder, usableTime: { morning, evening } });
+  }
+
+  if (shelfCount === 0) {
+    return (
+      <section className={styles.empty} role="status">
+        <Icon name="inventory_2" filled className={styles.emptyIcon} />
+        <h2 className={styles.heading}>먼저 제품을 등록해 주세요</h2>
+        <p className={styles.lead}>
+          루틴은 보유한 제품으로만 만듭니다. 선반이 비어 있으면 AI 가 쓸 재료가
+          없어요.
+        </p>
+        <Link className={styles.cta} href="/scan">
+          <Icon name="add_circle" filled size="sm" />내 선반에 추가하기
+        </Link>
+      </section>
+    );
+  }
+
+  if (status === "done" && saved.length > 0) {
+    return (
+      <section className={styles.result} role="status">
+        <p className={styles.resultTitle}>
+          <Icon name="check_circle" filled size="sm" />
+          루틴을 만들었어요
+        </p>
+
+        {saved.map((routine) => (
+          <article key={routine.id} className={styles.routine}>
+            <header className={styles.routineHead}>
+              <h2 className={styles.routineName}>{routine.name}</h2>
+              <span className={styles.routineSummary}>{routine.summary}</span>
+            </header>
+
+            <ol className={styles.steps}>
+              {routine.steps.map((step, index) => (
+                <li key={step.id} className={styles.step}>
+                  <span className={styles.stepIndex}>{index + 1}</span>
+                  <div className={styles.stepBody}>
+                    <p className={styles.stepName}>{step.routineName}</p>
+                    {/*
+                      using_product 는 id 가 아니라 이름 문자열이다. 저장된 제품과
+                      매칭되지 않을 수 있으므로 여기서는 이름을 그대로 보여준다 —
+                      못 찾았다고 단계를 숨기면 사용자가 이유를 알 수 없다.
+                    */}
+                    {step.usingProduct.length > 0 && (
+                      <p className={styles.stepProduct}>
+                        {step.usingProduct.join(" + ")}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </article>
+        ))}
+
+        <div className={styles.resultActions}>
+          <Link className={styles.cta} href="/routine">
+            <Icon name="check_circle" filled size="sm" />
+            루틴 보러 가기
+          </Link>
+          <button type="button" className={styles.again} onClick={reset}>
+            다시 만들기
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className={styles.section}>
+      <div className={styles.intro}>
+        <h2 className={styles.heading}>어떤 피부 고민이 있나요?</h2>
+        <p className={styles.lead}>
+          고민과 쓸 수 있는 시간을 알려 주면, 등록한 제품
+          {shelfCount === null ? "" : ` ${shelfCount}개`}로 아침·저녁 루틴을 짜
+          드려요.
+        </p>
+      </div>
+
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={wonderId}>
+            피부 고민 <span className={styles.required}>필수</span>
+          </label>
+          <textarea
+            id={wonderId}
+            className={styles.textarea}
+            value={wonder}
+            onChange={(e) => setWonder(e.target.value)}
+            placeholder="예: 볼은 건조한데 T존은 번들거려요. 트러블 자국도 신경 쓰여요."
+            rows={4}
+            required
+            disabled={working}
+          />
+        </div>
+
+        <div className={styles.row}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor={morningId}>
+              아침에 쓸 수 있는 시간
+            </label>
+            <select
+              id={morningId}
+              className={styles.select}
+              value={morning}
+              onChange={(e) => setMorning(e.target.value)}
+              disabled={working}
+            >
+              {TIME_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor={eveningId}>
+              저녁에 쓸 수 있는 시간
+            </label>
+            <select
+              id={eveningId}
+              className={styles.select}
+              value={evening}
+              onChange={(e) => setEvening(e.target.value)}
+              disabled={working}
+            >
+              {TIME_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <button className={styles.submit} type="submit" disabled={working}>
+          {working ? (
+            <>
+              <Icon name="progress_activity" className={styles.spinner} />
+              루틴 짜는 중… {elapsed}초
+            </>
+          ) : (
+            <>
+              <Icon name="auto_awesome" filled />
+              루틴 만들기
+            </>
+          )}
+        </button>
+
+        {working && elapsed >= LONG_WAIT_SECONDS && (
+          <p className={styles.hint}>
+            제품과 성분을 하나씩 따져 보는 중이에요. 보통 1~2분 걸립니다. 화면을
+            닫지 말고 기다려 주세요.
+          </p>
+        )}
+      </form>
+
+      {status === "error" && error && (
+        <p className={styles.error} role="alert">
+          <Icon name="error" size="sm" />
+          {error}
+        </p>
+      )}
+    </section>
+  );
+}

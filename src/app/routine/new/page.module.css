@@ -1,10 +1,8 @@
 .main {
   display: flex;
   flex-direction: column;
-  gap: 24px;
   width: 100%;
   max-width: var(--container-max);
-  /* 상단 고정 앱바 + 하단 고정 탭바를 피한다 */
   margin: 0 auto;
   padding: var(--page-pt) var(--page-inline) var(--page-pb);
 }

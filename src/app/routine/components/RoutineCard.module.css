@@ -149,15 +149,21 @@
   margin-top: 16px;
 }
 
-.start,
-.complete {
+/* 손으로 켜는 "완료" 버튼(.complete/.completeDone)은 Step 7 에서 없앴다 —
+   새로고침하면 풀리는 가짜 상태였고 주간 달성률과도 어긋났다.
+   완료 여부는 이제 수행 기록에서 파생된다. 그래서 CSS 도 함께 지운다. */
+.start {
   display: flex;
   flex: 1;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  /* 터치 타깃 44px (R7 과 같은 기준) */
+  min-height: 44px;
   padding: 12px;
   border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
   font: var(--text-body-md);
   font-weight: 600;
   transition:
@@ -165,32 +171,17 @@
     transform 0.15s ease;
 }
 
-.start {
-  background: var(--primary);
-  color: var(--on-primary);
-}
-
 .start:hover {
   background: var(--primary-container);
   color: var(--on-primary-container);
 }
 
-.complete {
-  border: 1px solid var(--outline-variant);
-  color: var(--on-surface-variant);
-}
-
-.complete:hover {
-  background: var(--surface-container-low);
-}
-
-.completeDone {
-  border-color: transparent;
-  background: var(--primary-fixed);
-  color: var(--on-primary-fixed);
-}
-
-.start:active,
-.complete:active {
+.start:active {
   transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start {
+    transition: none;
+  }
 }

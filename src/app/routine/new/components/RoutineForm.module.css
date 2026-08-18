@@ -1,0 +1,305 @@
+/* 루틴 생성 폼.
+   색은 전부 globals.css 토큰이다 — hex 를 쓰면 다크에서 그 자리만 깨진다.
+   배경이 --X-container 면 전경은 반드시 짝인 --on-X-container 를 쓴다. */
+
+.section,
+.result,
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heading {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.lead {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+/* ── 폼 ─────────────────────────────────────────────────────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* row 안에서 좁아질 때 셀렉트가 넘치지 않게 한다 */
+  min-width: 0;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+}
+
+.required {
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  /* -fixed 짝은 불투명하게 쓴다 — 반투명이면 뒤 배경에 의존해 다크에서 대비가 무너진다 */
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.textarea,
+.select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  font: var(--text-body-md);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.textarea:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.textarea:disabled,
+.select:disabled {
+  opacity: 0.6;
+}
+
+/* ── 제출 ───────────────────────────────────────────────────────── */
+
+.submit,
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* 터치 타깃 44px 이상 (R7 과 같은 기준) */
+  min-height: 56px;
+  padding: 16px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-lg);
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.submit:hover,
+.cta:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.submit:active,
+.cta:active {
+  transform: scale(0.98);
+}
+
+.submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+
+  .submit,
+  .cta {
+    transition: none;
+  }
+}
+
+.hint {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font: var(--text-body-md);
+}
+
+/* ── 빈 선반 ────────────────────────────────────────────────────── */
+
+.empty {
+  align-items: center;
+  gap: 16px;
+  padding: 40px 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  color: var(--primary);
+}
+
+/* ── 생성 결과 ──────────────────────────────────────────────────── */
+
+.resultTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--text-body-lg);
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.routine {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+}
+
+.routineHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.routineName {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.routineSummary {
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.stepIndex {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: var(--text-label-sm);
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stepName {
+  font: var(--text-body-md);
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.stepProduct {
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+}
+
+.resultActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.again {
+  min-height: 44px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.again:hover {
+  color: var(--primary);
+}
+
+@media (min-width: 768px) {
+  .resultActions {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .cta {
+    flex: 1;
+  }
+}

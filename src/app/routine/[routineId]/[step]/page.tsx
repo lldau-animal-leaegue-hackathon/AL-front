@@ -1,91 +1,19 @@
-import type { Route } from "next";
-import { notFound } from "next/navigation";
+import { RoutineRunner } from "../../components/RoutineRunner";
 
-import { Icon } from "@/components/Icon";
-
-import { HowToList } from "../../components/HowToList";
-import { RunHeader } from "../../components/RunHeader";
-import { StepActions } from "../../components/StepActions";
-import { StepTimer } from "../../components/StepTimer";
-import { ROUTINES, findRoutine } from "../../routines";
-import styles from "./page.module.css";
-
-/** 모든 단계를 미리 생성한다 — 개수가 적고 고정이라 정적 프리렌더가 이득이다. */
-export function generateStaticParams() {
-  return ROUTINES.flatMap((routine) =>
-    routine.steps.map((_, index) => ({
-      routineId: routine.id,
-      step: String(index + 1),
-    })),
-  );
-}
-
+/**
+ * 루틴 수행 화면.
+ *
+ * 루틴이 localStorage 에 있으므로 **서버는 내용을 모른다.**
+ * 예전에는 시드 기반으로 `generateStaticParams` 를 돌려 정적 프리렌더했지만,
+ * 사용자마다 단계 수가 달라 미리 만들 수 없다 → 제거했다.
+ *
+ * 페이지는 껍데기만 남기고 `params` 만 넘긴다. 화면 본문·404 판정은
+ * 클라이언트 경계인 `RoutineRunner` 가 맡는다.
+ */
 export default async function RoutineStepPage({
   params,
 }: PageProps<"/routine/[routineId]/[step]">) {
   const { routineId, step } = await params;
 
-  const routine = findRoutine(routineId);
-  if (!routine) notFound();
-
-  const steps = routine.steps;
-  const index = Number(step) - 1;
-  // 범위를 벗어난 단계로 직접 들어오면 404 (URL을 손으로 고친 경우)
-  if (!Number.isInteger(index) || index < 0 || index >= steps.length)
-    notFound();
-
-  const current = steps[index];
-  const next = steps[index + 1];
-
-  return (
-    <>
-      <RunHeader title={routine.name} step={index + 1} total={steps.length} />
-
-      <main className={styles.main}>
-        <div className={styles.visual}>
-          {/* 제품 사진 자리. 제품 데이터가 붙으면 이미지로 교체한다. */}
-          <div className={styles.photo}>
-            <Icon name={current.icon} filled className={styles.photoIcon} />
-            <StepTimer seconds={current.timerSeconds} />
-          </div>
-        </div>
-
-        <div className={styles.details}>
-          <div className={styles.intro}>
-            <p className={styles.meta}>
-              <span className={styles.category}>{current.category}</span>
-              <span className={styles.duration}>약 {current.minutes}분</span>
-            </p>
-            <h2 className={styles.product}>{current.productName}</h2>
-            <p className={styles.description}>{current.description}</p>
-          </div>
-
-          <aside className={styles.expert}>
-            <span className={styles.expertBadge} aria-hidden="true">
-              <Icon name="spa" filled size="sm" />
-            </span>
-            <div>
-              <p className={styles.expertLabel}>전문가 팁</p>
-              <p className={styles.expertText}>{current.expertTip}</p>
-            </div>
-          </aside>
-
-          {/* 단계가 바뀌면 체크 상태를 초기화한다 */}
-          <HowToList key={current.id} items={current.howTo} />
-        </div>
-      </main>
-
-      <StepActions
-        nextHref={
-          next
-            ? (`/routine/${routineId}/${index + 2}` as Route)
-            : ("/routine" as Route)
-        }
-        nextLabel={next?.productName}
-        prevHref={
-          index > 0 ? (`/routine/${routineId}/${index}` as Route) : undefined
-        }
-      />
-    </>
-  );
+  return <RoutineRunner routineId={routineId} step={step} />;
 }
