@@ -27,7 +27,12 @@ type Envelope = {
 };
 
 export type RunClaudeOptions = {
-  /** 예: `["Read"]`. 비우면 도구 없이 실행한다. */
+  /**
+   * 자식이 쓸 수 있는 도구. 예: `["Read"]`.
+   *
+   * 비우면 **도구가 하나도 없이** 실행된다(`--tools ""`). 예전 주석은 그렇게 적혀 있었지만
+   * 실제로는 플래그를 안 붙여 기본 도구 전체가 열렸다 — 아래 `args` 주석 참조.
+   */
   allowedTools?: readonly string[];
   timeoutMs?: number;
   /**
@@ -143,7 +148,35 @@ export async function runClaude(
     cleanupSession = false,
   } = options;
 
-  const args = ["-p", "--output-format", "json"];
+  /*
+   * ⛔ `--allowedTools` 만으로는 도구가 제한되지 않는다 (2026-08-18 실측).
+   *
+   * 그건 **권한 허용 목록**일 뿐이라, `~/.claude/settings.json` 이
+   * `defaultMode: "bypassPermissions"` 면 권한 검사 자체를 건너뛰어 무력해진다.
+   * 게다가 예전 코드는 목록이 비면 플래그를 **아예 안 붙여서** 자식이 기본 도구
+   * 전체(Bash·Write·Edit…)를 물려받았다 — 사진 없이 제품을 등록하는 가장 흔한 경로가
+   * 여기 해당했고, 프롬프트에는 사용자가 입력한 제품명이 그대로 들어간다.
+   *
+   * 실측:
+   *   플래그 없음                        → `echo` 가 그대로 실행됨
+   *   `--strict-mcp-config --tools ""`   → 도구 스키마 0개. 거부가 아니라 **부재**다.
+   *
+   * 그래서 항상 `--tools` 로 **집합 자체를 좁히고**(빈 배열이면 `""` = 전부 끔),
+   * `--strict-mcp-config` 로 부모의 MCP 서버가 자식에 새지 않게 한다
+   * (이 세션에는 MCP 도구가 100개 넘게 붙어 있고, 없으면 그쪽으로 우회된다).
+   * `--allowedTools` 도 함께 남긴다 — 권한 모드가 엄격해져도 미리 승인돼 있어야
+   * 헤드리스에서 프롬프트 없이 진행된다.
+   *
+   * ⚠️ `--bare` 는 쓰지 말 것. 인증이 API 키 전용으로 바뀌어 구독 강제 정책과 충돌한다.
+   */
+  const args = [
+    "-p",
+    "--output-format",
+    "json",
+    "--strict-mcp-config",
+    "--tools",
+    allowedTools.join(","),
+  ];
   if (allowedTools.length > 0) {
     args.push("--allowedTools", allowedTools.join(","));
   }
