@@ -12,6 +12,7 @@ import {
   execute,
   selectRows,
 } from "@/lib/db/pool";
+import { LIMITS, text } from "@/lib/db/input";
 import { toSkinProfile } from "@/lib/db/rows";
 
 export const runtime = "nodejs";
@@ -39,23 +40,21 @@ export async function PUT(request: Request) {
     return Response.json({ message: "JSON 본문이 아닙니다." }, { status: 400 });
   }
 
-  const wonder = typeof body.wonder === "string" ? body.wonder.trim() : "";
+  const wonder = text(body.wonder, LIMITS.wonder);
   if (!wonder) {
-    return Response.json({ message: "wonder 는 필수입니다." }, { status: 400 });
+    return Response.json(
+      { message: `wonder 는 필수이고 ${LIMITS.wonder}자 이하여야 합니다.` },
+      { status: 400 },
+    );
   }
 
-  const usableTime =
+  const usableTime: Record<string, unknown> =
     typeof body.usableTime === "object" && body.usableTime !== null
       ? { ...body.usableTime }
       : {};
-  const morning =
-    "morning" in usableTime && typeof usableTime.morning === "string"
-      ? usableTime.morning
-      : "";
-  const evening =
-    "evening" in usableTime && typeof usableTime.evening === "string"
-      ? usableTime.evening
-      : "";
+  // 컬럼이 VARCHAR(30) 이라 넘치면 DB 에러 → 503 으로 나간다. 여기서 400 으로 막는다.
+  const morning = text(usableTime.morning, LIMITS.usableTime) ?? "";
+  const evening = text(usableTime.evening, LIMITS.usableTime) ?? "";
 
   try {
     const userId = await currentUserId();

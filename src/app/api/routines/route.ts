@@ -13,6 +13,7 @@ import {
   selectRows,
   withTransaction,
 } from "@/lib/db/pool";
+import { intInRange, LIMITS, text, textArray } from "@/lib/db/input";
 import { groupSteps, toRoutine } from "@/lib/db/rows";
 
 export const runtime = "nodejs";
@@ -80,32 +81,35 @@ type RoutineInput = {
   steps: StepInput[];
 };
 
-function strings(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((v): v is string => typeof v === "string")
-    : [];
+/** 단계 안의 문자열 배열(사용법·팁·주의). 상한을 넘으면 빈 배열로 떨어뜨린다. */
+function stepTexts(value: unknown): string[] {
+  return (
+    textArray(value ?? [], {
+      maxItems: LIMITS.stepTextItems,
+      maxLength: LIMITS.stepTextLength,
+    }) ?? []
+  );
 }
 
 function narrowStep(value: unknown): StepInput | null {
   if (typeof value !== "object" || value === null) return null;
   const step: Record<string, unknown> = { ...value };
 
-  const routineName =
-    typeof step.routineName === "string" ? step.routineName : "";
+  const routineName = text(step.routineName, LIMITS.routineName);
   if (!routineName) return null;
 
   return {
     routineName,
-    // 초 단위 정수다. 분으로 착각해 넣으면 타이머가 60배 틀어진다.
-    estimatedTime:
-      typeof step.estimatedTime === "number" &&
-      Number.isFinite(step.estimatedTime)
-        ? Math.max(0, Math.trunc(step.estimatedTime))
-        : 0,
-    usingProduct: strings(step.usingProduct),
-    howToUse: strings(step.howToUse),
-    tips: strings(step.tips),
-    warning: strings(step.warning),
+    /*
+     * 초 단위 정수다. 분으로 착각해 넣으면 타이머가 60배 틀어진다.
+     * 상한이 필요한 이유: 값 하나가 INT 범위를 넘으면 그 INSERT 가 죽고
+     * **트랜잭션 전체가 롤백돼 루틴이 한 벌도 저장되지 않는다.**
+     */
+    estimatedTime: intInRange(step.estimatedTime, 0, LIMITS.estimatedTime) ?? 0,
+    usingProduct: stepTexts(step.usingProduct),
+    howToUse: stepTexts(step.howToUse),
+    tips: stepTexts(step.tips),
+    warning: stepTexts(step.warning),
   };
 }
 
@@ -113,22 +117,22 @@ function narrowRoutine(value: unknown): RoutineInput | null {
   if (typeof value !== "object" || value === null) return null;
   const routine: Record<string, unknown> = { ...value };
 
-  const name = typeof routine.name === "string" ? routine.name : "";
+  const name = text(routine.name, LIMITS.routineName);
   if (!name) return null;
 
-  const steps = Array.isArray(routine.steps)
-    ? routine.steps.map(narrowStep).filter((s) => s !== null)
-    : [];
+  /*
+   * 단계 수 상한. 없으면 steps 를 수만 개 보내 트랜잭션이 사용자 행을 잡은 채
+   * 수십 초를 왕복하고, `seq` 가 SMALLINT 라 32,767 을 넘는 순간 전체가 롤백된다.
+   */
+  const rawSteps = Array.isArray(routine.steps) ? routine.steps : [];
+  if (rawSteps.length > LIMITS.steps) return null;
 
   return {
     name,
-    condition:
-      typeof routine.condition === "string" && routine.condition
-        ? routine.condition
-        : "평소",
+    condition: text(routine.condition, LIMITS.condition) ?? "평소",
     time: routine.time === "pm" ? "pm" : "am",
-    summary: typeof routine.summary === "string" ? routine.summary : "",
-    steps,
+    summary: text(routine.summary, LIMITS.summary) ?? "",
+    steps: rawSteps.map(narrowStep).filter((s) => s !== null),
   };
 }
 
@@ -143,6 +147,12 @@ export async function PUT(request: Request) {
   if (!Array.isArray(body.routines)) {
     return Response.json(
       { message: "routines 배열이 필요합니다." },
+      { status: 400 },
+    );
+  }
+  if (body.routines.length > LIMITS.routines) {
+    return Response.json(
+      { message: `루틴은 한 번에 ${LIMITS.routines}벌까지 저장할 수 있습니다.` },
       { status: 400 },
     );
   }

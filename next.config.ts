@@ -47,7 +47,27 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      /*
+       * ⛔ `/api/*` 는 **전부 사용자별 데이터**다(쿠키 익명 ID 로 가른다).
+       *
+       * Next 16 의 Route Handler 는 dynamic 이라 Next 자체 캐시는 안 타지만,
+       * **응답에 `Cache-Control` 을 아무것도 붙이지 않는다.** 앞단에 리버스 프록시나 CDN 이
+       * 붙는 순간(서브도메인 작업이 예정돼 있다) 기본 TTL·heuristic freshness 로
+       * `/api/products` 응답 하나가 URL 만으로 캐시되고, 쿠키가 다른 사람에게 그대로 나간다.
+       *
+       * `private` 로 공유 캐시 저장을 막고 `no-store` 로 저장 자체를 금지한다.
+       * `Vary: Cookie` 는 캐시가 굳이 저장할 때 사용자별로 갈리게 하는 마지막 보루다.
+       */
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "Vary", value: "Cookie" },
+        ],
+      },
+    ];
   },
 
   async rewrites() {

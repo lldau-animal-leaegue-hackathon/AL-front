@@ -33,6 +33,20 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
+  /*
+   * ⚠️ `secure` 를 NODE_ENV 로 정하면 안 된다.
+   *
+   * 프로덕션 빌드를 **TLS 없이** 올리는 순간(해커톤 서버에 흔하다) 브라우저가 Secure 쿠키를
+   * 버린다. 그러면 요청마다 새 ID 가 발급돼 **"저장은 되는데 새로고침하면 사라진다"** 가 되고,
+   * `users` 테이블에는 1회성 행이 무한히 쌓인다. 원인을 찾기 어려운 증상이다.
+   *
+   * 그래서 **실제 요청 프로토콜**로 정한다. HTTPS 로 서비스하면 자동으로 켜진다.
+   * (리버스 프록시 뒤에서는 `x-forwarded-proto` 를 봐야 한다 — 프록시가 붙을 예정이다.)
+   */
+  const isHttps =
+    request.nextUrl.protocol === "https:" ||
+    request.headers.get("x-forwarded-proto") === "https";
+
   // 이미 있으면 다시 굽지 않는다 — 만료가 계속 밀리는 것을 원하면 여기서 갱신하면 된다.
   if (!existing) {
     response.cookies.set({
@@ -41,10 +55,12 @@ export function proxy(request: NextRequest) {
       // JS 로 못 읽는다 — XSS 가 나도 ID 를 훔쳐 갈 수 없다.
       httpOnly: true,
       sameSite: "lax",
-      // 로컬은 http 라 secure 를 켜면 쿠키가 아예 저장되지 않는다.
-      secure: process.env.NODE_ENV === "production",
+      secure: isHttps,
       path: "/",
       maxAge: MAX_AGE_SECONDS,
+      // ponytail: HTTPS 서브도메인이 확정되면 쿠키 이름에 `__Host-` 접두사를 붙인다.
+      //           형제 서브도메인이 Domain 속성으로 세션을 고정하는 경로가 막힌다.
+      //           지금 붙이면 Secure 가 강제라 http 로컬·http 배포에서 동작하지 않는다.
     });
   }
 

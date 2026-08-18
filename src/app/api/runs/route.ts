@@ -14,6 +14,7 @@ import {
   execute,
   selectRows,
 } from "@/lib/db/pool";
+import { isoDate, LIMITS, textArray } from "@/lib/db/input";
 import { toRoutineRun } from "@/lib/db/rows";
 
 export const runtime = "nodejs";
@@ -31,17 +32,6 @@ export async function GET() {
   }
 }
 
-/**
- * ISO 문자열을 Date 로 바꾼다.
- * 문자열을 그대로 넘기면 `2026-08-18T11:23:11.000Z` 의 `T`·`Z` 를 DB 가 해석하지 못한다.
- * Date 로 주면 드라이버가 풀의 `timezone: "Z"` 기준으로 직렬화한다.
- */
-function toDate(value: unknown): Date | null {
-  if (typeof value !== "string") return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 export async function POST(request: Request) {
   let body: {
     routineId?: unknown;
@@ -56,8 +46,12 @@ export async function POST(request: Request) {
   }
 
   const routineId = typeof body.routineId === "string" ? body.routineId : "";
-  const startedAt = toDate(body.startedAt);
-  const finishedAt = toDate(body.finishedAt);
+  /*
+   * `new Date()` 는 "March 5" 나 서기 5만년도 받아 준다. 시각이 터무니없으면
+   * 주간 달성률이 조용히 틀어지므로 `isoDate` 가 범위까지 확인한다.
+   */
+  const startedAt = isoDate(body.startedAt);
+  const finishedAt = isoDate(body.finishedAt);
 
   if (!routineId || !startedAt || !finishedAt) {
     return Response.json(
@@ -66,9 +60,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const completedStepIds = Array.isArray(body.completedStepIds)
-    ? body.completedStepIds.filter((v): v is string => typeof v === "string")
-    : [];
+  const completedStepIds = textArray(body.completedStepIds ?? [], {
+    maxItems: LIMITS.completedStepIds,
+    maxLength: 64,
+  });
+  if (!completedStepIds) {
+    return Response.json(
+      { message: "completedStepIds 형식이 올바르지 않습니다." },
+      { status: 400 },
+    );
+  }
 
   try {
     const userId = await currentUserId();
