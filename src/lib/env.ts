@@ -36,7 +36,7 @@ export const serverEnv = {
   },
   /**
    * 헤드리스 Claude 실행 파일 경로. PATH 에 `claude` 가 있으면 기본값으로 충분하다.
-   * 이 머신 실측: `C:\Users\xoduq\.local\bin\claude.exe` (진짜 .exe 라 셸 없이 실행된다).
+   * Windows 실측: 사용자 홈의 `.local\bin\claude.exe` (진짜 .exe 라 셸 없이 실행된다).
    */
   get claudeBin(): string {
     return process.env.CLAUDE_BIN ?? "claude";

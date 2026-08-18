@@ -1,0 +1,36 @@
+# AL-front 서버 스택. 지금은 DB 하나뿐이고, 앱 서비스는 CI/CD 를 붙일 때 여기에 추가한다.
+#
+# 서버 배치: /home/ubuntu/al-front/  (서버 관례 — 프로젝트 폴더 + docker-compose.yml)
+# 접속 정보는 같은 폴더의 .env 에서 읽는다. .env 는 커밋하지 않는다.
+#
+# ⚠️ 포트를 127.0.0.1 에만 묶었다. 이 서버는 3306·3307 이 이미 인터넷에 열려 있지만
+#    이 DB 는 따라가지 않는다. 로컬 개발은 SSH 터널로 붙는다(사용자 결정 2026-08-18):
+#      ssh -L 3308:127.0.0.1:3308 ThisisServer
+
+services:
+  db:
+    # 서버에 이미 있는 이미지(11.3.2)를 그대로 쓴다.
+    # ponytail: 디스크가 91% 라 pull 을 막아 둔다. 버전 태그 고정은 CI/CD 붙일 때.
+    image: mariadb:latest
+    pull_policy: missing
+    container_name: al-front-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:3308:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+      # 첫 기동에만 실행된다. 002 이후는 손으로 적용한다(db/migrations/001_init.sql 주석 참조).
+      - ./db/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:

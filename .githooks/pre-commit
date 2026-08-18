@@ -1,0 +1,36 @@
+#!/bin/sh
+# 이 레포는 **퍼블릭**이다. 한 번 커밋되면 히스토리에 남아 되돌리기 어렵다.
+# 스테이징된 내용만 검사한다(작업 트리는 건드리지 않는다).
+#
+# 설치 — clone 마다 1회:
+#   git config core.hooksPath .githooks
+#
+# 오탐이면 이 파일의 패턴을 고친다. --no-verify 로 넘기지 말 것.
+
+fail() {
+  echo "⛔ 커밋 중단 — $1"
+  echo "   이 레포는 퍼블릭이다. 해당 내용을 지우고 다시 커밋할 것."
+  exit 1
+}
+
+# 1) .env 계열은 .env.example 말고 전부 금지
+if git diff --cached --name-only | grep -E '(^|/)\.env' | grep -qv '\.env\.example$'; then
+  fail ".env 파일이 스테이징됐다"
+fi
+
+# 추가된 줄만 본다 — 기존 줄을 옮기기만 한 diff 에서 오탐하지 않게.
+added=$(git diff --cached -U0 | grep '^+' | grep -v '^+++')
+
+# 2) 자격 증명
+if printf '%s' "$added" | grep -qE 'AKIA[0-9A-Z]{16}|BEGIN [A-Z ]*PRIVATE KEY|sk-ant-[A-Za-z0-9_-]{20}|ghp_[A-Za-z0-9]{30}|Authorization: *Bearer +[A-Za-z0-9._-]{20}'; then
+  fail "자격 증명으로 보이는 문자열이 있다"
+fi
+
+# 3) 공인 IP. 사설·루프백·와일드카드는 뺀다.
+#    실제로 서버 주소를 계획서에 적었다가 잡은 적이 있다(2026-08-18).
+if printf '%s' "$added" | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' |
+  grep -qvE '^(10\.|127\.|0\.0\.0\.0|255\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)'; then
+  fail "공인 IP 로 보이는 주소가 있다"
+fi
+
+exit 0

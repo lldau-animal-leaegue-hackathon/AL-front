@@ -206,10 +206,10 @@ claude -p <프롬프트> --output-format json [--allowedTools Read] [--append-sy
    실제 모델 응답은 `result` **문자열 안에** 들어 있다.
 5. **JSON 추출은 방어적으로** — `result`에서 첫 `{`부터 마지막 `}`까지 잘라 파싱한다.
    프롬프트가 "코드블록 금지"라고 해도 모델은 종종 펜스를 붙인다
-   ([claude_runner.py:65](file:///C:/Work/WatchList/backend/claude_runner.py)).
+   (참고 구현: WatchList 레포의 `backend/claude_runner.py:65`).
 
 **환경** — `CLAUDE_BIN` env로 실행 파일 경로를 덮어쓸 수 있게 한다(WatchList와 동일).
-이 머신에서는 `C:\Users\xoduq\.local\bin\claude.exe`로 확인됐다 — **진짜 `.exe`라
+Windows 에서는 사용자 홈의 `.local\bin\claude.exe`로 확인됐다 — **진짜 `.exe`라
 Node `execFile`을 `shell: false`로 안전하게 쓸 수 있다**(`.cmd` shim이었다면 Windows에서
 셸이 필요해 인젝션 위험이 생겼을 것이다).
 
