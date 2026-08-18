@@ -56,7 +56,9 @@
   padding: 2px 8px;
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--secondary-container) 40%, transparent);
-  color: var(--on-secondary-fixed-variant);
+  /* 배경이 --secondary-container 라 전경도 짝인 --on-secondary-container 를 쓴다.
+     -fixed-variant 는 스킴이 바뀌어도 고정이라 다크에서 배경과 같은 색이 됐다(대비 1.64). */
+  color: var(--on-secondary-container);
   font: var(--text-label-sm);
   font-size: 10px;
   letter-spacing: var(--tracking-label-sm);

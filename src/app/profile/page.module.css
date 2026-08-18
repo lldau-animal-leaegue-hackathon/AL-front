@@ -69,7 +69,9 @@
 }
 
 .concernCard .summaryValue {
-  color: var(--on-secondary-fixed-variant);
+  /* 형제인 .overline 과 같은 짝을 쓴다 — .concernCard 배경이 --secondary-container 다.
+     -fixed-variant 였을 때 다크에서 배경과 완전히 같은 색이 됐다(대비 1.00, 글자가 사라짐). */
+  color: var(--on-secondary-container);
 }
 
 .tagList {
@@ -87,7 +89,9 @@
     var(--surface-container-lowest) 50%,
     transparent
   );
-  color: var(--on-secondary-fixed-variant);
+  /* .concernCard(--secondary-container) 위에 얹히므로 짝을 맞춘다.
+     -fixed-variant 는 다크에서 어두워진 배경과 대비 1.53 이었다. */
+  color: var(--on-secondary-container);
   letter-spacing: var(--tracking-label-sm);
 }
 
@@ -238,13 +242,17 @@
   letter-spacing: var(--tracking-label-sm);
 }
 
+/* 선반 카드의 카테고리 칩 — -fixed 계열은 스킴이 바뀌어도 고정이라 짝끼리 쓰면
+   라이트·다크에서 똑같이 보인다. 단 **불투명해야** 한다: 예전처럼 50% 투명이면
+   뒤 카드 배경이 다크에서 어두워지면서 합성색이 중간톤(#837668)이 되어
+   고정 전경색과 대비가 2.14 까지 떨어졌다. 반투명은 뒤 배경에 의존한다. */
 .sand {
-  background: color-mix(in srgb, var(--secondary-fixed) 50%, transparent);
+  background: var(--secondary-fixed);
   color: var(--on-secondary-fixed-variant);
 }
 
 .sage {
-  background: color-mix(in srgb, var(--primary-fixed) 50%, transparent);
+  background: var(--primary-fixed);
   color: var(--on-primary-fixed-variant);
 }
 

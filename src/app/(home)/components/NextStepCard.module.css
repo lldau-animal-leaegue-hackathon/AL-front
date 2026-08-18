@@ -28,7 +28,9 @@
   height: 96px;
   border-radius: var(--radius);
   background: var(--surface-container);
-  color: var(--primary-container);
+  /* --primary-container 는 '컨테이너 배경' 역할이라 다크에서 같이 어두워져
+     어두운 표면 위 아이콘으로는 대비가 1.74 였다. 표면 위 강조색은 --primary 다. */
+  color: var(--primary);
 }
 
 .detail {
