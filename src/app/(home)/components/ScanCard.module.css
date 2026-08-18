@@ -82,5 +82,6 @@
 }
 
 .cta:hover {
-  background: #ffffff;
+  /* 라이트에서는 --surface-container-lowest 가 #ffffff 라 시각 변화 없음. 다크에서만 따라 바뀐다 */
+  background: var(--surface-container-lowest);
 }

@@ -37,11 +37,16 @@ export const viewport: Viewport = {
    */
   viewportFit: "cover",
   /**
-   * `--surface` 와 같은 값. 예전엔 light `#ffffff`(팔레트에 없는 값) +
-   * dark `#0a0a0a` 를 선언해, OS 다크 모드에서 **브라우저 UI 만 검고 페이지는 흰** 상태가 됐다.
-   * 다크 팔레트가 없으므로 라이트 단일 값으로 맞춘다(R-Step 6 에서 다크를 추가한다).
+   * 각 스킴의 `--surface` 값과 같다. 예전엔 light `#ffffff`(팔레트에 없는 값) +
+   * dark `#0a0a0a`(팔레트에 없는 값)를 선언해, OS 다크 모드에서
+   * **브라우저 UI 만 검고 페이지는 흰** 상태가 됐다.
+   * R-Step 6 에서 다크 팔레트가 생겨 `media` 로 두 값을 나눈다 —
+   * globals.css 의 라이트/다크 `--surface` 와 반드시 같은 값을 유지할 것.
    */
-  themeColor: "#f8f9fa",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8f9fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#101415" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
