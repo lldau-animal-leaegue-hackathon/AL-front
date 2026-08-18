@@ -34,13 +34,6 @@ export const serverEnv = {
   get backendOrigin(): string {
     return required(process.env.BACKEND_ORIGIN, "BACKEND_ORIGIN");
   },
-  /** 네이버 검색 API 자격 증명. 라우트 핸들러에서만 읽는다. */
-  get naverClientId(): string {
-    return required(process.env.NAVER_CLIENT_ID, "NAVER_CLIENT_ID");
-  },
-  get naverClientSecret(): string {
-    return required(process.env.NAVER_CLIENT_SECRET, "NAVER_CLIENT_SECRET");
-  },
 } as const;
 
 export const isProduction = process.env.NODE_ENV === "production";
