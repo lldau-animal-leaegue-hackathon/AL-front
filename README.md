@@ -1,6 +1,16 @@
 # AL-front
 
-Animal League 프론트엔드. Next.js 16 App Router 기반입니다.
+**스킨케어 루틴 앱** 프론트엔드. Next.js 16 App Router 기반입니다.
+_(저장소 이름의 "Animal League" 는 초기 프로젝트명이 남은 것입니다.)_
+
+> 👋 **처음 합류했다면 [docs/ONBOARDING.md](./docs/ONBOARDING.md) 를 먼저 읽으세요.**
+>
+> ⛔ **이 저장소는 퍼블릭입니다.** clone 직후 보안 훅을 설치하세요.
+> 안 하면 훅이 돌지 않아 비밀번호·서버 주소가 그대로 커밋됩니다.
+>
+> ```bash
+> git config core.hooksPath .githooks
+> ```
 
 ## 요구 사항
 
@@ -23,9 +33,10 @@ Animal League 프론트엔드. Next.js 16 App Router 기반입니다.
 ## 시작하기
 
 ```bash
-npm ci                       # package-lock.json 기준으로 정확히 설치
-cp .env.example .env.local   # Windows PowerShell: Copy-Item .env.example .env.local
-npm run dev                  # http://localhost:3000
+git config core.hooksPath .githooks   # ⛔ 보안 훅. clone 마다 1회, 반드시 먼저
+npm ci                                # package-lock.json 기준으로 정확히 설치
+cp .env.example .env.local            # PowerShell: Copy-Item .env.example .env.local
+npm run dev                           # http://localhost:3000
 ```
 
 ## 스크립트
@@ -124,22 +135,27 @@ const pretendard = localFont({
 `.env.local` 에 작성합니다. **커밋되지 않습니다.**
 키를 추가하면 `.env.example` 에도 (값 없이) 같이 추가해 주세요.
 
-| 키                         | 노출 범위           | 설명                                 |
-| -------------------------- | ------------------- | ------------------------------------ |
-| `BACKEND_ORIGIN`           | 서버 전용           | `/api/*` 요청을 프록시할 백엔드 주소 |
-| `NEXT_PUBLIC_API_BASE_URL` | **브라우저에 노출** | 클라이언트가 호출할 API 베이스 경로  |
+| 키                                | 노출 범위           | 설명                                               |
+| --------------------------------- | ------------------- | -------------------------------------------------- |
+| `DB_HOST` `DB_PORT`               | 서버 전용           | 서버 MariaDB. SSH 터널을 열고 로컬 포트를 가리킨다 |
+| `DB_NAME` `DB_USER` `DB_PASSWORD` | 서버 전용           | **팀 채널로 따로 받는다.** 저장소에 없다           |
+| `CLAUDE_BIN`                      | 서버 전용           | 헤드리스 `claude` 실행 경로. PATH 에 있으면 불필요 |
+| `BACKEND_ORIGIN`                  | 서버 전용           | ⚠️ **지금은 쓰지 않는다** — 비워 둔다 (아래 참고)  |
+| `NEXT_PUBLIC_API_BASE_URL`        | **브라우저에 노출** | 클라이언트가 호출할 API 베이스 경로                |
 
 > `NEXT_PUBLIC_` 접두사가 붙은 값은 브라우저 번들에 **평문으로** 들어갑니다.
 > 비밀 키에는 절대 붙이지 마세요.
 
 ### 백엔드 연동
 
-`.env.local` 에 `BACKEND_ORIGIN=http://localhost:8080` 을 넣으면
-`next.config.ts` 의 `rewrites` 가 `/api/*` 를 백엔드로 넘겨줍니다.
-프론트엔드에서 보면 같은 오리진이므로 **CORS 설정이 필요 없습니다.**
+⚠️ **별도 백엔드 서버가 없습니다.** `/api/*` 는 전부 이 저장소의 Route Handler
+(`src/app/api/**`) 가 처리하고, DB 에도 여기서 직접 붙습니다. 프론트·백엔드를 같이 만듭니다.
 
-이 rewrite 는 파일 기반 라우트보다 나중에 평가되므로,
-`src/app/api/foo/route.ts` 를 만들면 그 경로는 Next.js 가 직접 처리합니다.
+`BACKEND_ORIGIN` 프록시(`next.config.ts` 의 `rewrites`)는 **남아 있지만 쓰지 않습니다.**
+rewrite 는 파일 기반 라우트보다 나중에 평가되므로 `src/app/api/foo/route.ts` 가 있으면
+그쪽이 이깁니다 — 즉 켜 두어도 무해합니다. 외부 백엔드를 붙일 일이 생기면 그때 되살립니다.
+
+브라우저는 항상 **같은 오리진 `/api/*`** 로만 호출하므로 **CORS 설정이 필요 없습니다.**
 
 ## CI
 
