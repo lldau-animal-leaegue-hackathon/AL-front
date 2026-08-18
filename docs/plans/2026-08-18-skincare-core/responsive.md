@@ -575,8 +575,18 @@ R-Step 3은 **동작 보존 리팩토링**이므로 마친 뒤 `refactor-equival
 
 - [x] Q-R1 결정 — **좌측 사이드바** (2026-08-18)
 - [x] Q-R2 결정 — **다크 팔레트 제작** (2026-08-18)
-- [ ] R-Step 1 — 토큰 + viewport 설정
-- [ ] R-Step 2 — 셸·네비게이션 (**Step 3 이전 필수**)
+- [x] R-Step 1 — 완료 2026-08-18. 커밋 `1a840ab`. 유동 타이포(clamp) + 셸 치수 토큰 +
+      `viewportFit: "cover"` + `themeColor` 단일화 + `color-scheme: light`.
+      **브라우저 실측**: `font` 단축 속성 안의 `clamp()` 파싱 확인(실패 시 전체 타이포가
+      조용히 죽는 지점). 1440px에서 48/32/24/18px → 320px에서 32/24/20/16px 축소.
+      `--page-pb`가 `calc(76px + 0px + 24px)`로 `env()` 폴백 동작. _R3·R5·R8 기반 완료._
+- [x] R-Step 2 — 완료 2026-08-18. 커밋 `8d8f373`. **R1 해결.**
+      `tabs.ts`(단일 출처) + `SideNav`(lg 이상) + `AppShell` + BottomNav 숨김 기준 1024px로.
+      `TopAppBar`·`PageHeader`에 `left: var(--sidebar-w)` 추가 — `position:fixed`라
+      `AppShell`의 padding이 안 먹어 사이드바에 가려졌다.
+      **브라우저 실측**: 900px에서 네비 복구(예전 이동 불가 구간), 1440px에서 사이드바 240px·
+      헤더/본문 x=240·겹침 0건·링크 48px, 몰입 화면 네비 0개.
+      **구현 중 발견·수정**: 몰입 화면에서 사이드바가 없는데도 본문이 240px 밀리는 버그.
 - [ ] R-Step 3 — 매직 넘버 제거 — ~~routine 제외~~ **전체(2026-08-18 위임으로 해제).** routine은 `[routineId]` 경로 기준
 - [ ] R-Step 4 — 그리드·컨테이너 쿼리 — ~~home만~~ **home + `routine/[routineId]/[step]`**
 - [ ] R-Step 5 — 320px + 가로모드(R6) + 터치타깃(R7 `.subtle`, R7 `.back`) — **전체 해제**
