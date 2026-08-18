@@ -34,6 +34,13 @@ export const serverEnv = {
   get backendOrigin(): string {
     return required(process.env.BACKEND_ORIGIN, "BACKEND_ORIGIN");
   },
+  /**
+   * 헤드리스 Claude 실행 파일 경로. PATH 에 `claude` 가 있으면 기본값으로 충분하다.
+   * 이 머신 실측: `C:\Users\xoduq\.local\bin\claude.exe` (진짜 .exe 라 셸 없이 실행된다).
+   */
+  get claudeBin(): string {
+    return process.env.CLAUDE_BIN ?? "claude";
+  },
 } as const;
 
 export const isProduction = process.env.NODE_ENV === "production";

@@ -572,7 +572,38 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
   - **`save()`가 `boolean`을 반환**한다. 썸네일 누적으로 `QuotaExceededError`가 실제로 나는데,
     조용히 실패하면 사용자는 저장된 줄 안다. `addProduct`·`appendRun`은 실패 시 `null`.
 
-- [ ] Step 2 — 헤드리스 Claude 러너 + 프롬프트 + Route Handler 3종
+- [x] Step 2 — 완료 2026-08-18. 신규 9파일(`src/lib/claude/{runner,parseJson}.ts` +
+      `src/lib/prompts/{ingredients,routine,warnings}.ts` + `src/app/api/ai/*/route.ts` 3종 + `src/api/ai.ts`),
+      `env.ts`에 `claudeBin`·`.env.example`에 경고 추가. 커밋: 대기.
+
+  **착수 전 CLI 실측 4가지 — 전부 확인됨:**
+  - ① stdin 프롬프트 전달 **가능** → argv 상한(32,767자) 회피. runner가 stdin을 쓴다.
+  - ② 봉투 구조 `{ is_error, session_id, result, ... }` 확인. `result`는 **문자열**이고 그 안에 JSON.
+  - ③ `--allowedTools Read`로 이미지 인식 **성공** — 테스트 성분표에서 9개를 순서까지 정확히 추출.
+  - ④ 트랜스크립트에 **이미지 base64 사본이 실제로 남음**(9.5KB 이미지 → 59KB jsonl). 삭제 필수 확인.
+
+  **추가 발견 2건:**
+  - **`--bare` 는 쓸 수 없다.** `ANTHROPIC_API_KEY` 또는 apiKeyHelper를 강제하므로
+    구독 인증 결정(Q2·Q8)과 정면 충돌한다. 토큰 오버헤드 절감 수단으로 고려했다가 폐기.
+  - 호출당 캐시 생성 토큰이 **1만~3만**이다(기본 시스템 프롬프트·도구 정의). 호출이 잦아지면
+    구독 한도를 체감할 수 있다 — 성분 추출은 등록 시 1회, 주의사항은 지연 생성으로 분산해 뒀다.
+
+  **엔드투엔드 실호출 검증(dev 서버, 실제 AI 응답):**
+
+  | 엔드포인트                                    | 결과                                         | 소요   |
+  | --------------------------------------------- | -------------------------------------------- | ------ |
+  | `POST /api/ai/ingredients` (productName 누락) | 400 + 한글 메시지                            | 0.3초  |
+  | `POST /api/ai/ingredients` (이미지 포함)      | 200, 성분 9개 + `category: "토너"` 자동 분류 | 13.6초 |
+  | `POST /api/ai/warnings` (성분 있음)           | 200, 주의사항 6개(규칙 7 상한 정확히 준수)   | 34.5초 |
+  | `POST /api/ai/warnings` (**빈 배열**)         | 200, 규칙 6의 고정 문구만 반환               | 8.0초  |
+  | `POST /api/ai/routine`                        | 200, 아침 4단계 + 저녁                       | 91초   |
+  - **규칙 위반 경고 0건** — 서버 로그에 `warnOnRuleViolations` 출력이 없다. LLM이 계약을 지켰다.
+  - **Q5 검증됨**: `how_to_use`가 실제로 **배열**로 온다.
+  - **규칙 2(시간 예산) 준수**: 아침 60+40+60+60 = 220초 ≤ 입력 "5분".
+  - **규칙 5(순서) 준수**: 클렌징 → 토너 → 크림 → 선케어.
+  - **정리 확인**: 임시 이미지 파일 누수 0건, 세션 트랜스크립트 삭제됨.
+  - ⚠️ 루틴 생성이 **91초** 걸린다. Step 5 화면에는 **진행 표시가 반드시 필요**하다.
+
 - [ ] Step 3 — 제품 등록 폼
 - [ ] Step 4 — 카메라 이관 + tesseract 제거
 - [ ] Step 5 — 루틴 생성 — ~~보류~~ **해제(2026-08-18, 위임).** 프롬프트 1벌 → `Routine` 2개 매핑
