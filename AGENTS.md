@@ -25,8 +25,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **원격**: `github.com/lldau-animal-leaegue-hackathon/AL-front`
 - **도메인**(2026-08-18 확정 — `presentation/SERVICE.md`·`docs/plans/2026-08-18-skincare-core/` 기준):
   **스킨케어 루틴 앱.** 제품 등록(성분표 사진 → AI 성분 추출) · AI 루틴 생성(피부 고민 + 가용 시간 +
-  보유 제품) · 루틴 수행(단계별 안내·타이머) · 수행 기록. 저장은 localStorage,
+  보유 제품) · 루틴 수행(단계별 안내·타이머) · 수행 기록.
   AI는 헤드리스 Claude(`claude -p`)를 Route Handler가 감싼다.
+  **저장소는 localStorage → 서버 MariaDB 로 이전 중**(사용자 결정 2026-08-18 —
+  `docs/plans/2026-08-18-server-storage/`). 이전이 끝나기 전까지 두 경로가 공존하므로,
+  새 코드를 어느 쪽에 붙일지는 그 계획서의 구현 순서를 먼저 확인할 것.
   — _구 설명(점수/상점/채팅)은 `animal-league-04-back` 구조에서 유추한 오류였다.
   그 백엔드는 이 앱과 무관하다(실측 지식은 `ai-contract-check` 스킬 부록에 보존)._
 
@@ -153,8 +156,13 @@ App Router에서 가장 사고가 잦은 지점이다.
 
 ## 보안
 
-- `.env` / `.env.local` / `.env.production` 등 **실제 값이 든 파일은 읽지도 커밋하지도 말 것.**
-  `.env.example`(값 없는 템플릿)만 커밋 대상이다.
+- **`.env` 계열 읽기는 허용한다** (사용자 결정, 2026-08-18). AI 프롬프트 본문을 환경변수에 두기로
+  하면서, `ai-contract-check`(프롬프트 원문을 읽어 응답 매핑을 검증하는 절차)가 막히지 않도록 연 예외다.
+  - ⛔ **커밋은 여전히 금지.** `.env.example`(값 없는 템플릿)만 커밋 대상이다.
+  - ⛔ **출력·전재도 금지.** 읽은 값을 `echo`/`cat` 으로 찍거나 커밋 메시지·문서·PR 본문에 옮기지 않는다.
+    **읽는 것과 퍼뜨리는 것은 다르다.**
+  - ⚠️ `.env` 에는 DB 접속 비밀번호가 들어간다. 전면 허용이므로 **자격 증명이 세션 컨텍스트에
+    들어올 수 있음**을 사용자가 인지하고 선택했다. 좁히려면 이 항목만 고치면 된다.
 - Firebase 서비스 계정 JSON(`*firebase*.json`), 키스토어·인증서(`*.keystore`, `*.jks`, `*.p12`, `*.pem`),
   `application-*.yml`의 시크릿 등 **자격 증명 파일은 읽거나 출력(echo/cat)하거나 커밋하지 말 것.**
 - 백엔드 DTO 검증 시에도 `src/main/resources/`의 자격 증명 디렉토리는 건드리지 않는다.
