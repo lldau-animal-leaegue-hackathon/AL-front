@@ -306,10 +306,9 @@
 }
 
 @media (min-width: 768px) {
-  .main {
-    padding: 96px var(--margin-desktop) 40px;
-  }
-
+  /* .main 의 padding 오버라이드는 두지 않는다 — 셸 토큰(--page-pt/--page-inline/
+     --page-pb)이 브레이크포인트별 값을 이미 담고 있고, 여기서 덮으면 탭바가 아직
+     떠 있는 768~1023px 구간에서 하단 여백이 60px 부족해진다. */
   .sectionTitle {
     font: var(--text-headline-lg);
     letter-spacing: var(--tracking-headline-lg);
