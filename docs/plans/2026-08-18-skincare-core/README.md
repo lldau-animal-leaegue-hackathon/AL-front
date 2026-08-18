@@ -558,7 +558,20 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
       `[routineId]` 25경로 정상. 커밋: 대기.
       **잔여**: 노션 기획서의 `how_to_use: string[]` 갱신(Q5)은 **사용자 작업** — 코드 쪽 정본은
       Step 2에서 `src/lib/prompts/routine.ts`로 들어간다.
-- [ ] Step 1 — 타입 + 저장소 계층
+- [x] Step 1 — 완료 2026-08-18. 신규 5파일(`src/types/skincare.ts` + `src/lib/storage/{local,products,routines,history}.ts`).
+      **소비처 0건 = 순수 추가**(grep 확인). 검증: `npm run check` + `npm run build` 통과,
+      `localStorage` 접근이 전부 함수 내부라 SSR `ReferenceError` 없음(모듈 스코프 0건 grep 확인).
+      ⚠️ **런타임은 미검증** — import 하는 화면이 아직 없다. 실제 동작은 Step 3(등록 폼)에서 처음 확인된다.
+      커밋: 대기.
+
+  **머지(db9eaed) 반영으로 초안에서 바뀐 설계 3가지:**
+  - `Routine`은 **time 당 1벌**이다(팀원 모델). 초안의 `{ am: [], pm: [] }` 한 덩어리 구조는 폐기.
+    프롬프트 1회 출력 → `Routine` 2개로 펼쳐 저장한다.
+  - **`SkinProfile` 타입 신설**(초안에 없던 것) — `wonder`·`usableTime`은 여러 루틴이 공유하는
+    생성 입력이라 `Routine`마다 중복 저장하지 않고 분리했다. 프로필 화면의 "피부 프로필"도 이걸 쓴다.
+  - **`save()`가 `boolean`을 반환**한다. 썸네일 누적으로 `QuotaExceededError`가 실제로 나는데,
+    조용히 실패하면 사용자는 저장된 줄 안다. `addProduct`·`appendRun`은 실패 시 `null`.
+
 - [ ] Step 2 — 헤드리스 Claude 러너 + 프롬프트 + Route Handler 3종
 - [ ] Step 3 — 제품 등록 폼
 - [ ] Step 4 — 카메라 이관 + tesseract 제거
