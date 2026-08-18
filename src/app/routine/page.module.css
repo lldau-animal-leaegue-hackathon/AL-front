@@ -9,8 +9,33 @@
   padding: 88px var(--margin-mobile) 120px;
 }
 
+.heading {
+  font: var(--text-headline-lg-mobile);
+  color: var(--on-surface);
+}
+
+.lead {
+  margin-top: 4px;
+  font: var(--text-body-md);
+  font-size: 14px;
+  color: var(--on-surface-variant);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+  list-style: none;
+}
+
 @media (min-width: 768px) {
   .main {
     padding: 96px var(--margin-desktop) 40px;
+  }
+
+  .heading {
+    font: var(--text-headline-lg);
+    letter-spacing: var(--tracking-headline-lg);
   }
 }

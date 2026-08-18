@@ -38,7 +38,7 @@ export function RoutineStarter() {
         <p className={`${card.label} ${styles.caption}`}>현재 시각</p>
       </div>
 
-      <Link href="/routine/am/1" className={styles.cta}>
+      <Link href="/routine/daily-am/1" className={styles.cta}>
         <Icon name="wb_sunny" />
         <span>모닝 루틴 시작하기</span>
       </Link>

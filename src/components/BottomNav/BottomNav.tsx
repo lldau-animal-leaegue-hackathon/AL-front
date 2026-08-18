@@ -14,9 +14,9 @@ const TABS = [
   { icon: "person", label: "프로필", href: "/profile" },
 ] as const;
 
-// 루틴 수행 화면(/routine/am/1 …)은 한 가지 일에 집중시키는 화면이라
+// 루틴 수행 화면(/routine/daily-am/1 …)은 한 가지 일에 집중시키는 화면이라
 // 탭바를 감춘다. 빠져나가는 길은 헤더의 닫기 버튼이다.
-const IMMERSIVE = /^\/routine\/(am|pm)\//;
+const IMMERSIVE = /^\/routine\/[^/]+\//;
 
 export function BottomNav() {
   const pathname = usePathname();

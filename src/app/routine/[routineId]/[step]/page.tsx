@@ -7,24 +7,28 @@ import { HowToList } from "../../components/HowToList";
 import { RunHeader } from "../../components/RunHeader";
 import { StepActions } from "../../components/StepActions";
 import { StepTimer } from "../../components/StepTimer";
-import { ROUTINES, SLOT_LABEL, isSlot } from "../../routines";
+import { ROUTINES, findRoutine } from "../../routines";
 import styles from "./page.module.css";
 
 /** 모든 단계를 미리 생성한다 — 개수가 적고 고정이라 정적 프리렌더가 이득이다. */
 export function generateStaticParams() {
-  return Object.entries(ROUTINES).flatMap(([slot, steps]) =>
-    steps.map((_, index) => ({ slot, step: String(index + 1) })),
+  return ROUTINES.flatMap((routine) =>
+    routine.steps.map((_, index) => ({
+      routineId: routine.id,
+      step: String(index + 1),
+    })),
   );
 }
 
 export default async function RoutineStepPage({
   params,
-}: PageProps<"/routine/[slot]/[step]">) {
-  const { slot, step } = await params;
+}: PageProps<"/routine/[routineId]/[step]">) {
+  const { routineId, step } = await params;
 
-  if (!isSlot(slot)) notFound();
+  const routine = findRoutine(routineId);
+  if (!routine) notFound();
 
-  const steps = ROUTINES[slot];
+  const steps = routine.steps;
   const index = Number(step) - 1;
   // 범위를 벗어난 단계로 직접 들어오면 404 (URL을 손으로 고친 경우)
   if (!Number.isInteger(index) || index < 0 || index >= steps.length)
@@ -35,11 +39,7 @@ export default async function RoutineStepPage({
 
   return (
     <>
-      <RunHeader
-        title={SLOT_LABEL[slot]}
-        step={index + 1}
-        total={steps.length}
-      />
+      <RunHeader title={routine.name} step={index + 1} total={steps.length} />
 
       <main className={styles.main}>
         <div className={styles.visual}>
@@ -78,12 +78,12 @@ export default async function RoutineStepPage({
       <StepActions
         nextHref={
           next
-            ? (`/routine/${slot}/${index + 2}` as Route)
+            ? (`/routine/${routineId}/${index + 2}` as Route)
             : ("/routine" as Route)
         }
         nextLabel={next?.productName}
         prevHref={
-          index > 0 ? (`/routine/${slot}/${index}` as Route) : undefined
+          index > 0 ? (`/routine/${routineId}/${index}` as Route) : undefined
         }
       />
     </>
