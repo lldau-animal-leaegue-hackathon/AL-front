@@ -11,9 +11,18 @@ type Props = {
   image?: string;
   price?: number;
   href?: string;
+  /** 주면 카드가 버튼이 된다 — 등록 폼에 이름·제조사를 채워 넣는 용도 */
+  onSelect?: () => void;
 };
 
-export function ProductCard({ name, brand, image, price, href }: Props) {
+export function ProductCard({
+  name,
+  brand,
+  image,
+  price,
+  href,
+  onSelect,
+}: Props) {
   const body = (
     <>
       <div className={styles.thumb}>
@@ -37,6 +46,17 @@ export function ProductCard({ name, brand, image, price, href }: Props) {
       )}
     </>
   );
+
+  // 검색 결과에는 성분 정보가 없다. 고르면 등록 폼으로 넘겨 AI 추출을 태운다(Q4).
+  if (onSelect) {
+    return (
+      <li>
+        <button type="button" className={styles.card} onClick={onSelect}>
+          {body}
+        </button>
+      </li>
+    );
+  }
 
   if (!href) return <li className={styles.card}>{body}</li>;
 

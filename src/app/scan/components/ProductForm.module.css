@@ -1,0 +1,264 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.heading {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.lead {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 좁은 화면에서는 한 줄에 하나씩, 480px 부터 두 칸으로 */
+.row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 480px) {
+  .row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+}
+
+.required {
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed);
+  letter-spacing: 0;
+}
+
+/* DESIGN.md — 테두리 없는 연회색 필드, 포커스 시 sage 테두리 + 부드러운 글로우 */
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  font: var(--text-body-md);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.input::placeholder {
+  color: var(--outline);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.file {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+}
+
+.file::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  cursor: pointer;
+}
+
+.fileName {
+  overflow: hidden;
+  font: var(--text-label-sm);
+  color: var(--on-surface-variant);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* 16 + 24(아이콘) + 16 = 56px — 터치 타깃 여유 */
+  min-height: 56px;
+  padding: 16px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-lg);
+  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.submit:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.submit:disabled {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: progress;
+}
+
+/* 분석이 10초 넘게 걸려서(실측) 진행 중임을 계속 보여줘야 한다 */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+.hint {
+  font: var(--text-body-md);
+  font-size: 14px;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font: var(--text-body-md);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed);
+}
+
+.resultTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.resultName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font: var(--text-body-lg);
+  font-weight: 600;
+}
+
+.chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--on-primary-fixed) 12%, transparent);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+}
+
+.ingredient {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface-variant);
+  font: var(--text-label-sm);
+}
+
+.emptyIngredients {
+  font: var(--text-body-md);
+  color: var(--on-primary-fixed-variant);
+}
+
+.another {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  background: var(--surface-container-lowest);
+  color: var(--primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+}
+
+.another:hover {
+  background: var(--surface-container);
+}

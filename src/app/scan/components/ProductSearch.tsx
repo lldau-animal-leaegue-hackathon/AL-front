@@ -8,7 +8,12 @@ import { POPULAR_PRODUCTS, searchProducts } from "../products";
 import { ProductCard } from "./ProductCard";
 import styles from "./ProductSearch.module.css";
 
-export function ProductSearch() {
+export function ProductSearch({
+  onSelect,
+}: {
+  /** 카드를 고르면 등록 폼을 채운다. 검색 결과에 성분이 없어 폼을 반드시 거친다(Q4). */
+  onSelect: (product: { name: string; brand: string }) => void;
+}) {
   const [query, setQuery] = useState("");
 
   // 로컬 카탈로그라 입력할 때마다 즉시 거른다 (네트워크 호출이 없어 디바운스도 불필요).
@@ -47,6 +52,9 @@ export function ProductSearch() {
                 name={product.name}
                 brand={product.brand}
                 price={product.price}
+                onSelect={() =>
+                  onSelect({ name: product.name, brand: product.brand })
+                }
               />
             ))}
           </ul>

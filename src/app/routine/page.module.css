@@ -6,7 +6,7 @@
   max-width: var(--container-max);
   /* 상단 고정 앱바 + 하단 고정 탭바를 피한다 */
   margin: 0 auto;
-  padding: 88px var(--margin-mobile) 120px;
+  padding: var(--page-pt) var(--page-inline) var(--page-pb);
 }
 
 .heading {
@@ -30,10 +30,6 @@
 }
 
 @media (min-width: 768px) {
-  .main {
-    padding: 96px var(--margin-desktop) 40px;
-  }
-
   .heading {
     font: var(--text-headline-lg);
     letter-spacing: var(--tracking-headline-lg);

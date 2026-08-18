@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { PageHeader } from "./components/PageHeader";
-import { ProductSearch } from "./components/ProductSearch";
+import { ScanWorkspace } from "./components/ScanWorkspace";
 import { ScannerCta } from "./components/ScannerCta";
 import styles from "./page.module.css";
 
@@ -15,7 +15,7 @@ export default function ScanPage() {
       <PageHeader title="내 선반에 추가" />
 
       <main className={styles.main}>
-        <ProductSearch />
+        <ScanWorkspace />
         <ScannerCta />
       </main>
     </>
