@@ -13,8 +13,9 @@ import type { Routine, SkinProfile } from "@/types/skincare";
 
 import { load, remove, save } from "./local";
 
-const ROUTINES_KEY = "routines";
-const PROFILE_KEY = "skin-profile";
+/** `useStored` 로 같은 값을 구독하는 화면들이 있어 키를 노출한다 — 문자열을 두 곳에 적으면 갈라진다. */
+export const ROUTINES_KEY = "routines";
+export const PROFILE_KEY = "skin-profile";
 
 export function listRoutines(): Routine[] {
   return load<Routine[]>(ROUTINES_KEY, []);

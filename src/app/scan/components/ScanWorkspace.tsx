@@ -11,7 +11,7 @@ import { ProductSearch } from "./ProductSearch";
  * 검색 결과에는 **성분 정보가 없다** — 그래서 카드를 고르면 바로 저장하지 않고
  * 등록 폼을 채운다. 저장은 언제나 AI 성분 추출을 거친다(Q4).
  *
- * 이 조각만 클라이언트다. 페이지(`page.tsx`)와 `PageHeader` 는 서버 컴포넌트로 남는다.
+ * 이 조각만 클라이언트다. 페이지(`page.tsx`)와 `PageHeader`(`@/components`) 는 서버 컴포넌트로 남는다.
  */
 export function ScanWorkspace() {
   const [prefill, setPrefill] = useState<ProductPrefill | null>(null);

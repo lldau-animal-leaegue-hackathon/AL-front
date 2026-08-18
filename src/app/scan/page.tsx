@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-import { PageHeader } from "./components/PageHeader";
+import { PageHeader } from "@/components/PageHeader/PageHeader";
+
 import { ScanWorkspace } from "./components/ScanWorkspace";
 import styles from "./page.module.css";
 

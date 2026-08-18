@@ -7,7 +7,10 @@ import type { Product } from "@/types/skincare";
 
 import { load, newId, save } from "./local";
 
-const KEY = "products";
+/** `useStored` 로 같은 값을 구독하는 화면이 있어 키를 노출한다 — 문자열을 두 곳에 적으면 갈라진다. */
+export const PRODUCTS_KEY = "products";
+
+const KEY = PRODUCTS_KEY;
 
 export function listProducts(): Product[] {
   return load<Product[]>(KEY, []);
