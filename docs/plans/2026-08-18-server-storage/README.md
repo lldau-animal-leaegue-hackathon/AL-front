@@ -7,6 +7,63 @@
 > 🔗 관련: [스캔 탭 디벨롭](../2026-08-18-scan-search/README.md) — 이 문서가 **선행**이다.
 > 🔗 무효화: [스킨케어 코어 플로우](../2026-08-18-skincare-core/README.md)의 **Q1(localStorage)**
 
+---
+
+## 🚩 다음 세션 인계 (2026-08-18 작성)
+
+**이 문서가 현재 활성 계획서다.** 아래 순서대로 읽고 이어받으면 된다.
+
+### 1. 먼저 할 일 — litedeck MCP 도구 확인
+
+세션 중에 `litedeck` MCP 를 등록했으나 **그 세션에서는 도구가 안 잡혔다**(세션 시작 시점에
+도구 목록이 고정된다). 새 세션에서는 붙어 있을 것이다.
+
+```
+등록: claude mcp add --transport http litedeck http://127.0.0.1:54572/mcp --header "Authorization: Bearer ..."
+스코프: local (C:\Users\xoduq\.claude.json, project: C:\Work\AL-front)
+```
+
+⚠️ **LiteDeck 은 DB 도구가 아니다.** SSH 기반 **서버 관리 GUI** 다(파일·서비스·프로세스·컨테이너·터미널).
+조회 12개 + 변경 5개의 MCP 도구를 노출한다고 되어 있으나 **구체적 도구 이름은 미확인**이다
+(웹페이지 요약만 봤다). 새 세션에서 실제 목록을 먼저 확인할 것.
+
+→ 용도는 **DB 에 SQL 을 직접 쏘는 것이 아니라, 서버에 접속해 명령을 실행하는 통로**다.
+
+### 2. 서버에서 확인할 것
+
+- MariaDB 가 설치·기동 중인가, **버전이 10.2 이상인가**
+  (`JSON` 타입과 `ON UPDATE CURRENT_TIMESTAMP` 가 필요하다 — 스키마가 둘 다 쓴다)
+- 접속 정보: host / port / database / user / password
+- `db/migrations/001_init.sql` 을 서버로 올려 적용
+  → 적용 후 `SELECT * FROM schema_migrations` 로 `001` 이 찍혔는지 확인
+
+### 3. 그다음 — Step 3 부터 이어서
+
+접속 정보를 `.env.local` 에 넣고 구현 순서의 Step 3(쿼리 계층) → Step 4 → Step 5~7 로 간다.
+**`.env` 는 읽어도 된다**(사용자 결정 — `AGENTS.md` 보안 절 참조). 단 커밋·출력·전재는 여전히 금지.
+
+### 지금까지의 커밋
+
+| 커밋        | 내용                                                              |
+| ----------- | ----------------------------------------------------------------- |
+| `674d254`   | `fix:` 러너 도구 제한(`--tools`) — **보안. 웹 도구 켜기 전 선행** |
+| `f1a2b3d`   | `docs:` 계획서 2건 + `.env` 읽기 예외 규칙                        |
+| `05a0d84`   | `feat:` MariaDB 초기 스키마 (Step 1)                              |
+| _(이 커밋)_ | `feat:` 쿠키 익명 사용자 발급 (Step 2)                            |
+
+### 이 작업에서 이미 확인한 함정 — 다시 밟지 말 것
+
+1. **`middleware.ts` 는 Next 16 에서 deprecated.** `proxy.ts` 로 바뀌었고 export 이름도 `proxy` 다.
+   Proxy 는 **Node.js 런타임이 기본**이고 `runtime` 설정을 넣으면 **에러가 난다.**
+   → `node_modules/next/dist/docs/` 를 먼저 읽는 AGENTS.md 규칙이 실제로 값을 했다.
+2. **`--allowedTools` 는 도구를 제한하지 않는다.** `--strict-mcp-config --tools` 를 써야 한다.
+   `674d254` 에서 고쳤으니 **되돌리지 말 것.**
+3. **`ANON_HEADER` 위조 방지는 `matcher` 에 달려 있다.** 경로를 빼면 그 경로에서 사칭이 가능하다.
+4. **`uk_products_name_brand`** — MySQL/MariaDB 는 `NULL` 끼리를 중복으로 안 본다.
+   브랜드 미상은 **빈 문자열**로 넣어야 유니크 키가 작동한다.
+5. **React 19 린터가 effect 안 `setState` 를 막는다.** 서버 데이터로 갈아탈 때 같은 벽을 만난다
+   (직전 작업에서 `useStored` 를 만들며 겪었다 — [skincare-core](../2026-08-18-skincare-core/README.md) 참조).
+
 ## Context
 
 지금까지 모든 데이터는 **브라우저 localStorage**에 있었다([skincare-core Q1](../2026-08-18-skincare-core/README.md)).
@@ -259,9 +316,17 @@ CREATE TABLE routine_runs (
 
 ### 접속 정보 없이 가능 (지금 착수)
 
-- [ ] **Step 1 — 스키마 확정** `db/migrations/001_init.sql`. 리뷰 후 고정.
-- [ ] **Step 2 — 쿠키 익명 인증** `middleware.ts` + `anonUser.ts`.
-      _DB 없이도 쿠키 발급·조회는 검증 가능하다._
+- [x] **Step 1 — 스키마 확정** — 완료 2026-08-18. 커밋 `05a0d84`.
+      `db/migrations/001_init.sql` 133줄, 테이블 7개(`schema_migrations` 포함).
+      **아직 서버에 적용하지 않았다** — DB 가 없다. 판단이 갈린 4가지(FK 미설정, thumbnail 위치,
+      NULL 유니크 함정, `ingredient_source` NOT NULL)는 SQL 주석에 근거를 남겼다.
+- [x] **Step 2 — 쿠키 익명 인증** — 완료 2026-08-18. 커밋은 이 문서 상단 인계 표 참조.
+      `src/proxy.ts` + `src/lib/auth/anonUser.ts` (2파일 +124).
+      ⚠️ 계획 초안은 `middleware.ts` 였으나 **Next 16 에서 deprecated → `proxy.ts`** 다.
+      **브라우저 실측**: 1차 요청에 `al_uid` 발급(HttpOnly · SameSite=lax · Max-Age 1년),
+      2차 요청에 쿠키를 동봉하면 `Set-Cookie` 없음 = 재발급 안 함.
+      `Secure=false` 는 로컬 http 라 정상이다(켜면 쿠키가 아예 저장되지 않는다).
+      **교훈**: 쿠키만 세팅하면 **그 요청**의 핸들러는 값을 못 본다 → 같은 요청에 헤더로 함께 실었다.
 - [ ] **Step 3 — 쿼리 계층 골격** `pool.ts`·`rows.ts` + Route Handler 4종.
       _접속 정보가 없으면 연결 에러가 나는 게 정상이다. 타입·구조를 먼저 맞춘다._
 - [ ] **Step 4 — 클라이언트 데이터 계층** (Q2 확정 후). 화면의 `ready` → 로딩·에러 확장.
