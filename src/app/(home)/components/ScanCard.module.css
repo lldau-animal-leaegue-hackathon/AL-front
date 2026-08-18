@@ -81,7 +81,15 @@
   transition: background 0.2s ease;
 }
 
+/* hover 에서 표면 토큰(--surface-container-lowest)으로 갈아타면 안 된다.
+   기본 상태는 --on-primary-container(배경) + --primary-container(전경) 역짝인데,
+   배경만 표면색으로 바꾸면 다크에서 near-black 위에 짙은 초록 글씨가 되어
+   대비가 1.6 수준으로 무너진다(라이트에서는 #ffffff 라 티가 안 나 놓치기 쉽다).
+   같은 짝 안에서 살짝 어둡게만 섞는다 — 두 스킴 모두 대비 방향이 유지된다. */
 .cta:hover {
-  /* 라이트에서는 --surface-container-lowest 가 #ffffff 라 시각 변화 없음. 다크에서만 따라 바뀐다 */
-  background: var(--surface-container-lowest);
+  background: color-mix(
+    in srgb,
+    var(--on-primary-container) 88%,
+    var(--primary-container)
+  );
 }
