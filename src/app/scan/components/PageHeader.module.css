@@ -42,3 +42,10 @@
     padding: 16px var(--margin-desktop);
   }
 }
+
+/* 좌측 사이드바에 가려지지 않도록 (TopAppBar 와 같은 이유) */
+@media (min-width: 1024px) {
+  .bar {
+    left: var(--sidebar-w);
+  }
+}

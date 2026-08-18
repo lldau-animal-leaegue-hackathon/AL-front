@@ -42,8 +42,14 @@
   letter-spacing: var(--tracking-label-sm);
 }
 
-/* 데스크톱에서는 하단 탭 대신 넓은 그리드를 쓴다 (목업의 md:hidden) */
-@media (min-width: 768px) {
+/*
+ * lg(1024px) 부터 좌측 SideNav 가 대신한다.
+ *
+ * 예전 기준은 768px 이었는데 대체 네비가 없어서 **768px 이상에서 섹션 간 이동이
+ * 아예 불가능**했다(R1). 이제 숨김 기준을 사이드바 등장 시점과 정확히 맞춰
+ * 네비게이션이 비는 구간이 없다.
+ */
+@media (min-width: 1024px) {
   .nav {
     display: none;
   }

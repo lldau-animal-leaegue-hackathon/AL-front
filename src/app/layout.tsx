@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
-import { BottomNav } from "@/components/BottomNav/BottomNav";
+import { AppShell } from "@/components/AppShell/AppShell";
 
 import "./globals.css";
 
@@ -77,8 +77,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body>
-        {children}
-        <BottomNav />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

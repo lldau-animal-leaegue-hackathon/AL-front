@@ -67,3 +67,11 @@
     padding: 16px var(--margin-desktop);
   }
 }
+
+/* 좌측 사이드바(position:fixed)에 가려지지 않도록 시작점을 밀어 준다.
+   position:fixed 라 AppShell 의 padding-left 가 먹지 않는다. */
+@media (min-width: 1024px) {
+  .bar {
+    left: var(--sidebar-w);
+  }
+}
