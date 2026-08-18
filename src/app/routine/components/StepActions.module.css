@@ -4,7 +4,10 @@
   left: 0;
   z-index: 50;
   width: 100%;
-  padding: 16px var(--margin-mobile) calc(16px + env(safe-area-inset-bottom));
+  /* env() 폴백 0px 필수 — 없으면 미지원 브라우저에서 calc() 전체가 무효가 되어
+     하단 여백이 통째로 사라진다(globals.css 셸 치수 절과 같은 규칙). */
+  padding: 16px var(--margin-mobile)
+    calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--surface-container);
   background: color-mix(
     in srgb,
