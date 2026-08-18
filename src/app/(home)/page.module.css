@@ -18,6 +18,10 @@
   height: 100%;
 }
 
+/* md(768~1023) — 12열을 켜되 좁은 칸은 아직 만들지 않는다.
+   768px 에서 span 4 는 실폭이 약 219px 밖에 안 나와(1컬럼 36.9px + gap 24)
+   ScanCard·IngredientAlerts 같은 카드 내용이 뭉갠다. 그래서 이 구간은
+   wide 를 전폭, narrow 를 2열(span 6, 약 460px)로 둔다. */
 @media (min-width: 768px) {
   .main {
     grid-template-columns: repeat(12, 1fr);
@@ -28,6 +32,17 @@
     grid-column: span 12;
   }
 
+  .wide {
+    grid-column: span 12;
+  }
+
+  .narrow {
+    grid-column: span 6;
+  }
+}
+
+/* lg(1024~) — 사이드바가 등장하고 본문이 충분히 넓어져 목업의 8/4 벤토가 성립한다 */
+@media (min-width: 1024px) {
   .wide {
     grid-column: span 8;
   }

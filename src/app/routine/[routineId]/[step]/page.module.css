@@ -3,9 +3,13 @@
   flex-direction: column;
   width: 100%;
   max-width: var(--container-max);
-  /* 하단 고정 액션 바를 피한다 */
   margin: 0 auto;
-  padding: 8px var(--margin-mobile) 180px;
+  /* 상단은 RunHeader 가 흐름 안에 있어 8px 이면 된다.
+     하단은 탭바가 아니라 StepActions(고정 액션바)를 피한다 — 몰입 화면이라
+     BottomNav 가 숨기 때문이다. 그래서 --page-pb 가 아니라 --step-actions-h 를 쓴다.
+     (--page-pb 는 lg 이상에서 40px 로 줄지만 액션바는 그 구간에도 계속 떠 있다.) */
+  padding: 8px var(--page-inline)
+    calc(var(--step-actions-h) + env(safe-area-inset-bottom, 0px) + 24px);
 }
 
 .visual {
@@ -116,7 +120,8 @@
     grid-template-columns: repeat(12, 1fr);
     gap: var(--space-gutter);
     align-items: start;
-    padding: 8px var(--margin-desktop) 180px;
+    /* padding 오버라이드를 두지 않는다 — 기본 규칙의 셸 토큰이 브레이크포인트별
+       값을 이미 담고 있다(--page-inline 은 clamp, 하단은 액션바 기준이라 폭 무관). */
   }
 
   .visual {
@@ -133,5 +138,16 @@
 
   .details {
     grid-column: 7 / span 6;
+  }
+}
+
+/* 모바일 가로모드(R6) — 눕힌 폰은 높이가 ~390px 인데 위 768px 규칙이 걸려
+   정사각 사진이 되면 화면 높이를 넘긴다. 루틴 수행은 세면대에 거치해 두고 보는
+   화면이라 가로모드를 무시할 수 없다.
+   ⚠️ 이 블록은 반드시 768px 블록 **뒤**에 와야 한다 — 가로로 눕힌 폰은 폭이
+   768px 를 넘어 그 규칙이 먼저 적용되므로, 같은 특이도에서 순서로 이겨야 한다. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .photo {
+    aspect-ratio: 16 / 9;
   }
 }

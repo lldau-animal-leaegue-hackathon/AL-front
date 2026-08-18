@@ -19,7 +19,8 @@
 .back {
   display: grid;
   place-items: center;
-  padding: 8px;
+  /* 10px + 아이콘 24px + 10px = 44px (R7). 8px 이면 40px 라 4px 모자랐다 */
+  padding: 10px;
   border-radius: var(--radius-full);
   color: var(--on-surface);
   transition:
