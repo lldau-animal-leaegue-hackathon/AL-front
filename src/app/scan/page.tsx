@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 
 import { PageHeader } from "./components/PageHeader";
 import { ScanWorkspace } from "./components/ScanWorkspace";
-import { ScannerCta } from "./components/ScannerCta";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -16,7 +15,6 @@ export default function ScanPage() {
 
       <main className={styles.main}>
         <ScanWorkspace />
-        <ScannerCta />
       </main>
     </>
   );

@@ -96,7 +96,40 @@
   opacity: 0.6;
 }
 
+.photoRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.camera {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* 12 + 20 + 12 = 44px 터치 타깃 */
+  min-height: 44px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.camera:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.camera:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .file {
+  min-width: 0;
   width: 100%;
   padding: 12px;
   border-radius: var(--radius);

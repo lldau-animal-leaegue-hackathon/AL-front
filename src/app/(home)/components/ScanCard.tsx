@@ -4,7 +4,7 @@ import { Icon } from "@/components/Icon";
 
 import styles from "./ScanCard.module.css";
 
-/** 성분 스캔 진입 카드. 실제 카메라 OCR 화면(/testCamera)으로 보낸다. */
+/** 성분 스캔 진입 카드. 등록 폼이 있는 /scan 으로 보낸다(촬영은 거기서 연다). */
 export function ScanCard() {
   return (
     <section className={styles.section}>

@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 
 import { useProductRegister } from "../hooks/useProductRegister";
+import { CameraCapture } from "./CameraCapture";
 import styles from "./ProductForm.module.css";
 
 /** 검색 결과에서 고른 제품을 폼에 채워 넣을 때 쓴다 */
@@ -31,6 +32,7 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
     prefill?.productCompany ?? "",
   );
   const [file, setFile] = useState<File | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { status, error, saved, shelfCount, register, reset } =
@@ -69,6 +71,18 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
 
   return (
     <section className={styles.section}>
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={(captured) => {
+            setFile(captured);
+            // 파일 인풋과 상태가 어긋나지 않게 비운다 — 표시는 fileName 이 담당한다.
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            setCameraOpen(false);
+          }}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
+
       <div className={styles.intro}>
         <h2 className={styles.heading}>제품 등록</h2>
         <p className={styles.lead}>
@@ -128,15 +142,26 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
           <label className={styles.label} htmlFor={photoId}>
             성분표 사진
           </label>
-          <input
-            id={photoId}
-            ref={fileInputRef}
-            className={styles.file}
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            disabled={working}
-          />
+          <div className={styles.photoRow}>
+            <input
+              id={photoId}
+              ref={fileInputRef}
+              className={styles.file}
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              disabled={working}
+            />
+            <button
+              type="button"
+              className={styles.camera}
+              onClick={() => setCameraOpen(true)}
+              disabled={working}
+            >
+              <Icon name="photo_camera" filled size="sm" />
+              촬영
+            </button>
+          </div>
           {file && <p className={styles.fileName}>{file.name}</p>}
         </div>
 
