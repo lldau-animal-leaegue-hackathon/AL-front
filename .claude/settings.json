@@ -21,23 +21,11 @@
       "Bash(git push:*)",
       "Bash(curl:*)",
       "Bash(wget:*)",
-      "Read(**/.env)",
-      "Read(**/.env.local)",
-      "Read(**/.env.*.local)",
-      "Read(**/.env.development)",
-      "Read(**/.env.production)",
       "Read(**/*firebase*.json)",
       "Read(**/*.keystore)",
       "Read(**/*.jks)",
       "Read(**/*.p12)",
-      "Read(**/*.pem)",
-      "Read(**/application-*.yml)",
-      "Read(**/src/main/resources/**)"
-    ],
-    "additionalDirectories": [
-      "c:\\Work\\animal-league-04-back\\src\\main\\java\\com\\animal_league\\main\\dto",
-      "c:\\Work\\animal-league-04-back\\src\\main\\java\\com\\animal_league\\main\\controller",
-      "c:\\Work\\animal-league-04-back\\src\\main\\java\\com\\animal_league\\main\\entity"
+      "Read(**/*.pem)"
     ]
   }
 }

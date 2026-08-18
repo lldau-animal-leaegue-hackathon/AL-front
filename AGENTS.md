@@ -21,7 +21,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **이름**: al-front (Animal League 프론트엔드)
 - **스택**: Next.js 16 App Router, React 19, TypeScript 5.9, **CSS Modules** (Tailwind 미사용)
 - **Node**: 24 LTS 권장 (`engines`는 Next 최소값인 `>=20.9.0`). **Node 20은 2026-04-30 EOL**
-- **로컬 경로**: 프론트 `C:\Work\AL-front` · 백엔드 `C:\Work\animal-league-04-back` (Spring Boot)
+- **로컬 경로**: `C:\Work\AL-front` — **프론트와 백엔드를 여기서 함께 만든다.**
+  백엔드는 별도 서버가 아니라 **Next.js Route Handler**(`src/app/api/**`)이고,
+  DB는 **새로 구축하는 MariaDB**다(`docs/plans/2026-08-18-server-storage/`).
+  ⚠️ ~~`C:\Work\animal-league-04-back`(Spring)~~ 은 **이 프로젝트와 무관하다.** 참조하지 말 것.
 - **원격**: `github.com/lldau-animal-leaegue-hackathon/AL-front`
 - **도메인**(2026-08-18 확정 — `presentation/SERVICE.md`·`docs/plans/2026-08-18-skincare-core/` 기준):
   **스킨케어 루틴 앱.** 제품 등록(성분표 사진 → AI 성분 추출) · AI 루틴 생성(피부 고민 + 가용 시간 +
@@ -82,9 +85,12 @@ App Router에서 가장 사고가 잦은 지점이다.
 
 ### API 레이어 (`src/api/client.ts`)
 
-- 브라우저는 항상 **같은 오리진 `/api/*`** 로만 호출한다. `next.config.ts`의 `rewrites`가
-  `BACKEND_ORIGIN`으로 프록시하므로 **CORS 설정이 필요 없다.**
-- 이 rewrite는 파일 기반 라우트보다 **나중에** 평가된다 → `src/app/api/foo/route.ts`가 있으면 그쪽이 우선.
+- 브라우저는 항상 **같은 오리진 `/api/*`** 로만 호출한다. **CORS 설정이 필요 없다.**
+- `/api/*` 는 전부 **이 레포의 Route Handler**(`src/app/api/**`)가 처리한다.
+  외부 백엔드로 나가지 않는다.
+- ⚠️ `next.config.ts` 에 `BACKEND_ORIGIN` 프록시(`rewrites`)가 **아직 남아 있지만 쓰지 않는다.**
+  이 rewrite 는 파일 기반 라우트보다 **나중에** 평가되므로 `src/app/api/foo/route.ts` 가 있으면
+  그쪽이 이긴다 — 즉 지금은 사실상 무해하다. 외부 백엔드를 붙일 일이 생기면 그때 되살린다.
 - `api.get/post/put/patch/delete` 헬퍼 사용. 실패 시 `ApiError(status, statusText, body)`를 throw한다.
 
 ### API 호출 컨벤션

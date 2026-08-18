@@ -191,21 +191,23 @@ camelCase 변환·한글화·derived 필드 같은 화면용 변환은 **훅/컴
 프롬프트가 틀린 것 같으면 프론트에서 우회하지 말고 **프롬프트를 고치는 쪽**을 사용자에게 제안한다.
 파싱으로 때우기 시작하면 계약이 무너진다.
 
-## 부록 — Spring 백엔드가 붙는다면
+## 부록 — 이 스킬의 범위 (2026-08-18 갱신)
 
-현재 이 프로젝트는 백엔드를 쓰지 않는다(저장소 localStorage, AI는 자체 Route Handler).
-`animal-league-04-back`은 **계정/점수/상점/채팅 도메인이라 스킨케어와 무관**하다.
+**프론트와 백엔드를 전부 이 레포에서 만든다.** 백엔드는 별도 서버가 아니라
+**Next.js Route Handler**(`src/app/api/**`)이고, 저장소는 **새로 구축하는 MariaDB**다
+(`docs/plans/2026-08-18-server-storage/`).
 
-나중에 백엔드가 붙으면 아래를 되살린다 — 그 레포 실측 지식이라 다시 조사할 필요가 없다.
+> ⚠️ ~~`animal-league-04-back`(Spring)~~ 은 **이 프로젝트와 무관하다.**
+> 계정/점수/상점/채팅 도메인이라 스킨케어와 겹치지 않고, 앞으로 쓰지 않는다.
+> 예전 이 부록에는 그 레포의 DTO 규약이 적혀 있었으나 **되살릴 일이 없어 삭제했다**
+> (필요하면 git 이력에서 찾을 것). 재조사하지 말 것.
 
-- 요청 DTO는 `dto/*.java`(평탄), **응답 클래스는 `controller/<도메인>/res/*.java`** — 두 군데를 다 봐야 한다.
-- 컨트롤러가 `@ApiResponses` + `@ExampleObject`로 실제 JSON 예시를 리터럴로 박아뒀다(지름길).
-- base path가 불규칙하다: `/api/user`(Account), `/api/user/score`, `/api/user/item`(Shop),
-  `/api/user/item/use`(Item), `/api/admin/stats`, **`/api/logs`·`/api/inchecklogs`는 `/api/user` 아래가 아니다.**
-- **같은 DTO가 엔드포인트마다 전송 방식이 다르다** — `LoadUserScoreDto`는 `loadUserScore`에서
-  `@ModelAttribute`(query string), `ItemController`에서 `@RequestBody`(JSON body).
-  메서드 시그니처를 직접 열어 확인해야 한다.
-- 필드 표기가 camelCase/snake_case로 섞여 있다(`score_id` vs `createdIp`). Java 필드명 = JSON 키.
-- 응답이 envelope 없이 bare 배열로 오는 경우가 있다.
-- base path에 이미 `/api`가 있고 `publicEnv.apiBaseUrl` 기본값도 `/api`다 — 두 번 붙이지 말 것.
-- ⚠️ 자격 증명은 열지 않는다 — `src/main/resources/` 전체(특히 `application-*.yml`), 키스토어 등.
+이 스킬이 다루는 계약은 **LLM 응답 하나뿐**이다. 왜 별도 규율이 필요한지가 이 문서의 요지다 —
+컴파일러도 DB 스키마도 계약을 강제해 주지 않기 때문이다.
+
+**DB 행(row)은 이 스킬의 대상이 아니다.** 다만 규율은 같다:
+
+- `as` 캐스팅 금지, `unknown` 으로 받아 좁힌다.
+- 다른 점 하나 — **DB 는 스키마가 계약을 강제한다.** `NOT NULL` 인 컬럼은 실제로 비지 않는다.
+  LLM 응답에는 그런 보장이 없으므로 **런타임 검증의 무게가 다르다.**
+  DB 행 검증까지 이 스킬 수준으로 방어하면 과하다.
