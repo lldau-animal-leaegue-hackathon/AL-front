@@ -42,3 +42,130 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # ── 시크릿 스캔 ──────────────────────────────────────────────────────
+  # .githooks/pre-commit 은 clone 마다 `git config core.hooksPath .githooks` 를
+  # 수동 설정해야 동작하고 --no-verify 로 우회도 된다 — 설치를 잊은 사람에게는
+  # 방어선이 0이다. 여기서 CI 레벨로 한 번 더 막는다. 느려도 되므로 ci 잡과
+  # 분리했다(스캔이 오래 걸려도 빌드 검사 결과를 막지 않는다).
+  #
+  # ⚠️ 아래 정규식은 .githooks/pre-commit 의 패턴을 그대로 복사한 것이다.
+  # 새 도구(gitleaks 등)를 들이지 않고 같은 셸 로직을 재사용하기로 했기 때문에,
+  # 한쪽만 고치면 "훅은 막는데 CI 는 통과" 하는 상태가 된다.
+  # 패턴을 바꿀 때는 반드시 두 파일을 함께 갱신할 것.
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # diff 를 뜨려면 base/이전 커밋이 로컬 히스토리에 있어야 한다.
+          # actions/checkout 기본값은 shallow(fetch-depth: 1)라 그게 없다.
+          fetch-depth: 0
+
+      - name: Scan added lines for secret patterns
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA_PR: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA_PR: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA_PUSH: ${{ github.event.before }}
+          AFTER_SHA_PUSH: ${{ github.sha }}
+        run: |
+          set -u
+
+          fail=0
+
+          # 파일명 + 걸린 규칙 이름만 남긴다. 값(시크릿 본문)은 절대 출력하지
+          # 않는다 — 이 레포는 퍼블릭이라 로그도 퍼블릭이다.
+          report() {
+            echo "::error file=$1::시크릿 패턴 감지 - 규칙: $2"
+            fail=1
+          }
+
+          # 파일 하나(경로 $1)의 내용($2 - 추가된 줄 또는 전체 파일)을
+          # .githooks/pre-commit 과 동일한 5개 규칙으로 검사한다.
+          check_file() {
+            f="$1"
+            content="$2"
+
+            # ── 1) .env 계열 파일명 (허용은 빈 템플릿뿐) ─────────────
+            if printf '%s' "$f" | grep -iE '(^|/)\.env($|\.)|(^|/)env\.(local|development|production|test|staging)($|\.)' |
+              grep -ivE '\.env\.(example|sample|template)$' >/dev/null; then
+              report "$f" ".env 계열 파일"
+            fi
+
+            [ -n "$content" ] || return 0
+
+            # ── 2) API 키·토큰 ────────────────────────────────────────
+            if printf '%s' "$content" | grep -qE 'AKIA[0-9A-Z]{16}|BEGIN [A-Z ]*PRIVATE KEY|sk-ant-[A-Za-z0-9_-]{20}|gh[pousr]_[A-Za-z0-9]{30}|xox[baprs]-[A-Za-z0-9-]{10}|AIza[0-9A-Za-z_-]{30}|eyJ[A-Za-z0-9_-]{20,}\.eyJ'; then
+              report "$f" "API 키·토큰 패턴"
+            fi
+
+            # ── 3) 비밀번호·시크릿 대입 ───────────────────────────────
+            if printf '%s' "$content" |
+              grep -qE '(PASSWORD|PASSWD|SECRET|TOKEN|API_?KEY)[A-Za-z0-9_]*[[:space:]]*[:=][[:space:]]*["'"'"']?[^[:space:]"'"'"'$#{}<>|,]{8,}'; then
+              report "$f" "비밀번호·시크릿 대입 패턴"
+            fi
+
+            # ── 4) 자격 증명이 든 접속 URL ────────────────────────────
+            if printf '%s' "$content" | grep -qE '[a-z][a-z0-9+.-]*://[^:/@[:space:]]+:[^@/[:space:]]+@'; then
+              report "$f" "자격 증명이 든 접속 URL"
+            fi
+
+            # ── 5) 공인 IP (사설·루프백·와일드카드 제외) ──────────────
+            if printf '%s' "$content" | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' |
+              grep -qvE '^(10\.|127\.|0\.0\.0\.0|255\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)'; then
+              report "$f" "공인 IP 로 보이는 주소"
+            fi
+          }
+
+          # ── 검사 범위 결정 ──────────────────────────────────────────
+          # PR: base...head (머지 베이스 기준 — GitHub 의 "Files changed" 탭과
+          #     같은 범위. base 가 그 사이 main 에서 앞서가도 노이즈가 안 낀다).
+          # push: 이전 커밋..현재 커밋.
+          # 범위를 못 구하면(최초 커밋, force-push 로 이전 커밋이 사라진 경우 등)
+          # 실패시키지 않고 전체 추적 파일 스캔으로 폴백한다.
+          MODE="diff"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="$BASE_SHA_PR"
+            HEAD_SHA="$HEAD_SHA_PR"
+            RANGE_OP="..."
+          else
+            BASE_SHA="$BEFORE_SHA_PUSH"
+            HEAD_SHA="$AFTER_SHA_PUSH"
+            RANGE_OP=".."
+          fi
+
+          if [ -z "$BASE_SHA" ] ||
+            [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] ||
+            ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" >/dev/null; then
+            MODE="full"
+          fi
+
+          # .githooks/ 자신은 검사에서 뺀다 — 탐지 패턴이 들어 있어 반드시
+          # 자기 자신에 걸린다(훅 스크립트와 동일한 예외).
+          if [ "$MODE" = "diff" ]; then
+            RANGE="${BASE_SHA}${RANGE_OP}${HEAD_SHA}"
+            echo "diff 범위: $RANGE"
+            while IFS= read -r f; do
+              [ -n "$f" ] && [ -f "$f" ] || continue
+              content=$(git diff -U0 "$RANGE" -- "$f" 2>/dev/null | grep '^+' | grep -v '^+++')
+              check_file "$f" "$content"
+            done < <(git diff --name-only --diff-filter=ACMR "$RANGE" -- . ':!.githooks')
+          else
+            echo "diff 범위를 구할 수 없어 전체 추적 파일을 스캔합니다."
+            while IFS= read -r f; do
+              [ -n "$f" ] && [ -f "$f" ] || continue
+              content=$(cat "$f" 2>/dev/null)
+              check_file "$f" "$content"
+            done < <(git ls-files -- . ':!.githooks')
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            echo "⛔ 시크릿 패턴이 감지됐다. 위 파일에서 해당 내용을 지우고 다시 커밋할 것."
+            exit 1
+          fi
