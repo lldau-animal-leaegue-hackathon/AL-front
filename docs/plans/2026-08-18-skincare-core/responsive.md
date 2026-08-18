@@ -587,7 +587,44 @@ R-Step 3은 **동작 보존 리팩토링**이므로 마친 뒤 `refactor-equival
       **브라우저 실측**: 900px에서 네비 복구(예전 이동 불가 구간), 1440px에서 사이드바 240px·
       헤더/본문 x=240·겹침 0건·링크 48px, 몰입 화면 네비 0개.
       **구현 중 발견·수정**: 몰입 화면에서 사이드바가 없는데도 본문이 240px 밀리는 버그.
-- [ ] R-Step 3 — 매직 넘버 제거 — ~~routine 제외~~ **전체(2026-08-18 위임으로 해제).** routine은 `[routineId]` 경로 기준
+- [~] R-Step 3 — 매직 넘버 제거 — **3/4 완료(미기록분).** 메인 plan의 Step 3 커밋(`720c9d8`)에
+  묻어 들어갔고 여기에 기록되지 않았다. 그 커밋 메시지도 스스로 **"R-Step 3 _일부_"**라고 적었다.
+
+  | 페이지                        | 모바일 기본 | 데스크톱 오버라이드         | 판정                      |
+  | ----------------------------- | ----------- | --------------------------- | ------------------------- |
+  | `(home)`·`routine`·`scan` 3개 | 셸 토큰     | **삭제됨** (또는 원래 없음) | ✅ 완료                   |
+  | `profile`                     | 셸 토큰     | **남아 있음** (L310)        | ❌ 데스크톱만 구 매직넘버 |
+
+  4개 다 루트 셀렉터는 `.main`이고 각 `page.tsx`의 최상위 `<main>`에 실제로 붙는다(대조 확인).
+
+  **잔여 3줄 (2026-08-18 전수 grep — padding·margin·인라인 style·신규 화면 4방향 조사, 4번째 없음):**
+
+  | 파일                                         | 줄    | 현재                                       | 문제                                                                 |
+  | -------------------------------------------- | ----- | ------------------------------------------ | -------------------------------------------------------------------- |
+  | `profile/page.module.css`                    | `310` | `padding: 96px var(--margin-desktop) 40px` | ⚠️ 아래 "실측 심각도" 참조 — 단순 무효화가 아니라 **탭바 가림 위험** |
+  | `routine/[routineId]/[step]/page.module.css` | `8`   | `padding: 8px var(--margin-mobile) 180px`  | 수행 화면 — 애초에 토큰을 채택한 적 없다                             |
+  | `routine/[routineId]/[step]/page.module.css` | `119` | `padding: 8px var(--margin-desktop) 180px` | 위의 데스크톱 짝                                                     |
+
+  **⚠️ `profile:310`의 실측 심각도** — "데스크톱에서 무효"로 뭉뚱그리면 안 된다. 구간별로 다르다:
+
+  | 구간       | pt (88 vs 96) | inline (`clamp` vs 40px) | pb (100 vs 40)                       |
+  | ---------- | ------------- | ------------------------ | ------------------------------------ |
+  | 768–1023px | +8px          | +9.28px (4vw=30.72px)    | **−60px ← 실제 위험**                |
+  | ≥1024px    | +8px          | 일치 (clamp 상한 도달)   | 일치 (`--page-pb`가 40px로 재정의됨) |
+
+  **−60px가 핵심이다.** R-Step 2에서 `BottomNav` 숨김 기준을 768px→**1024px**로 올렸으므로
+  768–1023px 구간에서 탭바는 여전히 `position: fixed`로 떠 있다. 탭바 회피용으로 만든
+  `--page-pb`(100px)가 **정확히 탭바가 살아 있는 구간에서만 40px로 죽는다** → 하단 콘텐츠 가림.
+  홈·루틴·스캔은 `720c9d8`에서 이 오버라이드를 지워 해결했고 **profile만 빠졌다.**
+
+  **범위 밖이지만 같이 봐야 하는 것** — `@deprecated`로 표시한 `--margin-mobile`/`--margin-desktop`을
+  **고정 헤더·푸터가 8줄** 쓴다: `TopAppBar` 2(`:14`,`:67`) · `PageHeader` 2(`:13`,`:42`) ·
+  `RunHeader` 2(`:8`,`:78`) · `StepActions` 2(`:7`,`:88`).
+  _(이 문서는 한때 "6줄"이라 적었으나 나열은 2+2+2+2였다 — 실측 8줄이 맞다. `StepActions:88`은
+  `padding-inline` 축약형이라 `padding:` grep에서 빠진다.)_
+  이들은 페이지 컨테이너가 아니라 자체 좌우 여백이라 R-Step 3의 `--page-pt`/`--page-pb` 대상이 아니다.
+  `--page-inline`으로 옮길지는 R-Step 4에서 그리드와 함께 판단한다.
+
 - [ ] R-Step 4 — 그리드·컨테이너 쿼리 — ~~home만~~ **home + `routine/[routineId]/[step]`**
 - [ ] R-Step 5 — 320px + 가로모드(R6) + 터치타깃(R7 `.subtle`, R7 `.back`) — **전체 해제**
 - [ ] R-Step 6 — 다크 팔레트 (globals.css 중심이라 경계 영향 없음)
@@ -601,6 +638,35 @@ R-Step 3은 **동작 보존 리팩토링**이므로 마친 뒤 `refactor-equival
 - **R7 터치 타깃** — `StepActions.module.css`의 `.subtle`(이전/건너뛰기)이 **24px**다.
   부모 `.secondary`가 `padding: 0 8px`로 수평뿐이고 아이콘도 16px이라 높이를 늘려줄 요소가 없다.
   `min-height: 44px` 추가로 해결. `.primary`는 이미 충분하니 건드릴 필요 없다.
-- **R4 매직 넘버** — `routine/page.module.css`(`88px…120px`)와
-  `routine/[slot]/[step]/page.module.css`(`8px…180px`)를 `--page-pt`/`--page-pb` 토큰으로.
-  토큰은 R-Step 1에서 내가 `globals.css`에 먼저 만들어 둔다 — **가져다 쓰기만 하면 된다.**
+- **R4 매직 넘버** — ~~`routine/page.module.css`(`88px…120px`)와~~ **완료(`720c9d8`)**.
+  `routine/[routineId]/[step]/page.module.css`(`8px…180px`, L8·L119)만 남았다.
+
+  ⚠️ **`--page-pb`를 그대로 쓰면 안 된다** (2026-08-18 적대 검증 CONFIRMED). 이 화면은
+  탭바가 아니라 **`StepActions` 고정 액션바**를 피한다. 근거:
+  - `--page-pb`의 유일한 가변 입력은 `--nav-h`(76px, BottomNav 전용)다. 액션바 높이는 개입하지 않는다.
+  - 이 라우트는 `IMMERSIVE_PATH`에 걸려 **BottomNav가 `null`을 반환**한다(`BottomNav.tsx:15`).
+    즉 회피 대상이 아예 다른 요소다.
+  - `StepActions`는 `position: fixed`이고 `.primary`+`.secondary` 두 줄이 **항상** 렌더된다
+    → 실측 **≈129px + safe-area**. 반면 `--page-pb`는 `<1024px`에서 100px, **`≥1024px`에서 40px**.
+  - 부족분: `<1024px` **약 29px**, `≥1024px` **약 89px**. 액션바는 브레이크포인트와 무관하게
+    항상 떠 있으므로 **넓은 화면일수록 더 많이 가린다.**
+
+  → `globals.css`에 `--step-actions-h`(≈132–136px)를 신설하고
+  `calc(var(--step-actions-h) + env(safe-area-inset-bottom, 0px) + 24px)`로 구성한다.
+  **`--page-pb`의 1024px 축소 규칙(사이드바 전환용)을 여기 적용하지 말 것.**
+  _현재 하드코딩 180px는 필요치 129–163px에 17–51px 여유를 둔 값이라, 지금 당장 깨져 있진 않다._
+  _단 `.primary` 라벨이 2줄로 접히는 경우는 계산에 없다 — 확정 전 `browser-prober`로 실측할 것._
+
+- **R5 꼬리 — `env()` 폴백 누락 2건 → ✅ 수정 완료(2026-08-18).** `globals.css:136-137`이 스스로
+  _"env() 폴백 0px을 반드시 넣는다. 없으면 미지원 브라우저에서 `calc()` 전체가 무효가 되어
+  여백이 통째로 사라진다"_ 라고 적어 뒀는데, **정작 컴포넌트 2곳이 그 규칙을 어기고 있다:**
+
+  | 파일                                        | 줄   | 현재                                       |
+  | ------------------------------------------- | ---- | ------------------------------------------ |
+  | `routine/components/StepActions.module.css` | `7`  | `calc(16px + env(safe-area-inset-bottom))` |
+  | `components/BottomNav/BottomNav.module.css` | `10` | `calc(24px + env(safe-area-inset-bottom))` |
+
+  둘 다 R-Step 1 이전부터 있던 파일이라 토큰 작업 때 함께 고쳐지지 않았다.
+  `CameraCapture`·`SideNav`(신규)와 `--page-pb`는 폴백이 들어가 있었다.
+  → **`, 0px` 추가로 해결.** 지원 브라우저에서는 계산값이 동일하므로 **시각적 변화 0**이고,
+  미지원 브라우저에서만 여백이 살아난다. 재발 방지로 두 파일에 사유 주석을 남겼다.

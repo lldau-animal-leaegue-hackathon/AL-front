@@ -409,29 +409,30 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
 
 ### 신규
 
-| 파일 경로                                                | 작업 요약                                                        |
-| -------------------------------------------------------- | ---------------------------------------------------------------- |
-| `src/types/skincare.ts`                                  | `Product` · `RoutineStep` · `Routine` · `RoutineRun` · `Slot`    |
-| `src/lib/storage/local.ts`                               | localStorage 공통 — 직렬화, 버전 키, quota 예외 처리             |
-| `src/lib/storage/products.ts`                            | 등록 제품 CRUD                                                   |
-| `src/lib/storage/routines.ts`                            | 생성된 루틴 저장/조회                                            |
-| `src/lib/storage/history.ts`                             | 수행 기록 append/list + 진행 중 상태                             |
-| `src/lib/claude/runner.ts`                               | **WatchList 패턴 이식** — Q8의 규칙 5가지 전부                   |
-| `src/lib/claude/parseJson.ts`                            | 펜스·잡텍스트 무시 JSON 추출                                     |
-| `src/lib/prompts/{ingredients,routine,warnings}.ts`      | 프롬프트 3종 (서버 전용 — 클라이언트 import 금지)                |
-| `src/app/api/ai/{ingredients,routine,warnings}/route.ts` | 엔드포인트 3종. `runtime = "nodejs"` 명시                        |
-| `src/api/ai.ts`                                          | 클라이언트 래퍼 (raw 반환)                                       |
-| `src/app/scan/components/ProductForm.tsx`                | 제품명/용량/회사/사진 등록 폼 (+ `.module.css`)                  |
-| `src/app/scan/hooks/useProductRegister.ts`               | 폼 검증 + 성분 추출 호출 + 저장                                  |
-| `src/app/scan/camera/page.tsx`                           | `/testCamera` 이관 — 촬영 → 폼으로 이미지 반환 (+ `.module.css`) |
-| `src/app/routine/new/page.tsx`                           | 루틴 생성 화면 (+ `.module.css`)                                 |
-| `src/app/routine/new/components/*`                       | 고민 입력 · 시간 입력 · 생성 결과 미리보기                       |
-| `src/app/routine/hooks/useRoutineGenerate.ts`            | 루틴 생성 호출 + 저장                                            |
-| `src/app/routine/components/RoutineRunner.tsx`           | 수행 화면 클라이언트 경계 (+ `.module.css`)                      |
-| `src/app/routine/components/StepWarnings.tsx`            | `warning[]` 표시 UI (+ `.module.css`)                            |
-| `src/app/routine/[routineId]/done/page.tsx`              | 루틴 종료 · 기록 저장 (+ `.module.css`)                          |
-| `src/lib/imageResize.ts`                                 | canvas 축소·JPEG 인코딩 (Q7 — `/testCamera` 코드 재사용)         |
-| `src/lib/stepIcon.ts`                                    | 단계명 → Material Symbols 아이콘 매핑 (Q6 폴백)                  |
+| 파일 경로                                                                        | 작업 요약                                                                                   |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `src/types/skincare.ts`                                                          | `Product` · `RoutineStep` · `Routine` · `RoutineRun` · `Slot`                               |
+| `src/lib/storage/local.ts`                                                       | localStorage 공통 — 직렬화, 버전 키, quota 예외 처리                                        |
+| `src/lib/storage/products.ts`                                                    | 등록 제품 CRUD                                                                              |
+| `src/lib/storage/routines.ts`                                                    | 생성된 루틴 저장/조회                                                                       |
+| `src/lib/storage/history.ts`                                                     | 수행 기록 append/list + 진행 중 상태                                                        |
+| `src/lib/claude/runner.ts`                                                       | **WatchList 패턴 이식** — Q8의 규칙 5가지 전부                                              |
+| `src/lib/claude/parseJson.ts`                                                    | 펜스·잡텍스트 무시 JSON 추출                                                                |
+| `src/lib/prompts/{ingredients,routine,warnings}.ts`                              | 프롬프트 3종 (서버 전용 — 클라이언트 import 금지)                                           |
+| `src/app/api/ai/{ingredients,routine,warnings}/route.ts`                         | 엔드포인트 3종. `runtime = "nodejs"` 명시                                                   |
+| `src/api/ai.ts`                                                                  | 클라이언트 래퍼 (raw 반환)                                                                  |
+| `src/app/scan/components/ProductForm.tsx`                                        | 제품명/용량/회사/사진 등록 폼 (+ `.module.css`)                                             |
+| `src/app/scan/hooks/useProductRegister.ts`                                       | 폼 검증 + 성분 추출 호출 + 저장                                                             |
+| ~~`src/app/scan/camera/page.tsx`~~ → `src/app/scan/components/CameraCapture.tsx` | **Step 4에서 라우트 대신 오버레이로 변경.** 촬영 → `onCapture(file)` 콜백 (+ `.module.css`) |
+| `src/app/scan/components/ScanWorkspace.tsx`                                      | **초안에 없던 신규(Step 3).** 검색 → 폼 프리필을 잇는 클라이언트 경계                       |
+| `src/app/routine/new/page.tsx`                                                   | 루틴 생성 화면 (+ `.module.css`)                                                            |
+| `src/app/routine/new/components/*`                                               | 고민 입력 · 시간 입력 · 생성 결과 미리보기                                                  |
+| `src/app/routine/hooks/useRoutineGenerate.ts`                                    | 루틴 생성 호출 + 저장                                                                       |
+| `src/app/routine/components/RoutineRunner.tsx`                                   | 수행 화면 클라이언트 경계 (+ `.module.css`)                                                 |
+| `src/app/routine/components/StepWarnings.tsx`                                    | `warning[]` 표시 UI (+ `.module.css`)                                                       |
+| `src/app/routine/[routineId]/done/page.tsx`                                      | 루틴 종료 · 기록 저장 (+ `.module.css`)                                                     |
+| `src/lib/imageResize.ts`                                                         | canvas 축소·JPEG 인코딩 (Q7 — `/testCamera` 코드 재사용)                                    |
+| `src/lib/stepIcon.ts`                                                            | 단계명 → Material Symbols 아이콘 매핑 (Q6 폴백)                                             |
 
 ### 수정
 
@@ -444,7 +445,8 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
 | `src/app/routine/[routineId]/[step]/page.tsx`    | `generateStaticParams` 제거, `RoutineRunner`로 위임                                                                                  |
 | `src/app/routine/components/StepActions.tsx`     | 마지막 단계 → `/routine/[routineId]/done`으로                                                                                        |
 | `src/app/scan/page.tsx`                          | 등록 폼 + 검색 병행 배치 (Q4)                                                                                                        |
-| `src/app/scan/components/ScannerCta.tsx`         | 링크 `/testCamera` → `/scan/camera`                                                                                                  |
+| ~~`src/app/scan/components/ScannerCta.tsx`~~     | **삭제됨** — 촬영이 오버레이가 되면서 진입점이 `ProductForm` 안으로 흡수됐다 (아래 삭제 표)                                          |
+| `src/app/(home)/components/ScanCard.tsx`         | Step 4에서 링크 `/testCamera` → `/scan`으로 갱신                                                                                     |
 | `src/app/scan/components/ProductCard.tsx`        | 검색 결과 선택 → 등록 폼 프리필                                                                                                      |
 | `src/app/profile/page.tsx`                       | 목업 → 실데이터 (Q9 표 참조). 기록 섹션 추가                                                                                         |
 | `src/app/(home)/page.tsx`                        | 하드코딩 상수 → 실데이터 (Q9 표 참조)                                                                                                |
@@ -458,11 +460,12 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
 
 ### 삭제
 
-| 파일 경로                          | 사유                                                      |
-| ---------------------------------- | --------------------------------------------------------- |
-| `src/app/testCamera/`              | `/scan/camera`로 이관                                     |
-| `src/api/search.ts`                | **죽은 코드 51줄.** 호출처 0건, 네이버 API 신규 등록 불가 |
-| `src/app/api/search/shop/route.ts` | **죽은 코드 70줄.** 위와 같은 이유 (Q-ponytail 결정)      |
+| 파일 경로                                   | 사유                                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| ✅ `src/app/testCamera/`                    | `CameraCapture` 오버레이로 이관 (Step 4, `12f6b89`)                        |
+| ✅ `src/app/scan/components/ScannerCta.tsx` | **초안에 없던 삭제.** 촬영 진입점이 `ProductForm` 안으로 들어가 불필요해짐 |
+| ✅ `src/api/search.ts`                      | **죽은 코드 51줄.** 호출처 0건, 네이버 API 신규 등록 불가 (Step 0)         |
+| ✅ `src/app/api/search/shop/route.ts`       | **죽은 코드 70줄.** 위와 같은 이유 (Q-ponytail 결정)                       |
 
 > Q9에서 "전부 유지"로 확정됐으므로 홈·프로필 컴포넌트 **삭제는 없다.**
 
@@ -484,8 +487,9 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
   ③ `--allowedTools Read`로 이미지가 실제로 읽히는지 ④ 세션 트랜스크립트 삭제가 동작하는지.
 - **Step 3** — `/scan` 등록 폼 → 성분 추출 → 저장. 카메라는 아직 기존 `/testCamera` 사용.
   _여기서 처음으로 "제품 등록" 플로우가 끝까지 돈다._
-- **Step 4** — `/scan/camera` 이관, `src/lib/imageResize.ts` 분리, `tesseract.js` 제거,
-  촬영 이미지 → 폼 연결(원본은 AI로, 썸네일은 저장).
+  _(실제로는 `imageResize.ts`도 여기서 함께 나왔다 — 파일 선택 등록에 이미 썸네일이 필요했다.)_
+- **Step 4** — 촬영을 **오버레이 `CameraCapture`로 이관**(계획의 `/scan/camera` 라우트 대신),
+  `tesseract.js` 제거, 촬영 이미지 → 폼 연결(원본은 AI로, 썸네일은 저장).
 - **Step 5** — `/routine/new` 루틴 생성 → 저장.
 - **Step 6** — `/routine` + `/routine/[routineId]/[step]`를 저장된 루틴으로 구동.
   `ROUTINES` 시드 제거, `generateStaticParams` 제거, `RoutineRunner` 도입, `warning[]` UI 추가.
@@ -520,8 +524,10 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
   (구 `backend-dto-check`는 대상 없음 — 저장소가 localStorage, 백엔드 호출 없음.)
 - **수동 확인 (dev 서버)**
   1. `/scan` → 제품명만 입력하고 등록 → 성분이 채워지는지. Network에서 `POST /api/ai/ingredients` 확인.
-  2. `/scan/camera` → 성분표 촬영 → 폼으로 돌아오는지. 카메라 권한 프롬프트가 뜨는지
+  2. `/scan` → 폼의 촬영 버튼 → **오버레이**에서 성분표 촬영 → 폼으로 돌아오는지.
+     카메라 권한 프롬프트가 뜨는지
      (`next.config.ts`의 `Permissions-Policy: camera=(self)` — `camera=()`면 허용해도 `NotAllowedError`).
+     오버레이를 닫은 뒤 **카메라 표시등이 꺼지는지**(트랙 정리) — 라우트 이탈이 없어 cleanup이 유일한 해제 경로다.
   3. `/routine/new` → 고민·시간 입력 → 아침/저녁 루틴 생성.
      `estimated_time` 합이 입력한 시간을 넘지 않는지 (프롬프트 규칙 2 검증).
      `how_to_use`가 **배열**로 오는지 (Q5 검증).
@@ -555,14 +561,14 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
       `env.ts` getter 2개, `.env.example` 키 2줄, `products.ts` 거짓 주석), AGENTS.md 도메인
       스킨케어로 교체 + SSE 줄 정정, clova-ocr plan 폐기 배너, 팀원 `presentation/*.md` 포맷.
       검증: `npm run check` + `npm run build` 통과 — 빌드 라우트 표에서 `/api/search/shop` 소멸,
-      `[routineId]` 25경로 정상. 커밋: 대기.
+      `[routineId]` 25경로 정상. 커밋: `5dca62a`.
       **잔여**: 노션 기획서의 `how_to_use: string[]` 갱신(Q5)은 **사용자 작업** — 코드 쪽 정본은
       Step 2에서 `src/lib/prompts/routine.ts`로 들어간다.
 - [x] Step 1 — 완료 2026-08-18. 신규 5파일(`src/types/skincare.ts` + `src/lib/storage/{local,products,routines,history}.ts`).
       **소비처 0건 = 순수 추가**(grep 확인). 검증: `npm run check` + `npm run build` 통과,
       `localStorage` 접근이 전부 함수 내부라 SSR `ReferenceError` 없음(모듈 스코프 0건 grep 확인).
-      ⚠️ **런타임은 미검증** — import 하는 화면이 아직 없다. 실제 동작은 Step 3(등록 폼)에서 처음 확인된다.
-      커밋: 대기.
+      ⚠️ ~~**런타임은 미검증**~~ → **Step 3에서 검증됨**(등록 폼이 `addProduct`·`listProducts`를 실제로 쓴다).
+      커밋: `abf48c0`.
 
   **머지(db9eaed) 반영으로 초안에서 바뀐 설계 3가지:**
   - `Routine`은 **time 당 1벌**이다(팀원 모델). 초안의 `{ am: [], pm: [] }` 한 덩어리 구조는 폐기.
@@ -574,7 +580,7 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
 
 - [x] Step 2 — 완료 2026-08-18. 신규 9파일(`src/lib/claude/{runner,parseJson}.ts` +
       `src/lib/prompts/{ingredients,routine,warnings}.ts` + `src/app/api/ai/*/route.ts` 3종 + `src/api/ai.ts`),
-      `env.ts`에 `claudeBin`·`.env.example`에 경고 추가. 커밋: 대기.
+      `env.ts`에 `claudeBin`·`.env.example`에 경고 추가. 커밋: `2e28468`.
 
   **착수 전 CLI 실측 4가지 — 전부 확인됨:**
   - ① stdin 프롬프트 전달 **가능** → argv 상한(32,767자) 회피. runner가 stdin을 쓴다.
@@ -604,8 +610,29 @@ localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든
   - **정리 확인**: 임시 이미지 파일 누수 0건, 세션 트랜스크립트 삭제됨.
   - ⚠️ 루틴 생성이 **91초** 걸린다. Step 5 화면에는 **진행 표시가 반드시 필요**하다.
 
-- [ ] Step 3 — 제품 등록 폼
-- [ ] Step 4 — 카메라 이관 + tesseract 제거
+- [x] Step 3 — 완료 2026-08-18. 커밋 `720c9d8`. 등록 폼 → AI 성분 추출 → localStorage 저장이
+      **끝까지 도는 첫 플로우.** 신규 `ProductForm`·`useProductRegister`·`ScanWorkspace`·`imageResize.ts`.
+
+  **초안에서 바뀐 것 1가지:**
+  - **`ScanWorkspace` 신설**(계획에 없던 파일). 검색 카드를 고르면 폼을 프리필해야 하는데(Q4),
+    `page.tsx`를 통째로 클라이언트로 만들면 `PageHeader`까지 딸려 온다. 두 컴포넌트를 잇는
+    조각만 `"use client"`로 떼어 **경계를 leaf에 유지**했다.
+  - 프리필은 `key` 증가로 `ProductForm`을 리마운트해 넣는다 — prop→state 동기화 effect를 피했고,
+    **같은 카드를 다시 눌러도 폼이 초기화**된다.
+
+- [x] Step 4 — 완료 2026-08-18. 커밋 `12f6b89`. 촬영 이관 + `tesseract.js` 제거(−470줄).
+      `/testCamera/`와 `ScannerCta` 삭제, `ScanCard` 링크 갱신.
+
+  **⚠️ 설계 변경 — 별도 라우트가 아니라 오버레이다:**
+  - 계획서는 `src/app/scan/camera/page.tsx`(신규 라우트)였으나 실제 구현은
+    **`/scan` 안의 오버레이 컴포넌트 `CameraCapture.tsx`**다.
+  - 이유: 라우트로 두면 촬영 이미지를 폼으로 되돌릴 경로(`sessionStorage` 등)가 따로 필요하다.
+    오버레이는 `onCapture(file)` 콜백으로 바로 넘긴다. **라우트가 늘지 않아 `typedRoutes` 부담도 없다.**
+  - 따라서 `ScannerCta.tsx`(−114줄 CSS 포함)는 **삭제**됐다 — 계획서 삭제 표에 없던 항목이다.
+  - Esc 키 닫기를 직접 붙였다. 오버레이라 브라우저 뒤로가기가 닫아 주지 않는다.
+  - tesseract 전처리(워커·PSM·그레이스케일·3배 업스케일)는 **전부 제거**했다.
+    업스케일은 tesseract 전용 최적화였고 멀티모달은 원본 해상도를 선호한다(Q3).
+
 - [ ] Step 5 — 루틴 생성 — ~~보류~~ **해제(2026-08-18, 위임).** 프롬프트 1벌 → `Routine` 2개 매핑
 - [ ] Step 6 — 루틴 수행 실데이터화 — ~~보류~~ **해제(동상).** `[routineId]` 기준
 - [ ] Step 7 — 기록 저장 + 프로필 — 전체 진행 (`/routine/[routineId]/done` 포함)
