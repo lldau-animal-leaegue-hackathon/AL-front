@@ -6,6 +6,8 @@
  * argv 상한(32,767자)에 걸리지 않는다.
  */
 
+import { acquire, release } from "@/lib/ai/guard";
+import { currentUserId } from "@/lib/auth/anonUser";
 import { isStringArray, parseJsonObject } from "@/lib/claude/parseJson";
 import { runClaude } from "@/lib/claude/runner";
 import {
@@ -16,6 +18,9 @@ import {
 export const runtime = "nodejs";
 
 const TIMEOUT_MS = 600_000;
+
+/** 텍스트뿐인 본문이라 이미지가 실리는 ingredients 보다 훨씬 작게 잡는다. */
+const MAX_BODY_BYTES = 256 * 1024;
 
 /** 프롬프트 출력의 단계 1개 (snake_case 그대로 — 변환은 화면 단에서) */
 type RawStep = {
@@ -112,67 +117,101 @@ function narrowProducts(value: unknown): RoutineProductInput[] {
 }
 
 export async function POST(request: Request) {
-  let body: Body;
-  try {
-    body = (await request.json()) as Body;
-  } catch {
-    return Response.json({ message: "JSON 본문이 아닙니다." }, { status: 400 });
-  }
-
-  const wonder = typeof body.wonder === "string" ? body.wonder.trim() : "";
-  if (!wonder) {
-    return Response.json({ message: "wonder 는 필수입니다." }, { status: 400 });
-  }
-
-  const time = (body.usableTime ?? {}) as Record<string, unknown>;
-  const morning = typeof time.morning === "string" ? time.morning : "";
-  const evening = typeof time.evening === "string" ? time.evening : "";
-  if (!morning || !evening) {
+  // 사용자당 동시 1건. 루틴 생성은 90초짜리 claude 프로세스라 특히 중복 실행 비용이 크다.
+  const userId = await currentUserId();
+  if (!acquire(userId)) {
     return Response.json(
-      { message: "usableTime.morning 과 usableTime.evening 이 필요합니다." },
-      { status: 400 },
-    );
-  }
-
-  const products = narrowProducts(body.products);
-  if (products.length === 0) {
-    return Response.json(
-      { message: "등록된 제품이 없어 루틴을 만들 수 없습니다." },
-      { status: 400 },
+      { message: "이미 처리 중인 요청이 있습니다. 완료 후 다시 시도해 주세요." },
+      { status: 429 },
     );
   }
 
   try {
-    const raw = await runClaude(
-      buildRoutinePrompt({
-        wonder,
-        usableTime: { morning, evening },
-        products,
-      }),
-      { timeoutMs: TIMEOUT_MS },
-    );
-
-    const parsed = parseJsonObject(raw) as Record<string, unknown>;
-    const morningSteps = narrowSteps(parsed.morning);
-    const eveningSteps = narrowSteps(parsed.evening);
-
-    if (morningSteps.length === 0 && eveningSteps.length === 0) {
+    // content-length 가 없는 요청은 검사 없이 통과시킨다(흔치 않고, 다른 방어가 남아 있다).
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
       return Response.json(
-        { message: "AI 가 루틴을 만들지 못했습니다.", raw: raw.slice(0, 500) },
-        { status: 502 },
+        { message: "요청 본문이 너무 큽니다(최대 256KB)." },
+        { status: 413 },
       );
     }
 
-    const known = new Set(
-      products.map((product) => product.productName.trim()),
-    );
-    warnOnRuleViolations(morningSteps, "morning", known);
-    warnOnRuleViolations(eveningSteps, "evening", known);
+    let body: Body;
+    try {
+      body = (await request.json()) as Body;
+    } catch {
+      return Response.json(
+        { message: "JSON 본문이 아닙니다." },
+        { status: 400 },
+      );
+    }
 
-    return Response.json({ morning: morningSteps, evening: eveningSteps });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[api/ai/routine]", message);
-    return Response.json({ message }, { status: 502 });
+    const wonder = typeof body.wonder === "string" ? body.wonder.trim() : "";
+    if (!wonder) {
+      return Response.json(
+        { message: "wonder 는 필수입니다." },
+        { status: 400 },
+      );
+    }
+
+    const time = (body.usableTime ?? {}) as Record<string, unknown>;
+    const morning = typeof time.morning === "string" ? time.morning : "";
+    const evening = typeof time.evening === "string" ? time.evening : "";
+    if (!morning || !evening) {
+      return Response.json(
+        { message: "usableTime.morning 과 usableTime.evening 이 필요합니다." },
+        { status: 400 },
+      );
+    }
+
+    const products = narrowProducts(body.products);
+    if (products.length === 0) {
+      return Response.json(
+        { message: "등록된 제품이 없어 루틴을 만들 수 없습니다." },
+        { status: 400 },
+      );
+    }
+
+    try {
+      const raw = await runClaude(
+        buildRoutinePrompt({
+          wonder,
+          usableTime: { morning, evening },
+          products,
+        }),
+        { timeoutMs: TIMEOUT_MS },
+      );
+
+      const parsed = parseJsonObject(raw) as Record<string, unknown>;
+      const morningSteps = narrowSteps(parsed.morning);
+      const eveningSteps = narrowSteps(parsed.evening);
+
+      if (morningSteps.length === 0 && eveningSteps.length === 0) {
+        // AI 응답 원문은 응답 본문이 아니라 로그로만 남긴다.
+        console.error("[api/ai/routine] 루틴 생성 실패:", raw.slice(0, 500));
+        return Response.json(
+          { message: "AI 가 루틴을 만들지 못했습니다." },
+          { status: 502 },
+        );
+      }
+
+      const known = new Set(
+        products.map((product) => product.productName.trim()),
+      );
+      warnOnRuleViolations(morningSteps, "morning", known);
+      warnOnRuleViolations(eveningSteps, "evening", known);
+
+      return Response.json({ morning: morningSteps, evening: eveningSteps });
+    } catch (error: unknown) {
+      // claude CLI 의 stderr·서버 절대 경로가 섞여 나올 수 있어 상세는 로그로만 남긴다.
+      console.error("[api/ai/routine]", error);
+      return Response.json(
+        { message: "루틴 생성에 실패했습니다. 잠시 후 다시 시도해 주세요." },
+        { status: 502 },
+      );
+    }
+  } finally {
+    // 예외·타임아웃으로 새면 이 사용자는 영영 AI 를 못 쓰게 되므로 반드시 여기서 푼다.
+    release(userId);
   }
 }

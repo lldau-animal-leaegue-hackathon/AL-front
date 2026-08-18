@@ -12,6 +12,8 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { acquire, release } from "@/lib/ai/guard";
+import { currentUserId } from "@/lib/auth/anonUser";
 import { isStringArray, parseJsonObject } from "@/lib/claude/parseJson";
 import { runClaude } from "@/lib/claude/runner";
 import { buildIngredientsPrompt } from "@/lib/prompts/ingredients";
@@ -21,6 +23,9 @@ export const runtime = "nodejs";
 
 /** 이미지 인식은 텍스트만 다루는 호출보다 오래 걸린다(WatchList 기준 300초). */
 const TIMEOUT_MS = 300_000;
+
+/** 이미지 data URL 이 실려 다른 두 AI 엔드포인트보다 훨씬 크다. */
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
 type Body = {
   productName?: unknown;
@@ -43,89 +48,123 @@ function decodeDataUrl(
 }
 
 export async function POST(request: Request) {
-  let body: Body;
-  try {
-    body = (await request.json()) as Body;
-  } catch {
-    return Response.json({ message: "JSON 본문이 아닙니다." }, { status: 400 });
-  }
-
-  const productName =
-    typeof body.productName === "string" ? body.productName.trim() : "";
-  if (!productName) {
+  // 사용자당 동시 1건. claude 프로세스 1개가 뜨는 비용이라 중복 실행을 막는다.
+  const userId = await currentUserId();
+  if (!acquire(userId)) {
     return Response.json(
-      { message: "productName 은 필수입니다." },
-      { status: 400 },
+      { message: "이미 처리 중인 요청이 있습니다. 완료 후 다시 시도해 주세요." },
+      { status: 429 },
     );
   }
 
-  const capacity =
-    typeof body.capacity === "string" ? body.capacity : undefined;
-  const productCompany =
-    typeof body.productCompany === "string" ? body.productCompany : undefined;
-
-  let workdir: string | null = null;
-  let imagePath: string | undefined;
-
   try {
-    if (typeof body.productImg === "string" && body.productImg.length > 0) {
-      const decoded = decodeDataUrl(body.productImg);
-      if (!decoded) {
-        return Response.json(
-          { message: "productImg 는 image data URL 이어야 합니다." },
-          { status: 400 },
-        );
-      }
-      workdir = await mkdtemp(join(tmpdir(), "al-ocr-"));
-      imagePath = join(workdir, `label.${decoded.extension}`);
-      await writeFile(imagePath, decoded.bytes);
-    }
-
-    const prompt = buildIngredientsPrompt({
-      productName,
-      capacity,
-      productCompany,
-      imagePath,
-    });
-
-    const raw = await runClaude(prompt, {
-      // 이미지가 없으면 도구를 주지 않는다 — 불필요한 권한을 열지 않는다.
-      allowedTools: imagePath ? ["Read"] : [],
-      timeoutMs: TIMEOUT_MS,
-      cleanupSession: Boolean(imagePath),
-    });
-
-    const parsed = parseJsonObject(raw) as Record<string, unknown>;
-
-    // LLM 은 스키마를 보장하지 않는다. 프론트로 내보내기 전에 서버에서 좁힌다.
-    if (!isStringArray(parsed.ingredients)) {
+    // content-length 가 없는 요청(예: 청크 전송)은 검사 없이 통과시킨다 —
+    // 상한을 강제하지 못하는 유일한 경로이지만, 흔치 않고 다른 방어(가드·타임아웃)가 남아 있다.
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
       return Response.json(
-        {
-          message: "AI 응답에 ingredients 배열이 없습니다.",
-          raw: raw.slice(0, 500),
-        },
-        { status: 502 },
+        { message: "요청 본문이 너무 큽니다(최대 8MB)." },
+        { status: 413 },
       );
     }
 
-    // ⚠️ 빈 배열은 실패가 아니라 정상 응답이다(프롬프트 규칙 2: 확신 없으면 []).
-    //    여기서 에러로 바꾸면 "성분을 지어내지 않는다"는 설계를 정면으로 위배한다.
-    return Response.json({
-      product_name:
-        typeof parsed.product_name === "string"
-          ? parsed.product_name
-          : productName,
-      category:
-        typeof parsed.category === "string" ? parsed.category : "미분류",
-      ingredients: parsed.ingredients,
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[api/ai/ingredients]", message);
-    return Response.json({ message }, { status: 502 });
+    let body: Body;
+    try {
+      body = (await request.json()) as Body;
+    } catch {
+      return Response.json(
+        { message: "JSON 본문이 아닙니다." },
+        { status: 400 },
+      );
+    }
+
+    const productName =
+      typeof body.productName === "string" ? body.productName.trim() : "";
+    if (!productName) {
+      return Response.json(
+        { message: "productName 은 필수입니다." },
+        { status: 400 },
+      );
+    }
+
+    const capacity =
+      typeof body.capacity === "string" ? body.capacity : undefined;
+    const productCompany =
+      typeof body.productCompany === "string"
+        ? body.productCompany
+        : undefined;
+
+    let workdir: string | null = null;
+    let imagePath: string | undefined;
+
+    try {
+      if (typeof body.productImg === "string" && body.productImg.length > 0) {
+        const decoded = decodeDataUrl(body.productImg);
+        if (!decoded) {
+          return Response.json(
+            { message: "productImg 는 image data URL 이어야 합니다." },
+            { status: 400 },
+          );
+        }
+        workdir = await mkdtemp(join(tmpdir(), "al-ocr-"));
+        imagePath = join(workdir, `label.${decoded.extension}`);
+        await writeFile(imagePath, decoded.bytes);
+      }
+
+      const prompt = buildIngredientsPrompt({
+        productName,
+        capacity,
+        productCompany,
+        imagePath,
+      });
+
+      const raw = await runClaude(prompt, {
+        // 이미지가 없으면 도구를 주지 않는다 — 불필요한 권한을 열지 않는다.
+        allowedTools: imagePath ? ["Read"] : [],
+        timeoutMs: TIMEOUT_MS,
+        cleanupSession: Boolean(imagePath),
+      });
+
+      const parsed = parseJsonObject(raw) as Record<string, unknown>;
+
+      // LLM 은 스키마를 보장하지 않는다. 프론트로 내보내기 전에 서버에서 좁힌다.
+      if (!isStringArray(parsed.ingredients)) {
+        // AI 응답 원문은 응답 본문이 아니라 로그로만 남긴다(공개 서비스에 내부 응답을 노출하지 않는다).
+        console.error(
+          "[api/ai/ingredients] ingredients 배열 없음:",
+          raw.slice(0, 500),
+        );
+        return Response.json(
+          { message: "AI 응답에 ingredients 배열이 없습니다." },
+          { status: 502 },
+        );
+      }
+
+      // ⚠️ 빈 배열은 실패가 아니라 정상 응답이다(프롬프트 규칙 2: 확신 없으면 []).
+      //    여기서 에러로 바꾸면 "성분을 지어내지 않는다"는 설계를 정면으로 위배한다.
+      return Response.json({
+        product_name:
+          typeof parsed.product_name === "string"
+            ? parsed.product_name
+            : productName,
+        category:
+          typeof parsed.category === "string" ? parsed.category : "미분류",
+        ingredients: parsed.ingredients,
+      });
+    } catch (error: unknown) {
+      // claude CLI 의 stderr·서버 절대 경로가 섞여 나올 수 있어 상세는 로그로만 남긴다.
+      console.error("[api/ai/ingredients]", error);
+      return Response.json(
+        { message: "성분 추출에 실패했습니다. 잠시 후 다시 시도해 주세요." },
+        { status: 502 },
+      );
+    } finally {
+      // 성분표 사진이 서버에 남지 않게 한다. 실패해도 본 응답을 막지 않는다.
+      if (workdir)
+        await rm(workdir, { recursive: true, force: true }).catch(() => {});
+    }
   } finally {
-    // 성분표 사진이 서버에 남지 않게 한다. 실패해도 본 응답을 막지 않는다.
-    if (workdir)
-      await rm(workdir, { recursive: true, force: true }).catch(() => {});
+    // 예외·타임아웃으로 새면 이 사용자는 영영 AI 를 못 쓰게 되므로 반드시 여기서 푼다.
+    release(userId);
   }
 }
