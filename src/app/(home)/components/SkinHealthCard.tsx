@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 import { weeklyAchievement } from "@/lib/achievement";
-import { RUNS_KEY } from "@/lib/storage/history";
-import { ROUTINES_KEY } from "@/lib/storage/routines";
-import { useStored } from "@/lib/storage/useStored";
-import type { Routine, RoutineRun } from "@/types/skincare";
+import { useRoutines, useRuns } from "@/lib/data";
 
 import card from "./card.module.css";
 import styles from "./SkinHealthCard.module.css";
@@ -15,10 +13,6 @@ import styles from "./SkinHealthCard.module.css";
 // 게이지 원 둘레 (r=40) — stroke-dasharray 계산에 쓴다
 const RADIUS = 40;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
-/** 인라인 `[]` 는 매 렌더 새 배열이라 useStored 의 memo 를 무력화한다. */
-const NO_ROUTINES: Routine[] = [];
-const NO_RUNS: RoutineRun[] = [];
 
 function summaryText(percent: number): string {
   if (percent >= 80) return "정말 잘하고 있어요! 이대로만 이어가 보세요.";
@@ -53,17 +47,29 @@ function deltaInfo(delta: number | null): { icon: string; text: string } {
  * 저장소만 읽어 넘기고, 표시만 담당한다.
  */
 export function SkinHealthCard() {
-  const { ready, value: routines } = useStored<Routine[]>(
-    ROUTINES_KEY,
-    NO_ROUTINES,
+  const routinesRes = useRoutines();
+  const runsRes = useRuns();
+
+  // 달성률은 루틴과 기록이 **둘 다** 있어야 계산된다. 하나라도 덜 왔으면 아직 모른다.
+  if (!routinesRes.ready || !runsRes.ready)
+    return <DataState loading label="달성률" />;
+
+  if (routinesRes.error || runsRes.error)
+    return (
+      <DataState
+        error
+        label="달성률"
+        onRetry={() => {
+          routinesRes.retry();
+          runsRes.retry();
+        }}
+      />
+    );
+
+  const { percent, delta, hasRuns } = weeklyAchievement(
+    runsRes.value,
+    routinesRes.value,
   );
-  const { value: runs } = useStored<RoutineRun[]>(RUNS_KEY, NO_RUNS);
-
-  // 서버 렌더 단계에서는 저장소를 모른다. 여기서 "없음"을 그리면
-  // 빈 상태가 한 번 깜빡였다가 사라진다.
-  if (!ready) return null;
-
-  const { percent, delta, hasRuns } = weeklyAchievement(runs, routines);
 
   // 루틴이 아직 없어 예정 단계가 0 — 달성률을 계산할 수 없다.
   if (percent === null) {

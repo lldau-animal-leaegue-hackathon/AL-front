@@ -4,9 +4,7 @@ import { useCallback, useState } from "react";
 
 import { generateRoutine, type RoutineStepResponse } from "@/api/ai";
 import { ApiError } from "@/api/client";
-import { newId } from "@/lib/storage/local";
-import { listProducts } from "@/lib/storage/products";
-import { saveRoutines, saveSkinProfile } from "@/lib/storage/routines";
+import { saveProfile, saveRoutines, useProducts } from "@/lib/data";
 import type { Routine, RoutineStep, RoutineTime } from "@/types/skincare";
 
 import { TIME_LABEL, totalMinutes } from "../routineTime";
@@ -20,15 +18,31 @@ export type GenerateInput = {
 };
 
 /**
+ * 결과 화면용 임시 id. 서버가 저장 시점에 진짜 id 를 만들고 이 값은 무시한다.
+ *
+ * ⚠️ `crypto.randomUUID` 는 **보안 컨텍스트(HTTPS·localhost)에서만** 존재한다.
+ *    TLS 없이 배포하면 없으므로 폴백이 필요하다 — 여기서 던지면 90초 걸린 생성 결과가
+ *    화면에 그려지지 않는다.
+ */
+function tempId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
  * 응답 단계(snake_case) → 프론트 모델(camelCase).
  *
- * `id` 는 LLM 출력에 없다 — 수행 기록(`RoutineRun.completedStepIds`)이 단계를 가리키려면
- * 필요하므로 저장 시점에 만든다. 배열 인덱스를 쓰지 않는 이유는 나중에 루틴을
- * 재생성하면 같은 인덱스가 다른 단계를 뜻하게 되기 때문이다.
+ * `id` 는 LLM 출력에 없다. 서버가 저장 시점에 진짜 id 를 새로 만들지만(서버는 이 값을
+ * 무시한다), 저장 응답이 없어 생성 직후 결과 화면(`saved`)은 이 값으로 그린다 —
+ * `Routine`/`RoutineStep` 타입이 `id` 를 필수로 두고 React key 로도 쓰이기 때문이다.
+ * 배열 인덱스를 쓰지 않는 이유는 나중에 루틴을 재생성하면 같은 인덱스가 다른 단계를
+ * 뜻하게 되기 때문이다.
  */
 function toStep(raw: RoutineStepResponse): RoutineStep {
   return {
-    id: newId(),
+    id: tempId(),
     routineName: raw.routine_name,
     estimatedTime: raw.estimated_time,
     usingProduct: raw.using_product,
@@ -54,7 +68,7 @@ function toRoutine(raws: RoutineStepResponse[], time: RoutineTime): Routine {
   const minutes = totalMinutes(steps);
 
   return {
-    id: newId(),
+    id: tempId(),
     name: `${TIME_LABEL[time]} 루틴`,
     condition: "평소",
     time,
@@ -63,12 +77,12 @@ function toRoutine(raws: RoutineStepResponse[], time: RoutineTime): Routine {
         ? `${steps.length}단계`
         : `${steps.length}단계 · 약 ${minutes}분`,
     steps,
-    createdAt: new Date().toISOString(),
+    // createdAt 은 optional 이다. 서버가 저장 시점에 진짜 값을 만들므로 여기서 지어내지 않는다.
   };
 }
 
 /**
- * 루틴 생성 — AI 호출 → 저장(localStorage) 한 흐름.
+ * 루틴 생성 — AI 호출 → 서버 저장 한 흐름.
  *
  * ⚠️ 실측 약 90초 걸린다. 화면은 반드시 진행 표시를 해야 한다.
  */
@@ -76,24 +90,42 @@ export function useRoutineGenerate() {
   const [status, setStatus] = useState<GenerateStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<Routine[]>([]);
+  /*
+   * 선반은 서버에서 온다. 예전에는 `listProducts()` 를 콜백 안에서 동기로 읽었지만
+   * 네트워크가 끼면서 **아직 안 온 상태와 진짜 빈 선반을 구분**해야 한다 —
+   * 안 하면 로딩 중에 누른 사용자에게 "제품이 없어요"라고 잘못 안내한다.
+   */
+  const products = useProducts();
 
-  const generate = useCallback(async (input: GenerateInput) => {
-    const wonder = input.wonder.trim();
-    if (!wonder) {
-      setStatus("error");
-      setError("피부 고민을 입력해 주세요.");
-      return;
-    }
+  const generate = useCallback(
+    async (input: GenerateInput) => {
+      const wonder = input.wonder.trim();
+      if (!wonder) {
+        setStatus("error");
+        setError("피부 고민을 입력해 주세요.");
+        return;
+      }
 
-    // 제품이 없으면 서버도 400 을 준다. 왕복하기 전에 여기서 막고 다음 행동을 안내한다.
-    const products = listProducts();
-    if (products.length === 0) {
-      setStatus("error");
-      setError("등록된 제품이 없어요. 먼저 내 선반에 제품을 담아 주세요.");
-      return;
-    }
+      if (!products.ready) {
+        setStatus("error");
+        setError("제품 목록을 불러오는 중이에요. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+      if (products.error) {
+        setStatus("error");
+        setError("제품 목록을 불러오지 못했어요. 연결을 확인해 주세요.");
+        return;
+      }
 
-    setStatus("working");
+      // 제품이 없으면 서버도 400 을 준다. 왕복하기 전에 여기서 막고 다음 행동을 안내한다.
+      const items = products.value;
+      if (items.length === 0) {
+        setStatus("error");
+        setError("등록된 제품이 없어요. 먼저 내 선반에 제품을 담아 주세요.");
+        return;
+      }
+
+      setStatus("working");
     setError(null);
     setSaved([]);
 
@@ -102,7 +134,7 @@ export function useRoutineGenerate() {
         wonder,
         usableTime: input.usableTime,
         // 프롬프트 입력에 필요한 3개만 보낸다 — 썸네일까지 실으면 프롬프트가 불필요하게 커진다.
-        products: products.map((product) => ({
+        products: items.map((product) => ({
           productName: product.productName,
           category: product.category,
           ingredients: product.ingredients,
@@ -121,18 +153,10 @@ export function useRoutineGenerate() {
         return;
       }
 
-      // 저장 실패(대개 용량 초과)를 성공한 척하면 사용자는 저장된 줄 안다.
-      if (!saveRoutines(routines)) {
-        setStatus("error");
-        setError(
-          "저장 공간이 부족해 루틴을 담지 못했어요. 등록된 제품을 정리한 뒤 다시 시도해 주세요.",
-        );
-        return;
-      }
-      // 피부 프로필은 실패해도 루틴 자체는 살아 있다 — 막지 않고 로그만 남긴다.
-      if (!saveSkinProfile({ wonder, usableTime: input.usableTime })) {
-        console.warn("[useRoutineGenerate] 피부 프로필 저장 실패");
-      }
+      // 서버 저장. 90초 기다려 만든 결과가 저장에서 조용히 실패하면 사용자는 저장된 줄
+      // 안다 — 프로필·루틴 중 하나라도 실패하면 부분 성공으로 보고하지 않고 catch 로 던진다.
+      await saveProfile({ wonder, usableTime: input.usableTime });
+      await saveRoutines(routines);
 
       setSaved(routines);
       setStatus("done");
@@ -149,8 +173,10 @@ export function useRoutineGenerate() {
           ? cause.message
           : "알 수 없는 오류가 발생했어요.",
       );
-    }
-  }, []);
+      }
+    },
+    [products],
+  );
 
   const reset = useCallback(() => {
     setStatus("idle");

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useState } from "react";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
-import { listProducts } from "@/lib/storage/products";
+import { useProducts } from "@/lib/data";
 
 import { useRoutineGenerate } from "../../hooks/useRoutineGenerate";
 import styles from "./RoutineForm.module.css";
@@ -15,17 +16,6 @@ const TIME_OPTIONS = ["3분", "5분", "10분", "15분", "20분"] as const;
 /** 실측 약 90초. 이 시점부터는 "정상입니다"라고 알려 줘야 사용자가 안 떠난다. */
 const LONG_WAIT_SECONDS = 20;
 
-/*
- * localStorage 는 React 바깥의 스토어다. effect 에서 setState 로 끌어오면
- * cascading render 가 생기고(React 19 린터가 막는다) 하이드레이션도 어긋난다.
- * `useSyncExternalStore` 가 정확히 이 용도다 — 서버 스냅샷을 따로 줄 수 있어
- * "서버에서는 아직 모른다(null)"를 그대로 표현할 수 있다.
- * 이 화면에서 선반이 바뀌지는 않으므로 구독은 no-op 이다.
- */
-const subscribeShelf = () => () => {};
-const getShelfCount = () => listProducts().length;
-const getServerShelfCount = () => null;
-
 export function RoutineForm() {
   const wonderId = useId();
   const morningId = useId();
@@ -35,12 +25,9 @@ export function RoutineForm() {
   const [morning, setMorning] = useState("5분");
   const [evening, setEvening] = useState("10분");
 
-  /** 선반이 비었으면 폼을 보여줄 이유가 없다. `null` 은 "서버라 아직 모름". */
-  const shelfCount = useSyncExternalStore(
-    subscribeShelf,
-    getShelfCount,
-    getServerShelfCount,
-  );
+  /** 선반이 비었으면 폼을 보여줄 이유가 없다. `null` 은 "아직 서버 응답 전". */
+  const products = useProducts();
+  const shelfCount = products.ready ? products.value.length : null;
 
   const { status, error, saved, generate, reset } = useRoutineGenerate();
   const working = status === "working";
@@ -60,6 +47,16 @@ export function RoutineForm() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await generate({ wonder, usableTime: { morning, evening } });
+  }
+
+  /*
+   * 선반을 못 불러온 것과 "제품이 없다"는 다르다 — 구분하지 않으면 네트워크 실패가
+   * "제품을 먼저 등록하세요"로 잘못 안내된다.
+   * 로딩 중(`shelfCount === null`)에는 폼을 그대로 보여준다. 입력을 미리 할 수 있고,
+   * 제출 시점에 `useRoutineGenerate` 가 목록이 왔는지 다시 확인한다.
+   */
+  if (products.error) {
+    return <DataState error onRetry={products.retry} label="제품 목록" />;
   }
 
   if (shelfCount === 0) {

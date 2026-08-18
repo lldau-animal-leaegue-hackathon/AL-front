@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
+import { useProducts } from "@/lib/data";
 import { stepIcon } from "@/lib/stepIcon";
 import type { Product } from "@/types/skincare";
 
 import card from "../../(home)/components/card.module.css";
-import { useShelfProducts } from "../hooks/useShelfProducts";
 import { EmptyState } from "./EmptyState";
 import styles from "./ShelfSection.module.css";
 
@@ -26,9 +27,10 @@ function shelfNote(product: Product, flagged: boolean): string | null {
 }
 
 export function ShelfSection() {
-  const { ready, value: products } = useShelfProducts();
+  const { ready, value: products, error, retry } = useProducts();
 
-  if (!ready) return null;
+  if (!ready) return <DataState loading label="제품" />;
+  if (error) return <DataState error onRetry={retry} label="제품" />;
 
   if (products.length === 0) {
     return (

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { fetchWarnings } from "@/api/ai";
 import { ApiError } from "@/api/client";
-import { listProducts, updateProduct } from "@/lib/storage/products";
+import { setProductWarnings, useProducts } from "@/lib/data";
 import type { Product } from "@/types/skincare";
 
 export type IngredientAlertItem = {
@@ -15,6 +15,7 @@ export type IngredientAlertItem = {
 
 export type IngredientAlertsState =
   | { kind: "checking" }
+  | { kind: "error"; retry: () => void }
   | { kind: "no-products" }
   | { kind: "no-warnings" }
   | { kind: "ready"; alerts: IngredientAlertItem[] };
@@ -46,20 +47,27 @@ function toAlerts(products: Product[]): IngredientAlertItem[] {
  * 그만큼 뜬다.
  */
 export function useIngredientAlerts(): IngredientAlertsState {
-  // null = 아직 localStorage 를 읽기 전(SSR 첫 렌더 포함)
-  const [products, setProducts] = useState<Product[] | null>(null);
+  const { ready, value: products, error, retry } = useProducts();
   const [generating, setGenerating] = useState(false);
+  // 생성 루프는 한 번만 시작한다 — setProductWarnings 가 성공할 때마다 SWR 캐시가
+  // 갱신돼 products 참조가 바뀌는데, 그걸 effect 의존성에 넣으면 진행 중인 루프가
+  // 스스로를 취소시킨다. 최신 목록은 ref 로만 들여다본다.
+  const startedRef = useRef(false);
+  const productsRef = useRef(products);
+  productsRef.current = products;
 
   useEffect(() => {
+    if (!ready || error || startedRef.current) return;
+
+    const pending = productsRef.current.filter(
+      (product) => product.warnings === undefined,
+    );
+    if (pending.length === 0) return;
+    startedRef.current = true;
+
     let cancelled = false;
 
     async function run() {
-      // localStorage 는 브라우저 전용 — useEffect 안에서만 접근한다(SSR ReferenceError 방지).
-      const list = listProducts();
-      const pending = list.filter((product) => product.warnings === undefined);
-
-      setProducts(list);
-      if (pending.length === 0) return;
       setGenerating(true);
 
       for (const product of pending) {
@@ -77,12 +85,12 @@ export function useIngredientAlerts(): IngredientAlertsState {
               ingredients: product.ingredients,
             });
             warning = raw.warning;
-          } catch (error: unknown) {
+          } catch (err: unknown) {
             // 이 제품만 건너뛴다 — 하나 실패했다고 나머지 순차 처리를 막지 않는다.
             // warnings 는 undefined 로 남아 다음 방문 때 다시 시도된다.
             console.warn(
               `[useIngredientAlerts] "${product.productName}" 주의사항 생성 실패`,
-              error instanceof ApiError ? error.body : error,
+              err instanceof ApiError ? err.body : err,
             );
             continue;
           }
@@ -90,19 +98,19 @@ export function useIngredientAlerts(): IngredientAlertsState {
 
         if (cancelled) return;
 
-        if (!updateProduct(product.id, { warnings: warning })) {
-          // 대개 localStorage 용량 초과 — 조용히 넘기지 않는다(성공한 척 금지).
+        // 서버는 빈 배열을 400 으로 거부한다(기존 주의사항이 실수로 지워지는 것을 막는
+        // 가드). AI 가 빈 배열을 준 경우엔 저장을 건너뛴다 — warnings 는 undefined 로
+        // 남아 다음 방문 때 다시 시도된다.
+        if (warning.length === 0) continue;
+
+        try {
+          await setProductWarnings({ id: product.id, warnings: warning });
+        } catch (err: unknown) {
           console.warn(
             `[useIngredientAlerts] "${product.productName}" 주의사항 저장 실패`,
+            err instanceof ApiError ? err.body : err,
           );
         }
-        setProducts((prev) =>
-          prev
-            ? prev.map((item) =>
-                item.id === product.id ? { ...item, warnings: warning } : item,
-              )
-            : prev,
-        );
       }
 
       if (!cancelled) setGenerating(false);
@@ -112,9 +120,12 @@ export function useIngredientAlerts(): IngredientAlertsState {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- productsRef 로 최신값을 읽는다
+  }, [ready, error]);
 
-  if (products === null || generating) return { kind: "checking" };
+  if (!ready) return { kind: "checking" };
+  if (error) return { kind: "error", retry };
+  if (generating) return { kind: "checking" };
   if (products.length === 0) return { kind: "no-products" };
 
   const alerts = toAlerts(products);

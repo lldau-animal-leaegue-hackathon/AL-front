@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
+import { useProducts } from "@/lib/data";
 import type { Product } from "@/types/skincare";
 
 import card from "../../(home)/components/card.module.css";
-import { useShelfProducts } from "../hooks/useShelfProducts";
 import { EmptyState } from "./EmptyState";
 import styles from "./ReportSection.module.css";
 
@@ -52,9 +53,10 @@ function warningItems(products: readonly Product[]): WarningItem[] {
  * (같은 화면이 두 번 호출을 태우면 `claude -p` 프로세스가 중복으로 뜬다).
  */
 export function ReportSection() {
-  const { ready, value: products } = useShelfProducts();
+  const { ready, value: products, error, retry } = useProducts();
 
-  if (!ready) return null;
+  if (!ready) return <DataState loading label="제품" />;
+  if (error) return <DataState error onRetry={retry} label="제품" />;
 
   const uniqueIngredientCount = new Set(
     products.flatMap((product) => product.ingredients),

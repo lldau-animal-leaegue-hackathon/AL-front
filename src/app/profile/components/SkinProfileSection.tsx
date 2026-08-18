@@ -1,15 +1,12 @@
 "use client";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
-import { PROFILE_KEY } from "@/lib/storage/routines";
-import { useStored } from "@/lib/storage/useStored";
-import type { SkinProfile } from "@/types/skincare";
+import { useSkinProfile } from "@/lib/data";
 
 import card from "../../(home)/components/card.module.css";
 import { EmptyState } from "./EmptyState";
 import styles from "./SkinProfileSection.module.css";
-
-const NO_PROFILE: SkinProfile | null = null;
 
 /**
  * 피부 프로필 — 루틴 생성 때 입력한 `wonder`(피부 고민)·`usableTime`(가용 시간).
@@ -19,14 +16,13 @@ const NO_PROFILE: SkinProfile | null = null;
  * 실패가 아니라 첫 사용자의 기본 상태다.
  */
 export function SkinProfileSection() {
-  const { ready, value: profile } = useStored<SkinProfile | null>(
-    PROFILE_KEY,
-    NO_PROFILE,
-  );
+  const { ready, value: profile, error, retry } = useSkinProfile();
 
-  // 서버 렌더 단계에서는 저장소를 모른다. "없음"으로 단정하면 빈 상태가
-  // 한 번 깜빡였다가 사라진다.
-  if (!ready) return null;
+  // 아직 서버 응답 전이다. "없음"으로 단정하면 빈 상태가 깜빡였다 사라진다.
+  if (!ready) return <DataState loading label="피부 프로필" />;
+  // ⚠️ error 를 안 보면 네트워크 실패가 "아직 루틴을 만든 적 없음"으로 위장된다.
+  if (error)
+    return <DataState error onRetry={retry} label="피부 프로필" />;
 
   if (!profile) {
     return (

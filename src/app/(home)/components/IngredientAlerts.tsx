@@ -1,5 +1,6 @@
 "use client";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 
 import { useIngredientAlerts } from "../hooks/useIngredientAlerts";
@@ -29,6 +30,12 @@ export function IngredientAlerts() {
           성분 주의사항을 확인하고 있어요. 제품마다 최대 1분 정도 걸릴 수
           있어요.
         </p>
+      )}
+
+      {/* 제품 목록을 못 불러온 것과 "제품이 없다"는 다르다 — 구분하지 않으면
+          네트워크 실패가 "제품을 등록하세요"로 잘못 안내된다. */}
+      {state.kind === "error" && (
+        <DataState error onRetry={state.retry} label="성분 알림" />
       )}
 
       {state.kind === "no-products" && (

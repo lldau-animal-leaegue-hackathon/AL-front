@@ -4,12 +4,11 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect } from "react";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
+import { useRoutines } from "@/lib/data";
 import { stepIcon } from "@/lib/stepIcon";
 import { markRunStart } from "@/lib/storage/history";
-import { ROUTINES_KEY } from "@/lib/storage/routines";
-import { useStored } from "@/lib/storage/useStored";
-import type { Routine } from "@/types/skincare";
 
 import { HowToList } from "./HowToList";
 import styles from "./RoutineRunner.module.css";
@@ -17,9 +16,6 @@ import { RunHeader } from "./RunHeader";
 import { StepActions } from "./StepActions";
 import { StepTimer } from "./StepTimer";
 import { StepWarnings } from "./StepWarnings";
-
-/** 인라인 `[]` 를 넘기면 매 렌더 새 배열이라 useStored 의 useMemo 가 무의미해진다. */
-const NO_ROUTINES: Routine[] = [];
 
 /**
  * 수행 화면의 클라이언트 경계.
@@ -38,10 +34,7 @@ export function RoutineRunner({
   routineId: string;
   step: string;
 }) {
-  const { ready, value: routines } = useStored<Routine[]>(
-    ROUTINES_KEY,
-    NO_ROUTINES,
-  );
+  const { ready, value: routines, error, retry } = useRoutines();
 
   const routine = routines.find((item) => item.id === routineId);
   const index = Number(step) - 1;
@@ -55,9 +48,12 @@ export function RoutineRunner({
     if (ready && routine && index === 0) markRunStart(routineId);
   }, [ready, routine, index, routineId]);
 
-  // 서버 렌더 단계에서는 저장소를 모른다. 여기서 "없음"으로 단정하면
+  // 아직 서버 응답 전이다. 여기서 "없음"으로 단정하면
   // 정상 루틴인데도 "찾을 수 없어요"가 한 번 깜빡였다가 사라진다.
-  if (!ready) return null;
+  if (!ready) return <DataState loading label="루틴" />;
+
+  // 네트워크 실패를 "루틴 없음"으로 오판하면 안 되므로 404 판정보다 먼저 처리한다.
+  if (error) return <DataState error onRetry={retry} label="루틴" />;
 
   const valid =
     routine !== undefined &&

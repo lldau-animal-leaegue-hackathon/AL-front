@@ -1,18 +1,13 @@
 "use client";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 import { weeklyAchievement } from "@/lib/achievement";
-import { RUNS_KEY } from "@/lib/storage/history";
-import { ROUTINES_KEY } from "@/lib/storage/routines";
-import { useStored } from "@/lib/storage/useStored";
-import type { Routine, RoutineRun } from "@/types/skincare";
+import { useRoutines, useRuns } from "@/lib/data";
 
 import card from "../../(home)/components/card.module.css";
 import { EmptyState } from "./EmptyState";
 import styles from "./RecordsSection.module.css";
-
-const NO_ROUTINES: Routine[] = [];
-const NO_RUNS: RoutineRun[] = [];
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   month: "long",
@@ -29,16 +24,28 @@ const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
  * 필요하고, 각 기록에 루틴 이름을 붙이려면 `routineId` 로 찾아야 한다.
  */
 export function RecordsSection() {
-  const { ready: routinesReady, value: routines } = useStored<Routine[]>(
-    ROUTINES_KEY,
-    NO_ROUTINES,
-  );
-  const { ready: runsReady, value: runs } = useStored<RoutineRun[]>(
-    RUNS_KEY,
-    NO_RUNS,
-  );
+  const {
+    ready: routinesReady,
+    value: routines,
+    error: routinesError,
+    retry: retryRoutines,
+  } = useRoutines();
+  const {
+    ready: runsReady,
+    value: runs,
+    error: runsError,
+    retry: retryRuns,
+  } = useRuns();
 
-  if (!routinesReady || !runsReady) return null;
+  const ready = routinesReady && runsReady;
+  const error = routinesError || runsError;
+  const retry = () => {
+    retryRoutines();
+    retryRuns();
+  };
+
+  if (!ready) return <DataState loading label="기록" />;
+  if (error) return <DataState error onRetry={retry} label="기록" />;
 
   if (routines.length === 0) {
     return (

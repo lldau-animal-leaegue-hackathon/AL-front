@@ -1,0 +1,72 @@
+/* 로딩·실패 표시. 화면마다 빈 상태 문구는 다르지만 이 둘은 같아도 된다. */
+
+.loading {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--on-surface-variant);
+  font-size: 0.9375rem;
+  text-align: center;
+  /* 몇 초 걸릴 수 있어 "멈춘 것"으로 보이지 않게 은은하게 숨 쉬게 한다. */
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 움직임을 줄이도록 설정한 사용자에게는 애니메이션을 걸지 않는다. */
+@media (prefers-reduced-motion: reduce) {
+  .loading {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 16px;
+  background: var(--surface-container-low);
+  text-align: center;
+}
+
+.icon {
+  color: var(--on-surface-variant);
+}
+
+.text {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.retry:hover {
+  background: var(--primary-container);
+}

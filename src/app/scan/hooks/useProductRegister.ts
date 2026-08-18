@@ -4,8 +4,8 @@ import { useCallback, useState } from "react";
 
 import { extractIngredients } from "@/api/ai";
 import { ApiError } from "@/api/client";
+import { addProduct, useProducts } from "@/lib/data";
 import { fileToDataUrl, resizeToThumbnail } from "@/lib/imageResize";
-import { addProduct, listProducts } from "@/lib/storage/products";
 import type { Product } from "@/types/skincare";
 
 export type RegisterInput = {
@@ -19,14 +19,15 @@ export type RegisterInput = {
 export type RegisterStatus = "idle" | "working" | "done" | "error";
 
 /**
- * 제품 등록 — 성분 추출(AI) → 저장(localStorage) 한 흐름.
+ * 제품 등록 — 성분 추출(AI) → 저장(서버) 한 흐름.
  * AGENTS.md 컨벤션대로 폼 검증·fetch·비즈니스 로직을 화면에서 떼어 둔다.
  */
 export function useProductRegister() {
   const [status, setStatus] = useState<RegisterStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<Product | null>(null);
-  const [shelfCount, setShelfCount] = useState(0);
+  // 등록 성공 시 addProduct 가 캐시를 mutate 하므로 여기서는 개수만 읽는다.
+  const products = useProducts();
 
   const register = useCallback(async (input: RegisterInput) => {
     const productName = input.productName.trim();
@@ -59,34 +60,26 @@ export function useProductRegister() {
       });
 
       // raw 는 snake_case 다. 여기(화면 계층)에서 프론트 모델로 옮긴다.
-      const product = addProduct({
+      // capacity 는 서버 컬럼이 없어 저장 대상에서 뺀다(AI 프롬프트에는 그대로 넘긴다).
+      const product = await addProduct({
         productName: raw.product_name || productName,
-        capacity: input.capacity.trim() || undefined,
         productCompany: input.productCompany.trim() || undefined,
         thumbnail,
         category: raw.category,
         ingredients: raw.ingredients,
+        ingredientSource: input.file ? "photo" : "manual",
       });
 
-      if (!product) {
-        // addProduct 가 null 이면 저장 실패 — 대개 용량 초과다.
-        // 성공한 척하면 사용자는 저장된 줄 안다.
-        setStatus("error");
-        setError(
-          "저장 공간이 부족해 제품을 담지 못했어요. 등록된 제품을 정리한 뒤 다시 시도해 주세요.",
-        );
-        return;
-      }
-
       setSaved(product);
-      setShelfCount(listProducts().length);
       setStatus("done");
     } catch (cause: unknown) {
+      // AI 호출 실패든 저장 실패든 같은 에러 경로로 흘려보낸다 —
+      // 입력이 날아가는 자리라 실패를 반드시 화면에 알려야 한다.
       setStatus("error");
 
       if (cause instanceof ApiError) {
         const body = cause.body as { message?: string } | null;
-        setError(body?.message ?? `성분을 분석하지 못했어요 (${cause.status})`);
+        setError(body?.message ?? `요청을 처리하지 못했어요 (${cause.status})`);
         return;
       }
       setError(
@@ -103,5 +96,12 @@ export function useProductRegister() {
     setSaved(null);
   }, []);
 
-  return { status, error, saved, shelfCount, register, reset };
+  return {
+    status,
+    error,
+    saved,
+    shelfCount: products.value.length,
+    register,
+    reset,
+  };
 }
