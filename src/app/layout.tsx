@@ -30,10 +30,18 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
+  /**
+   * 이게 없으면 브라우저가 safe area 를 노출하지 않아
+   * `env(safe-area-inset-*)` 가 **전부 0** 이 된다.
+   * BottomNav·StepActions 가 그 값을 쓰고 있었는데 여태 무효였다(iOS 홈 인디케이터에 겹침).
+   */
+  viewportFit: "cover",
+  /**
+   * `--surface` 와 같은 값. 예전엔 light `#ffffff`(팔레트에 없는 값) +
+   * dark `#0a0a0a` 를 선언해, OS 다크 모드에서 **브라우저 UI 만 검고 페이지는 흰** 상태가 됐다.
+   * 다크 팔레트가 없으므로 라이트 단일 값으로 맞춘다(R-Step 6 에서 다크를 추가한다).
+   */
+  themeColor: "#f8f9fa",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
