@@ -86,7 +86,7 @@ export function ReportSection() {
           icon="science"
           title="분석할 제품이 없어요"
           text="제품을 등록하면 성분과 주의사항을 모아서 보여드려요."
-          ctaHref="/scan"
+          ctaHref="/scan?tab=add"
           ctaLabel="제품 등록하기"
         />
       ) : (
@@ -124,9 +124,13 @@ export function ReportSection() {
                     </li>
                   ))}
                 </ul>
-                {/* 리포트가 스캔 탭으로 오면서 자기 페이지 링크가 됐다 — 등록 폼 앵커로 보낸다. */}
+                {/*
+                  "대체 제품 찾기"인데 등록 폼으로 보내고 있었다 — 옛 `#add` 앵커가
+                  폼과 검색을 함께 감싸서 성립하던 우연이다. 탭이 생겨 목적지를
+                  검색으로 재조준했다. 이제 문구와 목적지가 일치한다.
+                */}
                 <Link
-                  href="/scan#add"
+                  href="/scan?tab=popular"
                   className={`${card.label} ${styles.alertCta}`}
                 >
                   대체 제품 찾기

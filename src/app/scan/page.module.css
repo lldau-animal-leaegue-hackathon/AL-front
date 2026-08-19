@@ -9,14 +9,12 @@
   padding: var(--page-pt) var(--page-inline) var(--page-pb);
 }
 
-/* 앵커(#add)를 달려고 감싼 래퍼. .main 의 flex gap 을 그대로 이어 준다. */
-.addBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
+/* ⛔ 탭 패널 래퍼용 클래스를 여기에 만들지 마라. `display` 를 선언하는 순간
+   브라우저 기본 `[hidden] { display: none }` 을 이겨 숨김이 무효가 된다.
+   (옛 .addBlock 은 폼·검색 둘을 감쌌기에 flex 가 필요했지만, 탭으로 갈린 뒤로는
+   패널마다 자식이 하나라 래퍼에 스타일이 필요 없다.) */
 
-/* Step 6 에서 옮겨 온 섹션(선반·리포트·기록)의 제목. 옛 concern/page.module.css 에서 왔다. */
+/* Step 6 에서 옮겨 온 섹션(선반·리포트)의 제목. 옛 concern/page.module.css 에서 왔다. */
 .sectionTitle {
   font: var(--text-headline-lg-mobile);
   color: var(--on-surface);

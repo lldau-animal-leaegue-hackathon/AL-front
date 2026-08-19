@@ -39,7 +39,8 @@ export function ShelfSection() {
         icon="inventory_2"
         title="아직 등록한 제품이 없어요"
         text="성분표를 촬영하면 AI가 성분을 읽어서 선반에 담아드려요."
-        ctaHref="/scan"
+        /* 선반 탭에서 누르는 버튼이다 — `/scan` 그대로면 URL 이 같아 화면이 안 바뀐다. */
+        ctaHref="/scan?tab=add"
         ctaLabel="제품 등록하기"
       />
     );
@@ -92,9 +93,9 @@ export function ShelfSection() {
       })}
 
       <li>
-        {/* 선반이 스캔 탭으로 오면서 이 링크가 자기 페이지를 가리키게 됐다(Step 6).
-            등록 폼은 이 위에 있으므로 앵커로 올려 보낸다. */}
-        <Link href="/scan#add" className={styles.addCard}>
+        {/* 등록 폼은 이제 다른 탭이다. 앵커(`#add`)로는 못 간다 — 숨겨진 조상 안이라
+            스크롤 대상으로 잡히지 않아 눌러도 아무 일이 안 일어난다. */}
+        <Link href="/scan?tab=add" className={styles.addCard}>
           <span className={styles.addIcon}>
             <Icon name="add" />
           </span>

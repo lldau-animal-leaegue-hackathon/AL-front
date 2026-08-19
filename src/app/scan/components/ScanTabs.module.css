@@ -1,0 +1,71 @@
+/* 스캔 탭의 상단 하위 메뉴. */
+
+.bar {
+  display: flex;
+  gap: 4px;
+  /* 폰트 폴백(Pretendard CDN 실패 → Malgun Gothic)으로 라벨이 넓어져도 넘친 폭이
+     body 로 새어 페이지 전체가 좌우로 흔들리는 것을 막는 안전망이다. */
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.bar::-webkit-scrollbar {
+  display: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* flex: 1 균등분할을 쓰지 않는다 — 셀 폭이 라벨보다 좁아지면 ellipsis 없이
+     조용히 잘린다. 자연폭으로 두면 4개 합이 358px 안에 들어간다. */
+  flex: 0 0 auto;
+  /* 44px 이 하한(반응형 계획서 R7). 48px 는 8px 베이스라인에 맞으면서
+     BottomNav 항목(약 56px)보다 낮아 두 바가 시각적으로 구분된다. */
+  min-height: 48px;
+  /* 실측으로 정한 값이다. 14px 이면 390px 화면에서 368px 이 되어 10px 넘친다. */
+  padding: 0 10px;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  white-space: nowrap;
+  transition:
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/*
+ * ⛔ --primary-container 채움 알약을 쓰지 않는다. 그건 BottomNav·SideNav 의
+ *    "현재 위치" 시그널이고, 1024px 미만에서는 하단바가 항상 떠 있어서 같이 쓰면
+ *    한 화면에 활성 표시가 둘 생긴다. 상단은 투명 배경 + 밑줄로 간다.
+ *
+ * font-weight 를 바꾸지 않는 이유: 활성 탭만 굵어지면 폭이 변해 320px 여유를 먹는다.
+ * inset box-shadow 라 레이아웃 시프트도 0이다.
+ */
+.active {
+  color: var(--primary);
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+
+.item:hover {
+  color: var(--primary);
+}
+
+/*
+ * 아주 좁은 화면(320px 계열)에서는 아이콘을 뺀다.
+ * 실측: 아이콘을 두면 가용폭 288px 에 336px 이 들어가 47px 넘친다. 바 안에서 스크롤되긴
+ * 하지만 활성 탭이 화면 밖에 있을 수 있어 "지금 어디인지"를 못 본다. 라벨은 남으므로
+ * 뜻은 유지된다.
+ */
+@media (max-width: 360px) {
+  .item > :global(.material-symbols-outlined) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

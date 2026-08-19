@@ -66,7 +66,8 @@ export function ProductSearch({
         {results ? (
           results.length === 0 ? (
             <p className={styles.empty}>
-              검색 결과가 없습니다. 위 등록 폼에서 이름으로 찾아보세요.
+              검색 결과가 없습니다. &lsquo;등록&rsquo; 탭에서 이름으로
+              찾아보세요.
             </p>
           ) : (
             <ul className={styles.grid}>
