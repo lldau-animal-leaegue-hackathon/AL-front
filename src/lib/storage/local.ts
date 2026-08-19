@@ -1,14 +1,18 @@
 /**
  * localStorage 공통 래퍼.
  *
+ * ⚠️ **도메인 데이터는 더 이상 여기 없다.** 제품·루틴·기록·프로필은 전부 서버로 옮겼다
+ * (`src/lib/data.ts`). 남은 소비처는 둘뿐이다:
+ *  - `history.ts` 의 수행 중 표시(기기별 임시 상태)
+ *  - `MigrateLocalData.tsx` 의 1회 이관(옛 데이터를 읽어 서버로 넘기고 지운다)
+ *
  * 왜 직접 쓰지 않는가:
  *  - **SSR 안전**: 모듈 최상단이나 서버 컴포넌트에서 `localStorage` 를 만지면
  *    `ReferenceError` 가 난다. 여기서 매번 존재 여부를 확인한다.
  *    (호출부는 `useEffect` 나 이벤트 핸들러여야 한다.)
- *  - **스키마 버전**: 모델이 바뀌어도 옛 값이 폭발하지 않게 키에 버전을 붙인다.
- *  - **용량 한계**: 5~10MB 를 넘기면 `QuotaExceededError` 가 난다. 제품 썸네일이
- *    쌓이면 실제로 닿는다(Q7). 그래서 `save` 는 성공 여부를 **반환**한다 —
- *    호출부가 사용자에게 알릴 수 있어야 한다.
+ *  - **스키마 버전**: 키에 붙는 `al:v1:` 접두사를 한 곳에서 관리한다.
+ *    이관 코드가 옛 키를 찾을 때도 이 규칙에 기댄다.
+ *  - **실패를 삼키지 않음**: `save` 는 성공 여부를 반환한다.
  */
 
 /** 모델이 바뀌면 올린다. 옛 키는 그대로 남지만 읽히지 않는다. */
@@ -113,14 +117,3 @@ export function remove(key: string): boolean {
   }
 }
 
-/**
- * 새 레코드 id.
- * `crypto.randomUUID` 는 보안 컨텍스트(HTTPS·localhost)에서만 있으므로
- * 없을 때를 대비해 시각 기반으로 폴백한다 — 로컬 저장용이라 충돌 위험이 낮으면 충분하다.
- */
-export function newId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}

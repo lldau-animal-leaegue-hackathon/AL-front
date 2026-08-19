@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/AppShell/AppShell";
 
 import "./globals.css";
+import { MigrateLocalData } from "./MigrateLocalData";
 
 const SITE_NAME = "Animal League";
 const SITE_DESCRIPTION = "Animal League 프로젝트";
@@ -82,6 +83,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body>
+        {/*
+          저장소를 서버로 옮기기 전에 쓰던 사용자의 localStorage 데이터를 1회 이관한다.
+          화면을 그리지 않으며, 옮길 데이터가 없으면 아무 일도 하지 않는다.
+          어느 화면으로 들어와도 한 번은 실행되도록 루트에 둔다.
+        */}
+        <MigrateLocalData />
         <AppShell>{children}</AppShell>
       </body>
     </html>
