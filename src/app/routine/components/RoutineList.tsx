@@ -99,7 +99,8 @@ export function RoutineList() {
   );
 
   return (
-    <div className={styles.groups}>
+    /* id 는 기록 섹션의 "루틴 보러 가기"가 가리키는 앵커다. */
+    <div id="routines" className={styles.groups}>
       <section>
         <h2 className={styles.heading}>기본 루틴</h2>
         <p className={styles.lead}>

@@ -9,8 +9,9 @@ import { useProducts } from "@/lib/data";
 import { stepIcon } from "@/lib/stepIcon";
 import type { Product } from "@/types/skincare";
 
+import { EmptyState } from "@/components/EmptyState/EmptyState";
+
 import card from "../../(home)/components/card.module.css";
-import { EmptyState } from "./EmptyState";
 import styles from "./ShelfSection.module.css";
 
 /**
@@ -91,7 +92,9 @@ export function ShelfSection() {
       })}
 
       <li>
-        <Link href="/scan" className={styles.addCard}>
+        {/* 선반이 스캔 탭으로 오면서 이 링크가 자기 페이지를 가리키게 됐다(Step 6).
+            등록 폼은 이 위에 있으므로 앵커로 올려 보낸다. */}
+        <Link href="/scan#add" className={styles.addCard}>
           <span className={styles.addIcon}>
             <Icon name="add" />
           </span>

@@ -5,8 +5,9 @@ import { Icon } from "@/components/Icon";
 import { weeklyAchievement } from "@/lib/achievement";
 import { useRoutines, useRuns } from "@/lib/data";
 
+import { EmptyState } from "@/components/EmptyState/EmptyState";
+
 import card from "../../(home)/components/card.module.css";
-import { EmptyState } from "./EmptyState";
 import styles from "./RecordsSection.module.css";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
@@ -66,7 +67,9 @@ export function RecordsSection() {
         icon="play_circle"
         title="첫 루틴을 시작해 보세요"
         text="루틴을 수행하고 나면 여기에서 기록과 달성률을 볼 수 있어요."
-        ctaHref="/routine"
+        /* 기록이 루틴 탭으로 오면서 "/routine" 이 자기 페이지가 됐다(Step 6).
+           목록은 이 위에 있으므로 앵커로 올려 보낸다. */
+        ctaHref="/routine#routines"
         ctaLabel="루틴 보러 가기"
       />
     );

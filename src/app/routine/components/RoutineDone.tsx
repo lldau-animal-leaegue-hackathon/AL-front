@@ -111,8 +111,11 @@ export function RoutineDone({ routineId }: { routineId: string }) {
           <Icon name="list" filled size="sm" />
           루틴 목록으로
         </Link>
-        {/* TODO(Step 6): 기록이 루틴 탭으로 옮겨 오면 이 링크도 그쪽을 가리킨다 */}
-        <Link className={styles.secondary} href="/concern">
+        {/*
+          기록이 루틴 탭으로 옮겨 왔다(Step 6). 같은 페이지지만 루틴 두 그룹 아래라
+          접힘선 밖이므로 앵커로 바로 보낸다.
+        */}
+        <Link className={styles.secondary} href="/routine#records">
           기록 보기
         </Link>
       </div>

@@ -9,21 +9,9 @@
   padding: var(--page-pt) var(--page-inline) var(--page-pb);
 }
 
-.sectionTitle {
-  font: var(--text-headline-lg-mobile);
-  color: var(--on-surface);
-}
+/* 섹션 제목 스타일은 선반·리포트·기록과 함께 스캔/루틴 탭으로 옮겼다(Step 6).
+   이 탭에 남은 `ConcernSection` 은 제목을 자기 CSS Module 로 갖는다.
 
-.sectionBody {
-  margin-top: 24px;
-}
-
-@media (min-width: 768px) {
-  /* .main 의 padding 오버라이드는 두지 않는다 — 셸 토큰(--page-pt/--page-inline/
-     --page-pb)이 브레이크포인트별 값을 이미 담고 있고, 여기서 덮으면 탭바가 아직
-     떠 있는 768~1023px 구간에서 하단 여백이 60px 부족해진다. */
-  .sectionTitle {
-    font: var(--text-headline-lg);
-    letter-spacing: var(--tracking-headline-lg);
-  }
-}
+   .main 의 padding 을 미디어 쿼리로 덮지 않는 것은 의도다 — 셸 토큰(--page-pt/
+   --page-inline/--page-pb)이 브레이크포인트별 값을 이미 담고 있고, 여기서 덮으면
+   탭바가 아직 떠 있는 768~1023px 구간에서 하단 여백이 60px 부족해진다. */

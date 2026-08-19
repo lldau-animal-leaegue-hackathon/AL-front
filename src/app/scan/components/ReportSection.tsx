@@ -7,8 +7,9 @@ import { Icon } from "@/components/Icon";
 import { useProducts } from "@/lib/data";
 import type { Product } from "@/types/skincare";
 
+import { EmptyState } from "@/components/EmptyState/EmptyState";
+
 import card from "../../(home)/components/card.module.css";
-import { EmptyState } from "./EmptyState";
 import styles from "./ReportSection.module.css";
 
 /** 2개 이상 제품에 공통으로 들어간 성분 — 상위 3개만 인사이트로 보여준다. */
@@ -123,8 +124,9 @@ export function ReportSection() {
                     </li>
                   ))}
                 </ul>
+                {/* 리포트가 스캔 탭으로 오면서 자기 페이지 링크가 됐다 — 등록 폼 앵커로 보낸다. */}
                 <Link
-                  href="/scan"
+                  href="/scan#add"
                   className={`${card.label} ${styles.alertCta}`}
                 >
                   대체 제품 찾기
