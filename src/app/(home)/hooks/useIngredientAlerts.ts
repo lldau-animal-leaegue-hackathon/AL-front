@@ -99,11 +99,12 @@ export function useIngredientAlerts(): IngredientAlertsState {
 
         if (cancelled) return;
 
-        // 서버는 빈 배열을 400 으로 거부한다(기존 주의사항이 실수로 지워지는 것을 막는
-        // 가드). AI 가 빈 배열을 준 경우엔 저장을 건너뛴다 — warnings 는 undefined 로
-        // 남아 다음 방문 때 다시 시도된다.
-        if (warning.length === 0) continue;
-
+        /*
+         * 빈 배열도 저장한다(2026-08-20) — "확인했고 주의 없음"이라는 답이다.
+         * 예전에는 건너뛰어서 그 제품이 영영 미기록으로 남아 **홈 재방문마다 30초짜리
+         * 생성이 재시도**됐다. 서버는 빈 배열을 첫 기록(NULL)일 때만 받으므로
+         * 기존 주의사항이 지워질 위험은 없다. 실패(catch)만 미기록으로 남아 재시도된다.
+         */
         try {
           await setProductWarnings({ id: product.id, warnings: warning });
         } catch (err: unknown) {

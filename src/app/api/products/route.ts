@@ -259,35 +259,41 @@ export async function PATCH(request: Request) {
     );
   }
 
-  /*
-   * ⛔ 빈 배열로 덮지 않는다. 주의사항이 없는 제품은 프롬프트 규칙 6 의 고정 문구가 오므로
-   *    빈 배열은 정상 응답이 아니고, 그대로 저장하면 **이미 만들어 둔 주의사항이 사라진다.**
-   */
-  if (warnings.length === 0) {
-    return Response.json(
-      { message: "warnings 가 비어 있습니다." },
-      { status: 400 },
-    );
-  }
-
   try {
     /*
      * **내 선반에 있는 제품만** 고칠 수 있다. 공유 카탈로그라 소유자 개념이 없지만,
      * 이것만으로도 임의 id 를 넣어 남의 주의사항을 지우는 경로는 막힌다.
      * ⚠️ 완전한 방어는 아니다 — 같은 제품을 자기 선반에 담으면 다시 고칠 수 있다.
      *    카탈로그를 공유하기로 한 결정의 필연적 결과이고, 되돌리려면 그 결정을 바꿔야 한다.
+     *
+     * ⛔ 빈 배열은 **첫 기록(NULL)일 때만** 받는다(2026-08-20).
+     *    - 예전에는 전면 거부했는데, 그러면 AI 가 "주의 없음"(빈 배열)을 준 제품이
+     *      영영 미기록으로 남아 **홈 재방문마다 30초짜리 생성이 재시도**됐다(refuter 검증).
+     *    - '[]' 를 저장하면 "확인했고 주의 없음"이 기록돼 재시도가 1회로 끝난다.
+     *      화면(rows.ts)은 NULL(아직 안 만듦)과 [](주의 없음)를 이미 구분한다.
+     *    - 기존 주의사항을 빈 배열로 **덮는** 것은 계속 거부한다 — 데이터 손실 가드.
      */
     const changed = await execute(
-      `UPDATE products p
-         JOIN shelf_items s ON s.product_id = p.id AND s.user_id = ?
-          SET p.warnings = ?
-        WHERE p.id = ?`,
+      warnings.length === 0
+        ? `UPDATE products p
+             JOIN shelf_items s ON s.product_id = p.id AND s.user_id = ?
+              SET p.warnings = ?
+            WHERE p.id = ? AND p.warnings IS NULL`
+        : `UPDATE products p
+             JOIN shelf_items s ON s.product_id = p.id AND s.user_id = ?
+              SET p.warnings = ?
+            WHERE p.id = ?`,
       [await currentUserId(), JSON.stringify(warnings), id],
     );
     if (changed === 0) {
       return Response.json(
-        { message: "내 선반에서 해당 제품을 찾을 수 없습니다." },
-        { status: 404 },
+        {
+          message:
+            warnings.length === 0
+              ? "빈 warnings 로는 기존 주의사항을 덮을 수 없습니다."
+              : "내 선반에서 해당 제품을 찾을 수 없습니다.",
+        },
+        { status: warnings.length === 0 ? 409 : 404 },
       );
     }
     return Response.json({ ok: true });
