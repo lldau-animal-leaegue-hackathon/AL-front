@@ -78,4 +78,7 @@
 
 .retry:hover {
   background: var(--primary-container);
+  /* 배경만 바꾸면 다크에서 on-primary(#1b3527) 글자가 primary-container(#314c3e) 위에
+     놓여 대비 약 1.4:1 — 라벨이 사실상 사라진다. 배경/전경 토큰은 짝으로 바꾼다. */
+  color: var(--on-primary-container);
 }

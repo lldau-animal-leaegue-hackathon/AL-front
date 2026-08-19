@@ -15,6 +15,13 @@
   color: var(--on-surface);
 }
 
+/* 제목 안의 고민 원문. 색만 구분한다 — 길이 절단은 JS 가 한다(줄바꿈 위치가 예측 가능해야
+   조사 "에"가 인용부 바로 뒤에 붙는다). 전문은 "내 고민" 카드가 든다. */
+.headingWonder {
+  color: var(--primary);
+  overflow-wrap: anywhere;
+}
+
 .lead {
   font: var(--text-body-md);
   color: var(--on-surface-variant);

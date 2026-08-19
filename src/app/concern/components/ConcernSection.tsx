@@ -155,7 +155,15 @@ export function ConcernSection() {
       </section>
 
       <section className={styles.card}>
-        <h2 className={styles.heading}>이 고민에 도움이 되는 성분</h2>
+        {/*
+          제목에 등록한 고민을 그대로 넣는다(사용자 요청 2026-08-20) —
+          "이 고민"이라는 대명사보다 무엇에 대한 답인지가 바로 보인다.
+          고민은 한 문단일 수 있어 CSS 로 두 줄에서 자른다(전문은 위 카드에 있다).
+        */}
+        <h2 className={styles.heading}>
+          <span className={styles.headingWonder}>&ldquo;{wonder}&rdquo;</span>에
+          도움이 되는 성분
+        </h2>
 
         {!ingredients.ready ? (
           <DataState loading label="성분" />
