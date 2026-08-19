@@ -18,6 +18,7 @@ import useSWR, { mutate, type SWRConfiguration } from "swr";
 
 import {
   createProduct,
+  fetchPopularProducts,
   fetchProducts,
   removeProduct as removeProductRequest,
   updateProductWarnings,
@@ -41,6 +42,7 @@ import type {
 /** SWR 캐시 키. 쓰기 후 무엇을 다시 불러올지 정하는 기준이라 한 곳에 모은다. */
 const KEYS = {
   products: "/products",
+  popular: "/products/popular",
   routines: "/routines",
   runs: "/runs",
   profile: "/profile",
@@ -89,6 +91,13 @@ const NO_RUNS: RoutineRun[] = [];
 
 export const useProducts = () =>
   useResource(KEYS.products, fetchProducts, NO_PRODUCTS);
+
+/**
+ * 많이 담긴 순 공유 카탈로그. **빈 배열이 정상이다**(아무도 아직 담지 않은 상태).
+ * 화면은 그때 시드 카탈로그로 폴백한다.
+ */
+export const usePopularProducts = () =>
+  useResource(KEYS.popular, fetchPopularProducts, NO_PRODUCTS);
 
 export const useRoutines = () =>
   useResource(KEYS.routines, fetchRoutines, NO_ROUTINES);

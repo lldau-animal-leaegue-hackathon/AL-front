@@ -10,7 +10,8 @@ import { stepIcon } from "@/lib/stepIcon";
 import type { Product } from "@/types/skincare";
 
 import type { RegisterPhase, SearchResult } from "../hooks/useProductRegister";
-import styles from "./ProductSearchModal.module.css";
+// 인기 제품 모달(`PopularProductModal`)과 같은 껍데기를 쓴다 — 한 파일을 함께 import 한다.
+import styles from "./productModal.module.css";
 
 /**
  * 검색 → 후보 선택 → 성분 확인 → 등록.

@@ -22,7 +22,7 @@ import { fetchImageAsDataUrl } from "@/lib/images";
 export const runtime = "nodejs";
 
 const LIST_SQL = `
-  SELECT p.id, p.name, p.brand, p.category, p.ingredients, p.warnings,
+  SELECT p.id, p.name, p.brand, p.category, p.ingredients, p.warnings, p.image,
          s.thumbnail, s.created_at
     FROM shelf_items s
     JOIN products p ON p.id = s.product_id
@@ -111,16 +111,20 @@ export async function POST(request: Request) {
   }
 
   /*
-   * 직접 찍은 사진이 우선이다. 없을 때만 검색 결과 이미지를 받아 온다.
+   * ⭐ **두 이미지는 저장 위치가 다르다**(002 마이그레이션).
+   *  - 내가 찍은 사진 → `shelf_items.thumbnail` (개인. 나만 본다)
+   *  - 검색에서 온 이미지 → `products.image` (공유. 인기 제품 등에 남에게 보인다)
+   * 섞으면 남의 개인 사진이 카탈로그에 노출된다.
    *
-   * ⛔ **주소는 클라이언트가 준 값이라 믿지 않는다.** `fetchImageAsDataUrl` 이 허용 호스트인지
-   *    다시 확인한다(SSRF 방어). 실패하면 `null` 을 주고 **등록은 그대로 진행한다** —
-   *    썸네일은 부가 정보라 이것 때문에 제품 등록이 막히면 안 된다.
+   * ⛔ 주소는 클라이언트가 준 값이라 믿지 않는다. `fetchImageAsDataUrl` 이 허용 호스트인지
+   *    다시 확인한다(SSRF 방어). 실패하면 `null` 이고 **등록은 그대로 진행한다** —
+   *    이미지는 부가 정보라 이것 때문에 제품 등록이 막히면 안 된다.
    */
-  let thumbnail = uploaded;
-  if (!thumbnail && typeof body.thumbnailUrl === "string") {
-    thumbnail = await fetchImageAsDataUrl(body.thumbnailUrl);
-  }
+  const thumbnail = uploaded;
+  const sharedImage =
+    typeof body.thumbnailUrl === "string"
+      ? await fetchImageAsDataUrl(body.thumbnailUrl)
+      : null;
 
   const source =
     typeof body.ingredientSource === "string" &&
@@ -153,9 +157,16 @@ export async function POST(request: Request) {
        */
       await conn.execute(
         `INSERT IGNORE INTO products
-           (id, name, brand, category, ingredients, ingredient_source)
-         VALUES (UUID(), ?, ?, ?, ?, ?)`,
-        [productName, brand, category, JSON.stringify(ingredients), source],
+           (id, name, brand, category, ingredients, ingredient_source, image)
+         VALUES (UUID(), ?, ?, ?, ?, ?, ?)`,
+        [
+          productName,
+          brand,
+          category,
+          JSON.stringify(ingredients),
+          source,
+          sharedImage,
+        ],
       );
 
       const [found] = await conn.execute(
@@ -176,6 +187,18 @@ export async function POST(request: Request) {
               SET category = ?, ingredients = ?, ingredient_source = ?
             WHERE id = ?`,
           [category, JSON.stringify(ingredients), source, id],
+        );
+      }
+
+      /*
+       * 공유 이미지는 **비어 있을 때만** 채운다. 이미 있는 것을 덮지 않는 이유는
+       * 성분과 같다 — 카탈로그는 여러 사용자가 함께 쓰므로, 나중에 담는 사람이
+       * 이미지를 못 얻었다고 앞사람 것이 사라지면 안 된다.
+       */
+      if (sharedImage) {
+        await conn.execute(
+          `UPDATE products SET image = ? WHERE id = ? AND image IS NULL`,
+          [sharedImage, id],
         );
       }
 

@@ -10,6 +10,14 @@ import { api } from "./client";
 
 export const fetchProducts = () => api.get<Product[]>("/products");
 
+/**
+ * 많이 담긴 순 공유 카탈로그.
+ * **개인 사진(`thumbnail`)은 오지 않는다** — 공유 이미지(`image`)만 담겨 있다.
+ * 아직 아무도 담지 않았으면 빈 배열이다(정상).
+ */
+export const fetchPopularProducts = () =>
+  api.get<Product[]>("/products/popular");
+
 /** 성분 출처. 화면에 표시해야 하므로 서버가 NOT NULL 로 받는다. */
 export type IngredientSource = "photo" | "hwahae" | "fallback" | "manual";
 

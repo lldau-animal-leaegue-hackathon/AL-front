@@ -1,4 +1,10 @@
-/* 검색 → 후보 선택 → 성분 확인 → 등록. 한 모달 안에서 단계가 바뀐다. */
+/*
+ * 제품 모달 공용 껍데기.
+ *
+ * `ProductSearchModal`(검색 → 후보 선택 → 성분 확인 → 등록)과
+ * `PopularProductModal`(인기 제품 상세 → 선반 추가)이 **같은 파일을 함께 import** 한다.
+ * 두 모달의 껍데기가 같아서다(AGENTS.md 의 `status.module.css` 와 같은 패턴).
+ */
 
 /*
  * **화면 가운데.** 노치·홈 인디케이터를 피하도록 위아래 safe-area 를 여백에 더한다.
@@ -282,6 +288,27 @@
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius-full);
   font: var(--text-body-md);
+}
+
+/* ── 주의사항 (인기 제품 모달) ─────────────────────────── */
+
+.warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: var(--text-body-md);
+  line-height: 1.5;
 }
 
 /* ── 등록 완료 ─────────────────────────────────────────── */

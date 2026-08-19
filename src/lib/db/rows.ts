@@ -78,7 +78,9 @@ export function toProduct(row: unknown): Product | null {
     id,
     productName: str(row.name),
     productCompany: optStr(row.brand),
+    // 내가 찍은 사진(개인) / 검색에서 온 이미지(공유) — 칸이 다르다(002 마이그레이션).
     thumbnail: optStr(row.thumbnail),
+    image: optStr(row.image),
     category: str(row.category),
     ingredients: strArray(row.ingredients),
     // 지연 생성이라 아직 없을 수 있다. 빈 배열과 "아직 안 만듦"을 구분해야 재시도가 돈다.

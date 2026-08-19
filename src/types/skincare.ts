@@ -21,10 +21,17 @@ export type Product = {
   /** 사용자 입력 (선택) */
   productCompany?: string;
   /**
-   * 긴 변 256px JPEG data URL. 원본은 저장하지 않는다(Q7).
-   * AI 에는 원본을 보내고 여기엔 축소본만 남긴다 — localStorage 5MB 한계 때문.
+   * **내가 찍은 사진**(긴 변 256px JPEG data URL). 원본은 저장하지 않는다(Q7).
+   * ⚠️ 개인 데이터다 — 공유 카탈로그(인기 제품 등)에 노출하지 않는다.
    */
   thumbnail?: string;
+
+  /**
+   * **공유 가능한 제품 이미지**(검색 결과에서 온 것). 인기 제품처럼 남에게 보이는
+   * 자리에서는 이것만 쓴다. 없으면 카테고리 아이콘으로 폴백한다.
+   * (`db/migrations/002_product_image.sql` — 개인 사진과 칸을 나눈 이유가 거기 있다.)
+   */
+  image?: string;
 
   /** AI 추출 결과 — 자유 문자열이다. 열거형으로 좁히지 말 것 */
   category: string;
