@@ -1,0 +1,213 @@
+/* "내 고민" 탭의 입구 — 고민 등록과 성분 추천. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+}
+
+.heading {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.lead {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.label {
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+}
+
+/* ── 입력 ──────────────────────────────────────────────── */
+
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  font: var(--text-body-md);
+  /* 고민은 여러 줄이 될 수 있다. 가로로만 늘어나면 읽기 어렵다. */
+  resize: vertical;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.input::placeholder {
+  color: var(--outline);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  min-height: 44px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.submit:disabled {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: not-allowed;
+}
+
+.ghost {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-container);
+}
+
+/* ── 등록된 고민 ───────────────────────────────────────── */
+
+.wonderHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wonder {
+  margin-top: 4px;
+  font: var(--text-body-lg);
+  font-weight: 600;
+  color: var(--on-surface);
+  /* 긴 고민이 수정 버튼을 밀어내지 않게 한다 */
+  overflow-wrap: anywhere;
+}
+
+/* ── 성분 목록 ─────────────────────────────────────────── */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius);
+}
+
+.name {
+  font: var(--text-body-md);
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.effect {
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  line-height: 1.5;
+}
+
+.caution {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.empty {
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  line-height: 1.5;
+}
+
+/* 진단으로 읽히지 않게 결과 아래 고정한다. 눈에 띄되 결과를 가리지 않는 크기. */
+.disclaimer {
+  color: var(--outline);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font: var(--text-body-md);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

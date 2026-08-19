@@ -61,6 +61,20 @@ export type WarningsResponse = {
   warning: string[];
 };
 
+/** 고민에 도움이 되는 성분 1건 — 프롬프트 출력 스키마 그대로 */
+export type ConcernIngredient = {
+  name: string;
+  /** 이 고민에 어떻게 도움이 되는지(40자 이내, 규칙 4) */
+  effect: string;
+  /** 알려진 주의점. 없으면 null (규칙 6) */
+  caution: string | null;
+};
+
+export type ConcernResponse = {
+  /** **빈 배열이 정상 응답이다** (규칙 7: 고를 수 없으면 []) */
+  ingredients: ConcernIngredient[];
+};
+
 /**
  * 검색어로 제품 후보를 찾는다.
  *
@@ -92,6 +106,14 @@ export function generateRoutine(input: {
   products: { productName: string; category: string; ingredients: string[] }[];
 }) {
   return api.post<RoutineResponse>("/ai/routine", input);
+}
+
+/**
+ * 피부 고민에 도움이 되는 성분 추천 (최대 6개).
+ * **웹 검색을 쓰지 않아** 다른 AI 호출보다 빠르다(실측 10~30초).
+ */
+export function recommendConcernIngredients(input: { wonder: string }) {
+  return api.post<ConcernResponse>("/ai/concern", input);
 }
 
 /** 제품 단독 사용 주의사항 (최대 6개) */

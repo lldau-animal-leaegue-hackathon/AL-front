@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 
 import { TopAppBar } from "@/components/TopAppBar/TopAppBar";
 
+import { ConcernSection } from "./components/ConcernSection";
 import { RecordsSection } from "./components/RecordsSection";
 import { ReportSection } from "./components/ReportSection";
 import { ShelfSection } from "./components/ShelfSection";
-import { SkinProfileSection } from "./components/SkinProfileSection";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -34,12 +34,11 @@ export default function ConcernPage() {
       <TopAppBar userName={USER_NAME} />
 
       <main className={styles.main}>
-        <section>
-          <h2 className={styles.sectionTitle}>피부 프로필</h2>
-          <div className={styles.sectionBody}>
-            <SkinProfileSection />
-          </div>
-        </section>
+        {/*
+          이 탭의 메인이다 — 고민을 적으면 도움이 되는 성분을 찾아 준다.
+          제목을 컴포넌트가 직접 갖는다(입력 화면과 결과 화면의 제목이 다르다).
+        */}
+        <ConcernSection />
 
         {/* 리포트는 데이터에 따라 배지·부제가 바뀌어 제목까지 컴포넌트가 갖는다. */}
         <section>

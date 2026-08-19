@@ -16,6 +16,8 @@
 
 import useSWR, { mutate, type SWRConfiguration } from "swr";
 
+import { recommendConcernIngredients, type ConcernIngredient } from "@/api/ai";
+
 import {
   createProduct,
   fetchPopularProducts,
@@ -46,6 +48,8 @@ const KEYS = {
   routines: "/routines",
   runs: "/runs",
   profile: "/profile",
+  /** 고민 성분 추천. **실제 키에는 고민 문자열이 붙는다**(아래 훅 참조). */
+  concern: "/ai/concern",
 } as const;
 
 /**
@@ -98,6 +102,37 @@ export const useProducts = () =>
  */
 export const usePopularProducts = () =>
   useResource(KEYS.popular, fetchPopularProducts, NO_PRODUCTS);
+
+const NO_CONCERN_INGREDIENTS: ConcernIngredient[] = [];
+
+/**
+ * 고민에 도움이 되는 성분. **`wonder` 가 없으면 호출하지 않는다**(키가 null 이면 SWR 이 쉰다).
+ *
+ * ⭐ **고민 문자열이 키의 일부다.** 같은 고민으로 돌아오면 캐시가 즉시 답해
+ * 10~30초짜리 호출을 다시 하지 않는다. 고민을 바꾸면 키가 달라져 새로 부른다.
+ */
+export function useConcernIngredients(
+  wonder: string | null,
+): Resource<ConcernIngredient[]> {
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR(
+    wonder ? `${KEYS.concern}?w=${encodeURIComponent(wonder)}` : null,
+    // 키가 null 이면 이 함수는 호출되지 않는다. 그래서 빈 문자열 폴백이 실행될 일이 없다.
+    () => recommendConcernIngredients({ wonder: wonder ?? "" }),
+    SWR_OPTIONS,
+  );
+
+  return {
+    // 고민이 없으면 "기다릴 것도 없다" — 로딩으로 보이지 않게 ready 로 둔다.
+    ready: wonder === null || data !== undefined || error !== undefined,
+    value: data?.ingredients ?? NO_CONCERN_INGREDIENTS,
+    error: error !== undefined,
+    retry: () => void revalidate(),
+  };
+}
 
 export const useRoutines = () =>
   useResource(KEYS.routines, fetchRoutines, NO_ROUTINES);
