@@ -62,18 +62,20 @@ export function MigrateLocalData() {
 
     void (async () => {
       try {
-        const result = await api.post<{
-          ok: boolean;
-          migrated: Record<string, number>;
-        }>("/migrate", { products, routines, runs, profile });
+        await api.post<{ ok: boolean; migrated: Record<string, number> }>(
+          "/migrate",
+          { products, routines, runs, profile },
+        );
 
         // 서버가 받았다. 이제 로컬은 지운다 — 두 곳에 두면 어느 쪽이 최신인지 알 수 없다.
+        // 성공은 조용히 지나간다(사용자가 할 일이 없다). 실패만 아래에서 알린다.
         for (const key of Object.values(OLD_KEYS)) remove(key);
-
-        console.info("[migrate] 서버로 옮겼습니다:", result.migrated);
       } catch (error: unknown) {
         // 로컬은 그대로 남는다. 다음 진입 때 다시 시도된다.
-        console.warn("[migrate] 이관 실패 — 다음 접속 때 다시 시도합니다:", error);
+        console.warn(
+          "[migrate] 이관 실패 — 다음 접속 때 다시 시도합니다:",
+          error,
+        );
       }
     })();
   }, []);

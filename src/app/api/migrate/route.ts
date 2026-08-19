@@ -15,12 +15,7 @@
 
 import { currentUserId } from "@/lib/auth/anonUser";
 import { isoDate, LIMITS, text, textArray } from "@/lib/db/input";
-import {
-  dbErrorResponse,
-  ensureUser,
-  selectRows,
-  withTransaction,
-} from "@/lib/db/pool";
+import { dbErrorResponse, ensureUser, withTransaction } from "@/lib/db/pool";
 
 export const runtime = "nodejs";
 
@@ -98,12 +93,14 @@ export async function POST(request: Request) {
         // 로컬 모델에는 출처 필드가 없었다. 사진이 있으면 촬영으로 등록한 것으로 본다.
         const source = thumbnail ? "photo" : "manual";
 
+        /*
+         * ⚠️ `VALUES()` 를 `JSON_LENGTH()` 같은 함수 인자로 넘기면 MariaDB 에서 값이
+         *    제대로 전달되지 않는다(실측). "덮을지 말지"는 아래에서 앱이 판단한다.
+         */
         await conn.execute(
-          `INSERT INTO products (id, name, brand, category, ingredients, ingredient_source)
-           VALUES (UUID(), ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-             ingredients = IF(JSON_LENGTH(VALUES(ingredients)) > 0,
-                              VALUES(ingredients), ingredients)`,
+          `INSERT IGNORE INTO products
+             (id, name, brand, category, ingredients, ingredient_source)
+           VALUES (UUID(), ?, ?, ?, ?, ?)`,
           [name, brand, category, JSON.stringify(ingredients), source],
         );
 
@@ -130,12 +127,27 @@ export async function POST(request: Request) {
           );
         }
 
+        // 로컬 성분이 있으면 카탈로그를 채운다. 빈 배열로는 덮지 않는다.
+        if (ingredients.length > 0) {
+          await conn.execute(
+            `UPDATE products SET ingredients = ? WHERE id = ?`,
+            [JSON.stringify(ingredients), productId],
+          );
+        }
+
         await conn.execute(
-          `INSERT INTO shelf_items (id, user_id, product_id, thumbnail)
-           VALUES (UUID(), ?, ?, ?)
-           ON DUPLICATE KEY UPDATE thumbnail = COALESCE(VALUES(thumbnail), thumbnail)`,
+          `INSERT IGNORE INTO shelf_items (id, user_id, product_id, thumbnail)
+           VALUES (UUID(), ?, ?, ?)`,
           [userId, productId, thumbnail],
         );
+        // 로컬에 사진이 있을 때만 덮는다 — 없는데 덮으면 기존 사진이 지워진다.
+        if (thumbnail) {
+          await conn.execute(
+            `UPDATE shelf_items SET thumbnail = ?
+              WHERE user_id = ? AND product_id = ?`,
+            [thumbnail, userId, productId],
+          );
+        }
         products += 1;
       }
 

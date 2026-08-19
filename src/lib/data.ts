@@ -65,7 +65,11 @@ function useResource<T>(
   fetcher: () => Promise<T>,
   fallback: T,
 ): Resource<T> {
-  const { data, error, mutate: revalidate } = useSWR<T>(key, fetcher, SWR_OPTIONS);
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR<T>(key, fetcher, SWR_OPTIONS);
 
   return {
     ready: data !== undefined || error !== undefined,

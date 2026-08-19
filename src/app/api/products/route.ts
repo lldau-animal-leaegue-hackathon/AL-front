@@ -130,15 +130,16 @@ export async function POST(request: Request) {
        *    **사진에서 추출해 둔 성분이 그 제품을 담은 모든 사용자 기준으로 사라진다.**
        *    공유 카탈로그라 피해가 나에게 그치지 않고, 성분은 알레르기와 직결된다.
        */
+      /*
+       * ⚠️ **`VALUES()` 를 함수 인자로 넘기지 않는다.** MariaDB 에서
+       *    `JSON_LENGTH(VALUES(col))` 은 값이 제대로 전달되지 않아
+       *    `Unexpected end of JSON text` 로 죽는다(2026-08-18 실측).
+       *    그래서 "덮을지 말지"를 SQL 이 아니라 여기서 판단한다 — 읽기도 더 쉽다.
+       */
       await conn.execute(
-        `INSERT INTO products (id, name, brand, category, ingredients, ingredient_source)
-         VALUES (UUID(), ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           category = IF(VALUES(category) = '미분류', category, VALUES(category)),
-           ingredients = IF(JSON_LENGTH(VALUES(ingredients)) > 0,
-                            VALUES(ingredients), ingredients),
-           ingredient_source = IF(JSON_LENGTH(VALUES(ingredients)) > 0,
-                                  VALUES(ingredient_source), ingredient_source)`,
+        `INSERT IGNORE INTO products
+           (id, name, brand, category, ingredients, ingredient_source)
+         VALUES (UUID(), ?, ?, ?, ?, ?)`,
         [productName, brand, category, JSON.stringify(ingredients), source],
       );
 
@@ -153,18 +154,35 @@ export async function POST(request: Request) {
           : "";
       if (!id) throw new Error("UPSERT 직후 products 행을 찾지 못했습니다.");
 
-      /*
-       * 이미 선반에 있으면 사진만 갱신한다(같은 제품을 다시 찍어 등록한 경우).
-       * ⛔ `COALESCE` 가 필요하다 — 사진 없이 다시 담으면 thumbnail 이 NULL 로 오는데,
-       *    그대로 덮으면 **사용자가 직접 찍은 사진이 지워지고 복구 수단이 없다**
-       *    (개인 데이터라 공유 카탈로그에는 사본이 없다).
-       */
+      // 성분을 실제로 가져왔을 때만 갱신한다. 빈 배열로 덮으면 남이 추출해 둔 성분이 사라진다.
+      if (ingredients.length > 0) {
+        await conn.execute(
+          `UPDATE products
+              SET category = ?, ingredients = ?, ingredient_source = ?
+            WHERE id = ?`,
+          [category, JSON.stringify(ingredients), source, id],
+        );
+      }
+
+      // 선반에 없으면 담는다. 이미 있으면 사진만 따로 판단한다.
       await conn.execute(
-        `INSERT INTO shelf_items (id, user_id, product_id, thumbnail)
-         VALUES (UUID(), ?, ?, ?)
-         ON DUPLICATE KEY UPDATE thumbnail = COALESCE(VALUES(thumbnail), thumbnail)`,
+        `INSERT IGNORE INTO shelf_items (id, user_id, product_id, thumbnail)
+         VALUES (UUID(), ?, ?, ?)`,
         [userId, id, thumbnail],
       );
+
+      /*
+       * 새로 찍은 사진이 있을 때만 덮는다.
+       * 사진 없이 다시 담을 때 NULL 로 덮으면 **사용자가 직접 찍은 사진이 지워지고
+       * 복구 수단이 없다**(개인 데이터라 공유 카탈로그에 사본이 없다).
+       */
+      if (thumbnail) {
+        await conn.execute(
+          `UPDATE shelf_items SET thumbnail = ?
+            WHERE user_id = ? AND product_id = ?`,
+          [thumbnail, userId, id],
+        );
+      }
 
       return id;
     });

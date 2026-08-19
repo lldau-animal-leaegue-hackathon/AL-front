@@ -30,7 +30,9 @@ export async function POST(request: Request) {
   const userId = await currentUserId();
   if (!acquire(userId)) {
     return Response.json(
-      { message: "이미 처리 중인 요청이 있습니다. 완료 후 다시 시도해 주세요." },
+      {
+        message: "이미 처리 중인 요청이 있습니다. 완료 후 다시 시도해 주세요.",
+      },
       { status: 429 },
     );
   }
@@ -102,7 +104,9 @@ export async function POST(request: Request) {
       // claude CLI 의 stderr·서버 절대 경로가 섞여 나올 수 있어 상세는 로그로만 남긴다.
       console.error("[api/ai/warnings]", error);
       return Response.json(
-        { message: "주의사항 생성에 실패했습니다. 잠시 후 다시 시도해 주세요." },
+        {
+          message: "주의사항 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+        },
         { status: 502 },
       );
     }

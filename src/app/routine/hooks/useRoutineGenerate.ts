@@ -126,53 +126,53 @@ export function useRoutineGenerate() {
       }
 
       setStatus("working");
-    setError(null);
-    setSaved([]);
+      setError(null);
+      setSaved([]);
 
-    try {
-      const raw = await generateRoutine({
-        wonder,
-        usableTime: input.usableTime,
-        // 프롬프트 입력에 필요한 3개만 보낸다 — 썸네일까지 실으면 프롬프트가 불필요하게 커진다.
-        products: items.map((product) => ({
-          productName: product.productName,
-          category: product.category,
-          ingredients: product.ingredients,
-        })),
-      });
+      try {
+        const raw = await generateRoutine({
+          wonder,
+          usableTime: input.usableTime,
+          // 프롬프트 입력에 필요한 3개만 보낸다 — 썸네일까지 실으면 프롬프트가 불필요하게 커진다.
+          products: items.map((product) => ({
+            productName: product.productName,
+            category: product.category,
+            ingredients: product.ingredients,
+          })),
+        });
 
-      // 한쪽이 비는 경우가 있다(제품이 적으면 저녁만 나오기도 한다).
-      // 빈 시간대는 루틴을 만들지 않는다 — 단계 0개짜리 카드는 사용자에게 의미가 없다.
-      const routines: Routine[] = [];
-      if (raw.morning.length > 0) routines.push(toRoutine(raw.morning, "am"));
-      if (raw.evening.length > 0) routines.push(toRoutine(raw.evening, "pm"));
+        // 한쪽이 비는 경우가 있다(제품이 적으면 저녁만 나오기도 한다).
+        // 빈 시간대는 루틴을 만들지 않는다 — 단계 0개짜리 카드는 사용자에게 의미가 없다.
+        const routines: Routine[] = [];
+        if (raw.morning.length > 0) routines.push(toRoutine(raw.morning, "am"));
+        if (raw.evening.length > 0) routines.push(toRoutine(raw.evening, "pm"));
 
-      if (routines.length === 0) {
+        if (routines.length === 0) {
+          setStatus("error");
+          setError("AI 가 루틴을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+          return;
+        }
+
+        // 서버 저장. 90초 기다려 만든 결과가 저장에서 조용히 실패하면 사용자는 저장된 줄
+        // 안다 — 프로필·루틴 중 하나라도 실패하면 부분 성공으로 보고하지 않고 catch 로 던진다.
+        await saveProfile({ wonder, usableTime: input.usableTime });
+        await saveRoutines(routines);
+
+        setSaved(routines);
+        setStatus("done");
+      } catch (cause: unknown) {
         setStatus("error");
-        setError("AI 가 루틴을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
-        return;
-      }
 
-      // 서버 저장. 90초 기다려 만든 결과가 저장에서 조용히 실패하면 사용자는 저장된 줄
-      // 안다 — 프로필·루틴 중 하나라도 실패하면 부분 성공으로 보고하지 않고 catch 로 던진다.
-      await saveProfile({ wonder, usableTime: input.usableTime });
-      await saveRoutines(routines);
-
-      setSaved(routines);
-      setStatus("done");
-    } catch (cause: unknown) {
-      setStatus("error");
-
-      if (cause instanceof ApiError) {
-        const body = cause.body as { message?: string } | null;
-        setError(body?.message ?? `루틴을 만들지 못했어요 (${cause.status})`);
-        return;
-      }
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "알 수 없는 오류가 발생했어요.",
-      );
+        if (cause instanceof ApiError) {
+          const body = cause.body as { message?: string } | null;
+          setError(body?.message ?? `루틴을 만들지 못했어요 (${cause.status})`);
+          return;
+        }
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "알 수 없는 오류가 발생했어요.",
+        );
       }
     },
     [products],

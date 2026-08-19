@@ -152,7 +152,9 @@ export async function PUT(request: Request) {
   }
   if (body.routines.length > LIMITS.routines) {
     return Response.json(
-      { message: `루틴은 한 번에 ${LIMITS.routines}벌까지 저장할 수 있습니다.` },
+      {
+        message: `루틴은 한 번에 ${LIMITS.routines}벌까지 저장할 수 있습니다.`,
+      },
       { status: 400 },
     );
   }

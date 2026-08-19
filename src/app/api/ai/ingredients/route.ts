@@ -52,7 +52,9 @@ export async function POST(request: Request) {
   const userId = await currentUserId();
   if (!acquire(userId)) {
     return Response.json(
-      { message: "이미 처리 중인 요청이 있습니다. 완료 후 다시 시도해 주세요." },
+      {
+        message: "이미 처리 중인 요청이 있습니다. 완료 후 다시 시도해 주세요.",
+      },
       { status: 429 },
     );
   }
@@ -90,9 +92,7 @@ export async function POST(request: Request) {
     const capacity =
       typeof body.capacity === "string" ? body.capacity : undefined;
     const productCompany =
-      typeof body.productCompany === "string"
-        ? body.productCompany
-        : undefined;
+      typeof body.productCompany === "string" ? body.productCompany : undefined;
 
     let workdir: string | null = null;
     let imagePath: string | undefined;

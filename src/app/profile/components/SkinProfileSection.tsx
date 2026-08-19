@@ -21,8 +21,7 @@ export function SkinProfileSection() {
   // 아직 서버 응답 전이다. "없음"으로 단정하면 빈 상태가 깜빡였다 사라진다.
   if (!ready) return <DataState loading label="피부 프로필" />;
   // ⚠️ error 를 안 보면 네트워크 실패가 "아직 루틴을 만든 적 없음"으로 위장된다.
-  if (error)
-    return <DataState error onRetry={retry} label="피부 프로필" />;
+  if (error) return <DataState error onRetry={retry} label="피부 프로필" />;
 
   if (!profile) {
     return (

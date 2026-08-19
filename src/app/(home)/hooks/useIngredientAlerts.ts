@@ -49,17 +49,18 @@ function toAlerts(products: Product[]): IngredientAlertItem[] {
 export function useIngredientAlerts(): IngredientAlertsState {
   const { ready, value: products, error, retry } = useProducts();
   const [generating, setGenerating] = useState(false);
-  // 생성 루프는 한 번만 시작한다 — setProductWarnings 가 성공할 때마다 SWR 캐시가
-  // 갱신돼 products 참조가 바뀌는데, 그걸 effect 의존성에 넣으면 진행 중인 루프가
-  // 스스로를 취소시킨다. 최신 목록은 ref 로만 들여다본다.
+  /*
+   * 생성 루프는 **한 번만** 시작한다.
+   * `setProductWarnings` 가 성공할 때마다 SWR 캐시가 갱신돼 `products` 참조가 바뀌는데,
+   * 그걸 effect 의존성에 넣으면 진행 중인 루프가 cleanup 으로 스스로를 취소시킨다.
+   * 이 플래그가 재실행을 막으므로 목록은 그냥 직접 읽으면 된다.
+   */
   const startedRef = useRef(false);
-  const productsRef = useRef(products);
-  productsRef.current = products;
 
   useEffect(() => {
     if (!ready || error || startedRef.current) return;
 
-    const pending = productsRef.current.filter(
+    const pending = products.filter(
       (product) => product.warnings === undefined,
     );
     if (pending.length === 0) return;
@@ -120,7 +121,7 @@ export function useIngredientAlerts(): IngredientAlertsState {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- productsRef 로 최신값을 읽는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- products 를 넣으면 저장할 때마다 루프가 재시작된다(startedRef 가 한 번만 돌게 막는다)
   }, [ready, error]);
 
   if (!ready) return { kind: "checking" };

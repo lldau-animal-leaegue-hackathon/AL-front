@@ -116,4 +116,3 @@ export function remove(key: string): boolean {
     return false;
   }
 }
-
