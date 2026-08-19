@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { DataState } from "@/components/DataState/DataState";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Icon } from "@/components/Icon";
-import { useProducts } from "@/lib/data";
+import { IngredientProducts } from "@/components/IngredientProducts/IngredientProducts";
+import { useProducts, useShelfReport } from "@/lib/data";
+import { SKIN_TYPES } from "@/lib/prompts/interactions";
+import type { IngredientPair } from "@/api/ai";
 import type { Product } from "@/types/skincare";
 
 import card from "../../(home)/components/card.module.css";
+import { IngredientChip } from "./IngredientChip";
 import styles from "./ReportSection.module.css";
 
 /** 2개 이상 제품에 공통으로 들어간 성분 — 상위 3개만 인사이트로 보여준다. */
@@ -79,15 +84,49 @@ function warningsByProduct(products: readonly Product[]): ProductWarnings[] {
     .filter((item) => item.lines.length > 0);
 }
 
+type SubTab = "summary" | "types" | "synergy";
+
+const SUB_TABS: readonly { id: SubTab; label: string }[] = [
+  { id: "summary", label: "종합" },
+  { id: "types", label: "피부 타입별" },
+  { id: "synergy", label: "시너지·궁합" },
+];
+
+/** 최초 생성은 1~2분 — 이 시점부터 "정상"이라고 알려야 사용자가 안 떠난다. */
+const LONG_WAIT_SECONDS = 20;
+
 /**
- * AI 분석 리포트 — 등록 제품 전체의 `ingredients`·`warnings` 를 모아 요약한다.
+ * AI 분석 리포트 — 세 하위 탭.
  *
- * 여기서 새로 AI 를 호출하지 않는다. `warnings` 생성은 홈 화면의
- * `useIngredientAlerts` 가 맡고 있어, 이 화면은 이미 저장된 값만 읽는다
- * (같은 화면이 두 번 호출을 태우면 `claude -p` 프로세스가 중복으로 뜬다).
+ *  - 종합: 저장된 `ingredients`·`warnings` 집계(AI 호출 없음, 즉시)
+ *  - 피부 타입별 / 시너지·궁합: 선반 상호작용 분석(`/api/ai/report`).
+ *    **하위 탭을 처음 열 때만 요청한다** — 최초 생성이 1~2분짜리 AI 호출이라
+ *    리포트를 안 여는 사용자에게 태우면 안 된다. 선반이 안 바뀌면 서버 지문
+ *    캐시가 즉시 답한다.
  */
 export function ReportSection() {
   const { ready, value: products, error, errorMessage, retry } = useProducts();
+
+  const [subTab, setSubTab] = useState<SubTab>("summary");
+  /** 분석 탭을 한 번이라도 열었는가. 켜진 뒤로는 유지 — 탭을 오가도 재요청이 없다. */
+  const [analysisWanted, setAnalysisWanted] = useState(false);
+  const report = useShelfReport(analysisWanted);
+  const generating = analysisWanted && !report.ready;
+
+  // 진행 표시 — 스피너만 돌면 멈춘 줄 안다(RoutineForm 과 같은 이유·같은 방식).
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!generating) return;
+    const startedAt = Date.now();
+    const id = setInterval(
+      () => setElapsed(Math.round((Date.now() - startedAt) / 1000)),
+      1000,
+    );
+    return () => clearInterval(id);
+  }, [generating]);
+
+  /** 시너지 탭에서 펼친 추천 성분. 하나만 연다(ConcernSection 과 같은 이유). */
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   if (!ready) return <DataState loading label="제품" />;
   if (error)
@@ -100,6 +139,64 @@ export function ReportSection() {
   ).size;
   const shared = sharedIngredients(products);
   const flagged = warningsByProduct(products);
+
+  const selectTab = (id: SubTab) => {
+    setSubTab(id);
+    if (id !== "summary") setAnalysisWanted(true);
+  };
+
+  /** 충돌·시너지 공용 목록. 계약상 빈 배열이 정상이라 빈 문구를 밖에서 받는다. */
+  const pairList = (pairs: IngredientPair[], empty: string) =>
+    pairs.length === 0 ? (
+      <p className={styles.groupEmpty}>{empty}</p>
+    ) : (
+      <ul className={styles.pairList}>
+        {pairs.map((pair) => (
+          <li key={pair.ingredients.join("+")} className={styles.pairItem}>
+            <p className={styles.pairChips}>
+              {pair.ingredients.map((name) => (
+                <IngredientChip key={name} name={name} />
+              ))}
+            </p>
+            {pair.products.length > 0 && (
+              <p className={styles.pairProducts}>{pair.products.join(" · ")}</p>
+            )}
+            <p className={styles.desc}>{pair.description}</p>
+          </li>
+        ))}
+      </ul>
+    );
+
+  /** 분석 데이터가 필요한 패널의 공통 게이트(로딩·실패). 통과하면 내용을 그린다. */
+  const analysisGate = (content: () => React.ReactNode) => {
+    if (generating) {
+      return (
+        <div className={styles.generating} role="status">
+          <Icon name="progress_activity" className={styles.spinner} />
+          <p className={styles.generatingText}>
+            선반의 성분 조합을 분석하는 중이에요… {elapsed}초
+          </p>
+          {elapsed >= LONG_WAIT_SECONDS && (
+            <p className={styles.generatingHint}>
+              제품 조합을 하나씩 따져 보는 중이에요. 처음 한 번만 1~2분 걸리고,
+              선반이 그대로면 다음부터는 바로 열립니다.
+            </p>
+          )}
+        </div>
+      );
+    }
+    if (report.error) {
+      return (
+        <DataState
+          error
+          onRetry={report.retry}
+          label="분석"
+          message={report.errorMessage}
+        />
+      );
+    }
+    return content();
+  };
 
   return (
     <section className={`${card.card} ${styles.section}`}>
@@ -121,83 +218,233 @@ export function ReportSection() {
         <EmptyState
           icon="science"
           title="분석할 제품이 없어요"
-          text="제품을 등록하면 성분과 주의사항을 모아서 보여드려요."
+          text="제품을 등록하면 성분·시너지·주의사항을 모아서 보여드려요."
           ctaHref="/scan?tab=add"
           ctaLabel="제품 등록하기"
         />
       ) : (
         <>
-          {shared.length > 0 && (
-            <div className={styles.block}>
-              <h3 className={styles.blockTitle}>자주 쓰는 성분</h3>
-              <ul className={styles.sharedList}>
-                {shared.map((item) => (
-                  <li key={item.name} className={styles.sharedItem}>
-                    <span className={styles.sharedName}>{item.name}</span>
-                    <span className={styles.sharedCount}>
-                      {item.count}개 제품
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/*
+            하위 세그먼트 — ScanTabs 의 밑줄 패턴을 따른다(DESIGN.md 에 탭 규정이 없어
+            코드베이스 선례가 정본이다). URL 에 올리지 않는 이유: 리포트는 이미
+            `/scan?tab=report` 안이고, 한 단계 더 딥링크할 필요가 확인되지 않았다.
+          */}
+          <div className={styles.subTabs}>
+            {SUB_TABS.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                className={
+                  id === subTab
+                    ? `${styles.subTab} ${styles.subTabActive}`
+                    : styles.subTab
+                }
+                aria-pressed={id === subTab}
+                onClick={() => selectTab(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-          {flagged.length === 0 ? (
-            <p className={styles.safe}>
-              <Icon
-                name="check_circle"
-                size="sm"
-                filled
-                className={styles.safeIcon}
-              />
-              등록한 제품에서 확인된 주의 성분이 없어요.
-            </p>
-          ) : (
-            /*
-              예전에는 전체를 붉은 상자(.alert)로 감쌌는데, 주의사항이 길어질수록
-              화면 대부분이 빨개져 읽기 힘들었다(사용자 지적 2026-08-19).
-              색은 제목·표식에만 남기고 본문은 보통 표면 위에 둔다.
-            */
-            <div className={styles.block}>
-              <h3 className={`${styles.blockTitle} ${styles.alertTitle}`}>
-                <Icon name="warning" size="sm" filled />
-                자극 우려 성분
-              </h3>
-
-              {flagged.map((product) => (
-                <article key={product.id} className={styles.product}>
-                  <h4 className={styles.productName}>{product.name}</h4>
-
-                  <ul className={styles.lines}>
-                    {product.lines.map((line) => (
-                      <li key={line.key} className={styles.line}>
-                        {/* 성분을 특정하지 못한 문장은 제목 없이 설명만 보여 준다 */}
-                        {line.ingredients.length > 0 && (
-                          <p className={styles.ingredient}>
-                            {line.ingredients.join(" · ")}
-                          </p>
-                        )}
-                        <p className={styles.desc}>{line.text}</p>
+          {subTab === "summary" && (
+            <>
+              {shared.length > 0 && (
+                <div className={styles.block}>
+                  <h3 className={styles.blockTitle}>자주 쓰는 성분</h3>
+                  <ul className={styles.sharedList}>
+                    {shared.map((item) => (
+                      <li key={item.name} className={styles.sharedItem}>
+                        <span className={styles.sharedName}>{item.name}</span>
+                        <span className={styles.sharedCount}>
+                          {item.count}개 제품
+                        </span>
                       </li>
                     ))}
                   </ul>
-                </article>
-              ))}
+                </div>
+              )}
 
-              {/*
-                "대체 제품 찾기"인데 등록 폼으로 보내고 있었다 — 옛 `#add` 앵커가
-                폼과 검색을 함께 감싸서 성립하던 우연이다. 탭이 생겨 목적지를
-                검색으로 재조준했다. 이제 문구와 목적지가 일치한다.
-              */}
-              <Link
-                href="/scan?tab=popular"
-                className={`${card.label} ${styles.alertCta}`}
-              >
-                대체 제품 찾기
-              </Link>
-            </div>
+              {flagged.length === 0 ? (
+                <p className={styles.safe}>
+                  <Icon
+                    name="check_circle"
+                    size="sm"
+                    filled
+                    className={styles.safeIcon}
+                  />
+                  등록한 제품에서 확인된 주의 성분이 없어요.
+                </p>
+              ) : (
+                <div className={styles.block}>
+                  <h3 className={`${styles.blockTitle} ${styles.alertTitle}`}>
+                    <Icon name="warning" size="sm" filled />
+                    자극 우려 성분
+                  </h3>
+
+                  {flagged.map((product) => (
+                    <article key={product.id} className={styles.product}>
+                      <h4 className={styles.productName}>{product.name}</h4>
+
+                      <ul className={styles.lines}>
+                        {product.lines.map((line) => (
+                          <li key={line.key} className={styles.line}>
+                            {/* 성분을 특정하지 못한 문장은 제목 없이 설명만 보여 준다 */}
+                            {line.ingredients.length > 0 && (
+                              <p className={styles.ingredient}>
+                                {line.ingredients.join(" · ")}
+                              </p>
+                            )}
+                            <p className={styles.desc}>{line.text}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))}
+
+                  <Link
+                    href="/scan?tab=popular"
+                    className={`${card.label} ${styles.alertCta}`}
+                  >
+                    대체 제품 찾기
+                  </Link>
+                </div>
+              )}
+            </>
           )}
+
+          {subTab === "types" &&
+            analysisGate(() => {
+              const cautions = report.value?.skin_type_cautions ?? [];
+              return (
+                <>
+                  {cautions.length === 0 ? (
+                    /* 빈 배열은 실패가 아니다(규칙 2) — 확신할 주의점이 없다는 답이다. */
+                    <p className={styles.groupEmpty}>
+                      보유 성분 중 피부 타입별로 특별히 주의할 것이 확인되지
+                      않았어요.
+                    </p>
+                  ) : (
+                    SKIN_TYPES.map((type) => {
+                      const items = cautions.filter(
+                        (item) => item.skin_type === type,
+                      );
+                      if (items.length === 0) return null;
+                      return (
+                        <div key={type} className={styles.block}>
+                          <h3 className={styles.blockTitle}>{type} 피부</h3>
+                          <ul className={styles.pairList}>
+                            {items.map((item) => (
+                              <li
+                                key={`${type}-${item.ingredient}`}
+                                className={styles.pairItem}
+                              >
+                                <p className={styles.pairChips}>
+                                  <IngredientChip name={item.ingredient} />
+                                </p>
+                                {item.products.length > 0 && (
+                                  <p className={styles.pairProducts}>
+                                    {item.products.join(" · ")}
+                                  </p>
+                                )}
+                                <p className={styles.desc}>{item.caution}</p>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })
+                  )}
+                  <p className={styles.disclaimer}>
+                    일반적인 정보이며 의학적 조언이 아닙니다. 피부 질환이
+                    의심되면 전문의와 상담하세요.
+                  </p>
+                </>
+              );
+            })}
+
+          {subTab === "synergy" &&
+            analysisGate(() => {
+              const conflicts = report.value?.conflicts ?? [];
+              const synergies = report.value?.synergies ?? [];
+              const suggestions = report.value?.suggestions ?? [];
+              return (
+                <>
+                  <div className={styles.block}>
+                    <h3 className={`${styles.blockTitle} ${styles.alertTitle}`}>
+                      <Icon name="warning" size="sm" filled />
+                      같이 쓰면 주의
+                    </h3>
+                    {pairList(
+                      conflicts,
+                      "보유 제품 사이에 충돌로 알려진 조합이 확인되지 않았어요.",
+                    )}
+                  </div>
+
+                  <div className={styles.block}>
+                    <h3 className={styles.blockTitle}>
+                      <Icon name="handshake" size="sm" filled />
+                      같이 쓰면 좋음
+                    </h3>
+                    {pairList(
+                      synergies,
+                      "보유 제품 사이에 시너지로 알려진 조합이 확인되지 않았어요.",
+                    )}
+                  </div>
+
+                  {suggestions.length > 0 && (
+                    <div className={styles.block}>
+                      <h3 className={styles.blockTitle}>
+                        <Icon name="add_circle" size="sm" filled />
+                        이런 성분을 더하면 좋아요
+                      </h3>
+                      <ul className={styles.suggestionList}>
+                        {suggestions.map((item) => {
+                          const open = expanded === item.ingredient;
+                          return (
+                            <li
+                              key={item.ingredient}
+                              className={styles.suggestionItem}
+                            >
+                              {/* 펼칠 때만 제품을 조회한다(ConcernSection 과 같은 이유). */}
+                              <button
+                                type="button"
+                                className={styles.suggestionHead}
+                                onClick={() =>
+                                  setExpanded(open ? null : item.ingredient)
+                                }
+                                aria-expanded={open}
+                              >
+                                <span className={styles.suggestionText}>
+                                  <IngredientChip name={item.ingredient} />
+                                  <span className={styles.desc}>
+                                    {item.reason}
+                                  </span>
+                                </span>
+                                <Icon
+                                  name={open ? "expand_less" : "expand_more"}
+                                  className={styles.chevron}
+                                />
+                              </button>
+                              {open && (
+                                <IngredientProducts
+                                  ingredient={item.ingredient}
+                                />
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+
+                  <p className={styles.disclaimer}>
+                    일반적인 정보이며 의학적 조언이 아닙니다. 새 성분은 소량으로
+                    먼저 테스트해 보세요.
+                  </p>
+                </>
+              );
+            })}
         </>
       )}
     </section>

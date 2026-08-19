@@ -26,6 +26,40 @@
   letter-spacing: var(--tracking-label-sm);
 }
 
+/* ── 하위 세그먼트 — ScanTabs 의 밑줄 패턴(투명 배경 + --primary 밑줄) ───── */
+
+.subTabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.subTab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  /* 상위 ScanTabs(48px)보다 낮아 위계가 보인다. 터치 하한 44px 은 지킨다. */
+  min-height: 44px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.subTabActive {
+  color: var(--primary);
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+
 /*
  * ⛔ 블록에 배경색도, 왼쪽 구분선도 두지 않는다 — 주의사항이 길어질수록 화면이
  *    장식으로 덮여 읽기 힘들어진다(사용자 지적 2026-08-19). 구분은 제목과 간격이 한다.
@@ -149,6 +183,140 @@
 
 .alertCta:hover {
   background: var(--error-container);
+}
+
+/* ── 분석 탭(타입별·시너지) ────────────────────────────── */
+
+/* 충돌·시너지·타입별 공용 목록. 칩(성분) → 제품 → 설명 순서로 읽힌다. */
+.pairList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+}
+
+.pairItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pairChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pairProducts {
+  color: var(--on-surface-variant);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+/* 한 그룹만 비었을 때 — 빈 배열은 실패가 아니라 "확인된 조합 없음"이라는 답이다. */
+.groupEmpty {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+}
+
+/* 추가 추천 성분 — 줄 전체가 버튼이고 펼치면 그 성분이 든 제품이 나온다. */
+.suggestionList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.suggestionItem {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius);
+}
+
+.suggestionHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.suggestionText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--on-surface-variant);
+}
+
+/* 최초 생성 1~2분 — 경과초와 안내가 없으면 멈춘 줄 안다. */
+.generating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.generatingText {
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+}
+
+.generatingHint {
+  max-width: 32ch;
+  color: var(--outline);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  line-height: 1.6;
+}
+
+.spinner {
+  color: var(--primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 진단으로 읽히지 않게 결과 아래 고정한다(ConcernSection 과 같은 원칙). */
+.disclaimer {
+  color: var(--outline);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  line-height: 1.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subTab {
+    transition: none;
+  }
+
+  .spinner {
+    animation: none;
+  }
 }
 
 /* 주의 성분이 없을 때 — 중립 표면 위에 안전한 on-surface-variant 짝을 쓴다.

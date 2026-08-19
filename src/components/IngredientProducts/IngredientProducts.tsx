@@ -20,6 +20,9 @@ import styles from "./IngredientProducts.module.css";
  * ⚠️ **빈 결과의 의미가 중요하다.** "그런 제품이 없다"가 아니라 **"아직 아무도 담지 않았다"**
  * 이다. 카탈로그는 사용자가 담아야 채워지므로, 초기에는 대부분 비어 있다.
  * 막다른 길을 만들지 않도록 스캔 탭으로 가는 길을 함께 준다.
+ *
+ * `concern/` 에서 이리로 옮겼다(2026-08-20) — 리포트의 "추가하면 좋을 성분"도 같은
+ * 화면을 쓰게 되면서 한 라우트 전용이 아니게 됐다(EmptyState 승격과 같은 근거).
  */
 export function IngredientProducts({ ingredient }: { ingredient: string }) {
   const products = useProductsByIngredient(ingredient);

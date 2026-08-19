@@ -186,19 +186,50 @@ export function useConcernIngredients(
  * 화면이 "그런 제품이 없다"로 읽히지 않게 안내를 구분해야 한다.
  */
 /**
+ * 선반 서명 — 리포트 SWR 키의 일부. 서버 지문(shelfFingerprint)과 **같은 사건**에만
+ * 바뀌도록 같은 입력(정렬된 id + ingredients)을 쓴다. 32비트 djb2 로 짧게 줄인다 —
+ * 충돌해 봐야 클라이언트가 스테일을 한 번 더 보여줄 뿐, 서버는 진짜 지문으로 판정한다.
+ */
+function shelfSignature(products: readonly Product[]): string {
+  const canonical = JSON.stringify(
+    products
+      .map((p) => ({ id: p.id, ingredients: p.ingredients }))
+      .sort((a, b) => a.id.localeCompare(b.id)),
+  );
+  let hash = 5381;
+  for (let i = 0; i < canonical.length; i++) {
+    hash = ((hash * 33) ^ canonical.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+/**
  * 선반 상호작용 분석 리포트.
  *
  * `enabled=false` 면 **호출하지 않는다** — 하위 탭을 열 때만 부른다.
  * 최초 생성은 1~2분짜리 AI 호출이라, 리포트 탭을 안 여는 사용자에게 태우면 안 된다.
- * 서버가 선반 지문으로 캐시하므로 선반이 안 바뀌면 캐시 히트(수백 ms)다.
+ *
+ * 무효화는 **키 교체**로 한다: 키에 선반 서명이 들어 있어 제품을 담고 빼면 키가
+ * 바뀌고, 새 키는 첫 마운트에서 fetch 한다(서버가 지문으로 캐시/재생성을 판정).
+ * `mutate(key, undefined)` 로 비우는 방식을 쓰지 않는 이유 — AI_SWR_OPTIONS 는
+ * 자동 재검증이 전부 꺼져 있어, 열려 있는 구독자가 **빈 캐시 상태로 영영 로딩**에 갇힌다.
  */
-export const useShelfReport = (enabled: boolean) =>
-  useResource<ShelfReportResponse | null>(
-    enabled ? KEYS.shelfReport : null,
+export function useShelfReport(
+  enabled: boolean,
+): Resource<ShelfReportResponse | null> {
+  const products = useProducts();
+  const key =
+    enabled && products.ready && !products.error && products.value.length > 0
+      ? `${KEYS.shelfReport}?s=${shelfSignature(products.value)}`
+      : null;
+
+  return useResource<ShelfReportResponse | null>(
+    key,
     fetchShelfReport,
     null,
     AI_SWR_OPTIONS,
   );
+}
 
 export const useProductsByIngredient = (name: string | null) =>
   useResource(
@@ -231,13 +262,9 @@ export async function addProduct(input: {
   ingredientSource?: IngredientSource;
 }): Promise<Product> {
   const created = await createProduct(input);
+  // 리포트 무효화는 따로 안 한다 — useShelfReport 의 키에 선반 서명이 들어 있어
+  // products 갱신이 곧 키 교체다.
   await mutate(KEYS.products);
-  /*
-   * 선반이 바뀌면 분석 리포트 캐시를 **지우기만** 한다(재검증 없음).
-   * mutate 로 즉시 재검증하면 1~2분짜리 AI 호출이 등록 직후에 나간다 —
-   * 비우면 다음에 리포트 탭을 열 때 새로 만든다(서버 지문도 그때 바뀐 걸 안다).
-   */
-  await mutate(KEYS.shelfReport, undefined, { revalidate: false });
   return created;
 }
 
@@ -251,9 +278,7 @@ export async function setProductWarnings(input: {
 
 export async function removeProduct(input: { id: string }): Promise<void> {
   await removeProductRequest(input);
-  await mutate(KEYS.products);
-  // 선반 구성이 바뀌었다 — addProduct 와 같은 이유로 리포트 캐시만 비운다.
-  await mutate(KEYS.shelfReport, undefined, { revalidate: false });
+  await mutate(KEYS.products); // 리포트 키도 이 갱신으로 같이 바뀐다(선반 서명)
 }
 
 export async function saveRoutines(routines: RoutineInput[]): Promise<void> {

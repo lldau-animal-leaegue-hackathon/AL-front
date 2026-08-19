@@ -7,8 +7,9 @@ import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 import { saveProfile, useConcernIngredients, useSkinProfile } from "@/lib/data";
 
+import { IngredientProducts } from "@/components/IngredientProducts/IngredientProducts";
+
 import styles from "./ConcernSection.module.css";
-import { IngredientProducts } from "./IngredientProducts";
 
 /**
  * 루틴 생성 폼과 같은 기본값. 고민만 등록하는 사용자도 값이 있어야 저장된다

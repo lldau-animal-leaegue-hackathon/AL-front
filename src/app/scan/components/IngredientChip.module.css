@@ -1,0 +1,13 @@
+/* DESIGN.md Chips 스펙: pill · Warm Sand 20% · Deep Navy 글자.
+   Warm Sand = --secondary, Deep Navy = --tertiary (다크에서는 토큰이 밝은 쌍으로 뒤집힌다). */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--secondary) 20%, transparent);
+  color: var(--tertiary);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  white-space: nowrap;
+}
