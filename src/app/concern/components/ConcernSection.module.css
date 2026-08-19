@@ -138,10 +138,38 @@
 .item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
   padding: 14px 16px;
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius);
+}
+
+/* 성분 줄 전체가 버튼이다 — 누르면 그 성분이 든 제품이 펼쳐진다. */
+.itemHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.itemText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--on-surface-variant);
 }
 
 .name {

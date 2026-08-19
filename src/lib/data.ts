@@ -22,6 +22,7 @@ import {
   createProduct,
   fetchPopularProducts,
   fetchProducts,
+  fetchProductsByIngredient,
   removeProduct as removeProductRequest,
   updateProductWarnings,
   type IngredientSource,
@@ -50,6 +51,8 @@ const KEYS = {
   profile: "/profile",
   /** 고민 성분 추천. **실제 키에는 고민 문자열이 붙는다**(아래 훅 참조). */
   concern: "/ai/concern",
+  /** 성분으로 찾은 제품. 실제 키에는 성분명이 붙는다. */
+  byIngredient: "/products/by-ingredient",
 } as const;
 
 /**
@@ -66,8 +69,12 @@ export type Resource<T> = {
   retry: () => void;
 };
 
+/**
+ * `key` 가 `null` 이면 **호출하지 않는다**(SWR 의 조건부 fetch).
+ * 아직 물어볼 대상이 정해지지 않은 화면 — 예: 고민을 적기 전, 성분을 고르기 전 — 에 쓴다.
+ */
 function useResource<T>(
-  key: string,
+  key: string | null,
   fetcher: () => Promise<T>,
   fallback: T,
 ): Resource<T> {
@@ -78,7 +85,8 @@ function useResource<T>(
   } = useSWR<T>(key, fetcher, SWR_OPTIONS);
 
   return {
-    ready: data !== undefined || error !== undefined,
+    // 호출하지 않기로 한 상태는 "기다릴 것도 없다" — 로딩으로 보이면 안 된다.
+    ready: key === null || data !== undefined || error !== undefined,
     value: data ?? fallback,
     error: error !== undefined,
     retry: () => void revalidate(),
@@ -114,25 +122,29 @@ const NO_CONCERN_INGREDIENTS: ConcernIngredient[] = [];
 export function useConcernIngredients(
   wonder: string | null,
 ): Resource<ConcernIngredient[]> {
-  const {
-    data,
-    error,
-    mutate: revalidate,
-  } = useSWR(
+  const res = useResource(
     wonder ? `${KEYS.concern}?w=${encodeURIComponent(wonder)}` : null,
     // 키가 null 이면 이 함수는 호출되지 않는다. 그래서 빈 문자열 폴백이 실행될 일이 없다.
     () => recommendConcernIngredients({ wonder: wonder ?? "" }),
-    SWR_OPTIONS,
+    null,
   );
 
-  return {
-    // 고민이 없으면 "기다릴 것도 없다" — 로딩으로 보이지 않게 ready 로 둔다.
-    ready: wonder === null || data !== undefined || error !== undefined,
-    value: data?.ingredients ?? NO_CONCERN_INGREDIENTS,
-    error: error !== undefined,
-    retry: () => void revalidate(),
-  };
+  // 응답이 `{ ingredients }` 한 겹이라 화면이 쓰기 좋게 벗겨 준다.
+  return { ...res, value: res.value?.ingredients ?? NO_CONCERN_INGREDIENTS };
 }
+
+/**
+ * 그 성분이 든 카탈로그 제품. `name` 이 없으면 호출하지 않는다.
+ *
+ * ⚠️ **빈 배열은 "아직 담긴 제품이 없다"** 는 뜻이다(카탈로그는 누군가 담아야 채워진다).
+ * 화면이 "그런 제품이 없다"로 읽히지 않게 안내를 구분해야 한다.
+ */
+export const useProductsByIngredient = (name: string | null) =>
+  useResource(
+    name ? `${KEYS.byIngredient}?n=${encodeURIComponent(name)}` : null,
+    () => fetchProductsByIngredient({ name: name ?? "" }),
+    NO_PRODUCTS,
+  );
 
 export const useRoutines = () =>
   useResource(KEYS.routines, fetchRoutines, NO_ROUTINES);

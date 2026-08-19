@@ -18,6 +18,17 @@ export const fetchProducts = () => api.get<Product[]>("/products");
 export const fetchPopularProducts = () =>
   api.get<Product[]>("/products/popular");
 
+/**
+ * 그 성분이 든 제품을 카탈로그에서 찾는다.
+ *
+ * **빈 배열은 "아직 담긴 제품이 없다"는 뜻**이지 그런 제품이 없다는 뜻이 아니다 —
+ * 카탈로그는 누군가 담아야 채워진다. 화면이 그 차이를 말해 줘야 한다.
+ */
+export const fetchProductsByIngredient = (input: { name: string }) =>
+  api.get<Product[]>("/products/by-ingredient", {
+    query: { name: input.name },
+  });
+
 /** 성분 출처. 화면에 표시해야 하므로 서버가 NOT NULL 로 받는다. */
 export type IngredientSource = "photo" | "hwahae" | "fallback" | "manual";
 

@@ -7,6 +7,7 @@ import { Icon } from "@/components/Icon";
 import { saveProfile, useConcernIngredients, useSkinProfile } from "@/lib/data";
 
 import styles from "./ConcernSection.module.css";
+import { IngredientProducts } from "./IngredientProducts";
 
 /**
  * 루틴 생성 폼과 같은 기본값. 고민만 등록하는 사용자도 값이 있어야 저장된다
@@ -28,6 +29,8 @@ export function ConcernSection() {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  /** 펼친 성분 이름. 하나만 연다 — 여러 개를 열면 목록이 길어져 비교가 어렵다. */
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const wonder = profile.value?.wonder ?? null;
   // 편집 중에는 추천을 부르지 않는다 — 아직 확정되지 않은 문장으로 30초를 쓸 이유가 없다.
@@ -157,18 +160,44 @@ export function ConcernSection() {
           </p>
         ) : (
           <ul className={styles.list}>
-            {ingredients.value.map((item) => (
-              <li key={item.name} className={styles.item}>
-                <p className={styles.name}>{item.name}</p>
-                {item.effect && <p className={styles.effect}>{item.effect}</p>}
-                {item.caution && (
-                  <p className={styles.caution}>
-                    <Icon name="info" size="sm" />
-                    {item.caution}
-                  </p>
-                )}
-              </li>
-            ))}
+            {ingredients.value.map((item) => {
+              const open = expanded === item.name;
+
+              return (
+                <li key={item.name} className={styles.item}>
+                  {/*
+                    펼칠 때만 제품을 조회한다 — 성분 6개를 한꺼번에 부르면
+                    쓰지도 않을 요청이 6개 나간다.
+                  */}
+                  <button
+                    type="button"
+                    className={styles.itemHead}
+                    onClick={() => setExpanded(open ? null : item.name)}
+                    aria-expanded={open}
+                  >
+                    <span className={styles.itemText}>
+                      <span className={styles.name}>{item.name}</span>
+                      {item.effect && (
+                        <span className={styles.effect}>{item.effect}</span>
+                      )}
+                    </span>
+                    <Icon
+                      name={open ? "expand_less" : "expand_more"}
+                      className={styles.chevron}
+                    />
+                  </button>
+
+                  {item.caution && (
+                    <p className={styles.caution}>
+                      <Icon name="info" size="sm" />
+                      {item.caution}
+                    </p>
+                  )}
+
+                  {open && <IngredientProducts ingredient={item.name} />}
+                </li>
+              );
+            })}
           </ul>
         )}
 
