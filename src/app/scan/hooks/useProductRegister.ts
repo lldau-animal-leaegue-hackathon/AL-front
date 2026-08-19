@@ -2,7 +2,11 @@
 
 import { useCallback, useState } from "react";
 
-import { extractIngredients } from "@/api/ai";
+import {
+  extractIngredients,
+  searchProductCandidates,
+  type ProductCandidate,
+} from "@/api/ai";
 import { ApiError } from "@/api/client";
 import { addProduct, useProducts } from "@/lib/data";
 import { fileToDataUrl, resizeToThumbnail } from "@/lib/imageResize";
@@ -12,96 +16,270 @@ export type RegisterInput = {
   productName: string;
   capacity: string;
   productCompany: string;
-  /** 성분표 사진. 없으면 이름·회사만으로 추론한다(확신 없으면 빈 배열이 온다). */
-  file: File | null;
+  /**
+   * 제품 사진(전면). **썸네일로만 쓴다.**
+   * 선반과 검색 결과에서 제품을 알아보는 용도라 성분 추출에는 보내지 않는다.
+   */
+  productFile: File | null;
+  /**
+   * 성분표 사진. **성분 추출에만 쓴다.**
+   * ⚠️ 썸네일로 쓰지 않는다 — 예전에는 이 사진이 선반 썸네일이 되어
+   * 목록에 성분표 클로즈업이 떴다. 제품을 알아볼 수 없었다.
+   */
+  labelFile: File | null;
 };
 
-export type RegisterStatus = "idle" | "working" | "done" | "error";
+/**
+ * 성분까지 확인된 제품 — **아직 저장하지 않았다.**
+ * 사용자가 모달에서 "선반에 등록하기"를 눌러야 저장된다.
+ */
+export type SearchResult = {
+  productName: string;
+  category: string;
+  ingredients: string[];
+  /** 저장용 256px 썸네일. 사진을 올렸을 때만 있다(Q7). */
+  thumbnail?: string;
+  productCompany?: string;
+  /** 화면이 성분 출처를 표시해야 하므로 저장까지 들고 간다. */
+  ingredientSource: "photo" | "manual";
+  /** 후보 검색에서 얻은 용량. 저장하지 않고 확인 화면에만 쓴다(DB 컬럼이 없다). */
+  volume?: string;
+};
 
 /**
- * 제품 등록 — 성분 추출(AI) → 저장(서버) 한 흐름.
- * AGENTS.md 컨벤션대로 폼 검증·fetch·비즈니스 로직을 화면에서 떼어 둔다.
+ * 등록 진행 단계.
+ *
+ * `choosing` 부터 `saving` 까지가 **모달이 떠 있는 구간**이다.
+ */
+export type RegisterPhase =
+  | "idle"
+  /** 후보 검색 중(웹 검색, 실측 18~37초) */
+  | "searching"
+  /** 후보 목록에서 고르는 중 */
+  | "choosing"
+  /** 고른 제품의 성분 추출 중(실측 14~54초) */
+  | "extracting"
+  /** 성분까지 확인됨. 등록 대기 */
+  | "found"
+  | "saving"
+  | "done";
+
+/**
+ * 제품 등록 — **검색 → 후보 선택 → 성분 확인 → 저장**.
+ *
+ * 예전에는 한 번에 저장까지 갔다. 사용자가 무엇이 담기는지 보지 못한 채 들어갔고,
+ * 이름을 조금만 다르게 쓰면 AI 가 다른 제품을 물어 와도 그대로 저장됐다.
+ *
+ * ⭐ **성분표 사진이 있으면 후보 검색을 건너뛴다.** 성분표가 손에 있으면 그게 가장 정확한
+ * 근거이고, 후보를 고를 이유도 없다(실측 14초 vs 검색 37초 + 추출).
+ * 제품 사진만 있을 때는 성분을 알 수 없으므로 **검색은 그대로 진행**하고 썸네일로만 쓴다.
  */
 export function useProductRegister() {
-  const [status, setStatus] = useState<RegisterStatus>("idle");
+  const [phase, setPhase] = useState<RegisterPhase>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<ProductCandidate[]>([]);
+  const [found, setFound] = useState<SearchResult | null>(null);
   const [saved, setSaved] = useState<Product | null>(null);
-  // 등록 성공 시 addProduct 가 캐시를 mutate 하므로 여기서는 개수만 읽는다.
+  /**
+   * 검색 시작 때 올린 제품 사진을 들고 있는다.
+   * 후보를 고르는 것은 검색이 끝난 뒤라, 그때 다시 폼에서 가져올 수 없다.
+   */
+  const [productFile, setProductFile] = useState<File | null>(null);
+  // 저장 시 addProduct 가 캐시를 mutate 하므로 여기서는 개수만 읽는다.
   const products = useProducts();
 
-  const register = useCallback(async (input: RegisterInput) => {
-    const productName = input.productName.trim();
-    if (!productName) {
-      setStatus("error");
-      setError("제품 이름을 입력해 주세요.");
-      return;
-    }
+  /** 성분 추출 — 후보를 골랐거나 사진이 있을 때 공통으로 탄다. */
+  const extract = useCallback(
+    async (input: {
+      productName: string;
+      capacity?: string;
+      productCompany?: string;
+      volume?: string;
+      productFile: File | null;
+      labelFile: File | null;
+    }) => {
+      setPhase("extracting");
+      setError(null);
 
-    setStatus("working");
-    setError(null);
-    setSaved(null);
-
-    try {
-      // AI 에는 원본, 저장에는 썸네일 — 같은 파일에서 두 벌을 만든다(Q7).
-      let original: string | undefined;
-      let thumbnail: string | undefined;
-      if (input.file) {
-        [original, thumbnail] = await Promise.all([
-          fileToDataUrl(input.file),
-          resizeToThumbnail(input.file),
+      try {
+        /*
+         * 두 사진의 쓰임이 다르다.
+         *  - 성분표: **원본**을 AI 에 보낸다. 글씨 해상도가 곧 정확도다.
+         *  - 제품:   256px 썸네일로 줄여 저장만 한다(Q7).
+         * 둘은 서로 다른 파일이므로 각자 한 번씩만 변환한다.
+         */
+        const [labelImage, thumbnail] = await Promise.all([
+          input.labelFile ? fileToDataUrl(input.labelFile) : undefined,
+          input.productFile ? resizeToThumbnail(input.productFile) : undefined,
         ]);
+
+        const raw = await extractIngredients({
+          productName: input.productName,
+          // capacity 는 서버 컬럼이 없어 저장하지 않는다. 프롬프트 입력으로만 쓴다.
+          capacity: input.capacity || input.volume || undefined,
+          productCompany: input.productCompany || undefined,
+          productImg: labelImage,
+        });
+
+        // raw 는 snake_case 다. 여기(화면 계층)에서 프론트 모델로 옮긴다.
+        setFound({
+          productName: raw.product_name || input.productName,
+          category: raw.category,
+          ingredients: raw.ingredients,
+          thumbnail,
+          productCompany: input.productCompany || undefined,
+          // 성분을 어디서 얻었는지다. 제품 사진은 성분 근거가 아니므로 판단에 넣지 않는다.
+          ingredientSource: input.labelFile ? "photo" : "manual",
+          volume: input.volume,
+        });
+        setPhase("found");
+      } catch (cause: unknown) {
+        /*
+         * 후보 목록이 있으면 그 화면으로 되돌린다 — 37초 걸린 검색 결과를 버리지 않고
+         * 다른 후보를 고를 수 있게 한다.
+         */
+        setPhase(candidates.length > 0 ? "choosing" : "idle");
+        setError(toMessage(cause, "성분을 찾지 못했어요"));
+      }
+    },
+    [candidates.length],
+  );
+
+  /** 1단계 — 사진이 있으면 성분 추출로 직행, 없으면 후보를 찾는다. */
+  const search = useCallback(
+    async (input: RegisterInput) => {
+      const productName = input.productName.trim();
+      if (!productName) {
+        setPhase("idle");
+        setError("제품 이름을 입력해 주세요.");
+        return;
       }
 
-      const raw = await extractIngredients({
-        productName,
-        capacity: input.capacity.trim() || undefined,
-        productCompany: input.productCompany.trim() || undefined,
-        productImg: original,
-      });
+      setError(null);
+      setFound(null);
+      setSaved(null);
+      setCandidates([]);
+      setProductFile(input.productFile);
 
-      // raw 는 snake_case 다. 여기(화면 계층)에서 프론트 모델로 옮긴다.
-      // capacity 는 서버 컬럼이 없어 저장 대상에서 뺀다(AI 프롬프트에는 그대로 넘긴다).
+      // 성분표가 있으면 그게 가장 정확한 근거다. 후보를 고를 이유가 없다.
+      if (input.labelFile) {
+        await extract({
+          productName,
+          capacity: input.capacity.trim(),
+          productCompany: input.productCompany.trim(),
+          productFile: input.productFile,
+          labelFile: input.labelFile,
+        });
+        return;
+      }
+
+      setPhase("searching");
+      try {
+        const raw = await searchProductCandidates({ query: productName });
+        setCandidates(raw.candidates);
+        setPhase("choosing");
+      } catch (cause: unknown) {
+        setPhase("idle");
+        setError(toMessage(cause, "제품을 찾지 못했어요"));
+      }
+    },
+    [extract],
+  );
+
+  /** 2단계 — 후보를 고르면 그 제품의 성분을 읽는다. */
+  const selectCandidate = useCallback(
+    async (candidate: ProductCandidate) => {
+      await extract({
+        productName: candidate.product_name,
+        productCompany: candidate.brand ?? undefined,
+        volume: candidate.volume ?? undefined,
+        // 검색 시 올린 제품 사진을 그대로 썸네일로 쓴다.
+        productFile,
+        // 이 경로에는 성분표가 없다. 이름·브랜드로 추론한다(빈 배열이 올 수 있다).
+        labelFile: null,
+      });
+    },
+    [extract, productFile],
+  );
+
+  /** 후보 목록으로 되돌아간다(다른 제품을 고르려는 경우). */
+  const backToCandidates = useCallback(() => {
+    setFound(null);
+    setError(null);
+    setPhase("choosing");
+  }, []);
+
+  /** 3단계 — 확인한 결과를 선반에 담는다. */
+  const confirm = useCallback(async () => {
+    if (!found) return;
+
+    setPhase("saving");
+    setError(null);
+
+    try {
       const product = await addProduct({
-        productName: raw.product_name || productName,
-        productCompany: input.productCompany.trim() || undefined,
-        thumbnail,
-        category: raw.category,
-        ingredients: raw.ingredients,
-        ingredientSource: input.file ? "photo" : "manual",
+        productName: found.productName,
+        productCompany: found.productCompany,
+        thumbnail: found.thumbnail,
+        category: found.category,
+        ingredients: found.ingredients,
+        ingredientSource: found.ingredientSource,
       });
 
       setSaved(product);
-      setStatus("done");
+      setFound(null);
+      setCandidates([]);
+      setPhase("done");
     } catch (cause: unknown) {
-      // AI 호출 실패든 저장 실패든 같은 에러 경로로 흘려보낸다 —
-      // 입력이 날아가는 자리라 실패를 반드시 화면에 알려야 한다.
-      setStatus("error");
-
-      if (cause instanceof ApiError) {
-        const body = cause.body as { message?: string } | null;
-        setError(body?.message ?? `요청을 처리하지 못했어요 (${cause.status})`);
-        return;
-      }
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "알 수 없는 오류가 발생했어요.",
-      );
+      /*
+       * ⚠️ 실패해도 `found` 를 지우지 않는다 — 모달을 열어 둔 채 에러를 보여 주고
+       * 다시 시도할 수 있게 한다. 여기서 닫으면 1분 넘게 걸린 결과가 통째로 날아간다.
+       */
+      setPhase("found");
+      setError(toMessage(cause, "선반에 담지 못했어요"));
     }
+  }, [found]);
+
+  /** 저장하지 않고 모달을 닫는다. 폼 입력은 그대로 두어 다시 검색할 수 있다. */
+  const dismiss = useCallback(() => {
+    setFound(null);
+    setCandidates([]);
+    setError(null);
+    setPhase("idle");
   }, []);
 
   const reset = useCallback(() => {
-    setStatus("idle");
+    setPhase("idle");
     setError(null);
+    setCandidates([]);
+    setFound(null);
     setSaved(null);
+    setProductFile(null);
   }, []);
 
   return {
-    status,
+    phase,
     error,
+    candidates,
+    found,
     saved,
     shelfCount: products.value.length,
-    register,
+    search,
+    selectCandidate,
+    backToCandidates,
+    confirm,
+    dismiss,
     reset,
   };
+}
+
+/** AI 호출이든 저장이든 사용자에게 보일 문구는 한 곳에서 만든다. */
+function toMessage(cause: unknown, fallback: string): string {
+  if (cause instanceof ApiError) {
+    const body = cause.body as { message?: string } | null;
+    return body?.message ?? `${fallback} (${cause.status})`;
+  }
+  return cause instanceof Error
+    ? cause.message
+    : "알 수 없는 오류가 발생했어요.";
 }

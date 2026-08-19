@@ -11,6 +11,21 @@
 
 import { api } from "./client";
 
+/** 후보 1건 — 프롬프트 출력 스키마 그대로 */
+export type ProductCandidate = {
+  /** 판촉 문구를 제거한 제품 이름(프롬프트 규칙 5) */
+  product_name: string;
+  /** 페이지에서 확인 못 하면 null (규칙 6) */
+  brand: string | null;
+  /** 페이지에 없으면 null (규칙 7) */
+  volume: string | null;
+};
+
+export type ProductSearchResponse = {
+  /** **빈 배열이 정상 응답이다** (프롬프트 규칙 3: 화해에 없으면 []) */
+  candidates: ProductCandidate[];
+};
+
 /** 성분 추출 응답 — 프롬프트 출력 스키마 그대로 */
 export type IngredientsResponse = {
   product_name: string;
@@ -40,6 +55,16 @@ export type RoutineResponse = {
 export type WarningsResponse = {
   warning: string[];
 };
+
+/**
+ * 검색어로 제품 후보를 찾는다.
+ *
+ * `/api/ai/*` 중 **유일하게 웹 검색을 쓴다**(화해 검색 결과가 근거).
+ * 실측 18~37초 — 화면에 진행 표시가 필요하다.
+ */
+export function searchProductCandidates(input: { query: string }) {
+  return api.post<ProductSearchResponse>("/ai/search", input);
+}
 
 /**
  * 제품 성분 추출.

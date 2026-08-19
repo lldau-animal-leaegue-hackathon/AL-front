@@ -5,8 +5,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 
 import { useProductRegister } from "../hooks/useProductRegister";
-import { CameraCapture } from "./CameraCapture";
+import { CameraCapture, type CaptureMode } from "./CameraCapture";
 import styles from "./ProductForm.module.css";
+import { ProductSearchModal } from "./ProductSearchModal";
 
 /** 검색 결과에서 고른 제품을 폼에 채워 넣을 때 쓴다 */
 export type ProductPrefill = {
@@ -15,83 +16,193 @@ export type ProductPrefill = {
 };
 
 /**
+ * 폼 버튼의 진행 문구.
+ *
+ * **AI 내부 단계는 알 수 없다** — 한 번의 호출이고 진척도를 돌려주지 않는다.
+ * 그래서 우리가 실제로 아는 것만 말한다: **지금 무엇을 하는 중인지**와 **얼마나 지났는지**.
+ *
+ * 이 자리는 **후보 검색(웹)** 구간만 담당한다. 성분 추출은 모달이 이어받는다.
+ * 35초 기준은 실측값이다(검색 18~37초). 그 선을 넘으면 멈춘 게 아닌지 의심하기 시작한다.
+ */
+function progressLabel(elapsed: number): string {
+  return elapsed >= 35 ? "거의 다 됐어요" : "제품 찾는 중";
+}
+
+/**
  * `prefill` 은 **초기값으로만** 쓴다.
  * 검색에서 제품을 고르면 부모가 `key` 를 바꿔 이 컴포넌트를 리마운트한다 —
  * effect 로 setState 를 호출해 prop 을 state 에 동기화하는 것보다 단순하고,
  * 같은 카드를 다시 눌러도 폼이 확실히 초기화된다.
  */
 export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
+  const formId = useId();
   const nameId = useId();
   const capacityId = useId();
   const companyId = useId();
-  const photoId = useId();
+  const productPhotoId = useId();
+  const labelPhotoId = useId();
 
   const [productName, setProductName] = useState(prefill?.productName ?? "");
   const [capacity, setCapacity] = useState("");
   const [productCompany, setProductCompany] = useState(
     prefill?.productCompany ?? "",
   );
-  const [file, setFile] = useState<File | null>(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  /** 썸네일용. 성분 추출에는 쓰지 않는다. */
+  const [productFile, setProductFile] = useState<File | null>(null);
+  /** 성분 추출용. 있으면 후보 검색을 건너뛴다. */
+  const [labelFile, setLabelFile] = useState<File | null>(null);
+  /** 어떤 촬영을 여는지. `null` 이면 닫혀 있다. */
+  const [cameraMode, setCameraMode] = useState<CaptureMode | null>(null);
 
-  const { status, error, saved, shelfCount, register, reset } =
-    useProductRegister();
-  const working = status === "working";
+  const productInputRef = useRef<HTMLInputElement>(null);
+  const labelInputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    phase,
+    error,
+    candidates,
+    found,
+    saved,
+    shelfCount,
+    search,
+    selectCandidate,
+    backToCandidates,
+    confirm,
+    dismiss,
+    reset,
+  } = useProductRegister();
+
+  /** 폼 버튼이 도는 구간 — **후보 검색만**. 성분 추출부터는 모달이 이어받는다. */
+  const searching = phase === "searching";
+  /** 모달이 떠 있는 구간. 등록 완료(`done`)까지 모달에서 보여 준다. */
+  const modalOpen =
+    phase === "choosing" ||
+    phase === "extracting" ||
+    phase === "found" ||
+    phase === "saving" ||
+    phase === "done";
+  const busy = searching || modalOpen;
 
   /*
-   * 분석이 오래 걸린다 — 실측으로 사진이 있으면 약 14초, 이름만이면 2분까지 갔다.
+   * 검색이 오래 걸린다 — 실측 18~37초.
    * 스피너만 돌면 멈춘 줄 알기 때문에 경과 시간을 같이 보여준다.
    * (effect 본문에서 setState 를 직접 부르지 않도록 시작 시각을 지역 변수로 잡는다.)
    */
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    if (!working) return;
+    if (!searching) return;
     const startedAt = Date.now();
     const id = setInterval(
       () => setElapsed(Math.round((Date.now() - startedAt) / 1000)),
       1000,
     );
     return () => clearInterval(id);
-  }, [working]);
+  }, [searching]);
 
   function clearForm() {
     setProductName("");
     setCapacity("");
     setProductCompany("");
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setProductFile(null);
+    setLabelFile(null);
+    if (productInputRef.current) productInputRef.current.value = "";
+    if (labelInputRef.current) labelInputRef.current.value = "";
     reset();
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await register({ productName, capacity, productCompany, file });
+    await search({
+      productName,
+      capacity,
+      productCompany,
+      productFile,
+      labelFile,
+    });
   }
 
   return (
     <section className={styles.section}>
-      {cameraOpen && (
+      {cameraMode && (
         <CameraCapture
+          mode={cameraMode}
           onCapture={(captured) => {
-            setFile(captured);
-            // 파일 인풋과 상태가 어긋나지 않게 비운다 — 표시는 fileName 이 담당한다.
-            if (fileInputRef.current) fileInputRef.current.value = "";
-            setCameraOpen(false);
+            if (cameraMode === "product") {
+              setProductFile(captured);
+              // 파일 인풋과 상태가 어긋나지 않게 비운다 — 표시는 fileName 이 담당한다.
+              if (productInputRef.current) productInputRef.current.value = "";
+            } else {
+              setLabelFile(captured);
+              if (labelInputRef.current) labelInputRef.current.value = "";
+            }
+            setCameraMode(null);
           }}
-          onClose={() => setCameraOpen(false)}
+          onClose={() => setCameraMode(null)}
         />
       )}
 
+      {/*
+        후보 선택 → 성분 확인 → 등록 → 완료가 모두 이 모달 안에서 일어난다.
+        저장 실패 시에도 모달은 열려 있다 — 닫으면 1분 넘게 걸린 결과가 통째로 날아간다.
+      */}
+      {modalOpen && (
+        <ProductSearchModal
+          phase={phase}
+          candidates={candidates}
+          result={found}
+          saved={saved}
+          shelfCount={shelfCount}
+          error={error}
+          onSelect={selectCandidate}
+          onBack={backToCandidates}
+          onConfirm={confirm}
+          onRegisterAnother={clearForm}
+          onClose={phase === "done" ? clearForm : dismiss}
+        />
+      )}
+
+      {/*
+        검색 버튼을 제목 줄 오른쪽에 둔다. 폼 밖이지만 `form` 속성으로 연결돼 있어
+        submit 이 정상 동작한다(엔터 제출도 유지된다).
+      */}
       <div className={styles.intro}>
-        <h2 className={styles.heading}>제품 등록</h2>
+        <div className={styles.introRow}>
+          <h2 className={styles.heading}>제품 등록</h2>
+
+          <button
+            className={styles.submit}
+            type="submit"
+            form={formId}
+            disabled={busy}
+          >
+            {searching ? (
+              <>
+                <Icon name="progress_activity" className={styles.spinner} />
+                {elapsed}초
+              </>
+            ) : (
+              <>
+                <Icon name={labelFile ? "document_scanner" : "search"} filled />
+                {/* 성분표가 있으면 검색을 건너뛴다 — 버튼도 실제로 할 일을 말한다. */}
+                {labelFile ? "성분 읽기" : "검색"}
+              </>
+            )}
+          </button>
+        </div>
+
+        {/*
+          설명은 **버튼과 같은 줄에 두지 않는다.** 그렇게 하면 컬럼이 195px 로 좁아져
+          문장 하나가 저절로 접히고 `<br>` 의도가 무력화된다(390px 실측 3줄).
+          전폭을 쓰면 문장 단위로 정확히 2줄이 된다.
+        */}
         <p className={styles.lead}>
-          제품 이름만 있어도 등록됩니다. 성분표 사진을 함께 올리면 성분을 훨씬
-          정확하게 읽어요.
+          제품 이름만 있어도 찾을 수 있어요.
+          <br />
+          사진은 없어도 됩니다.
         </p>
       </div>
 
-      <form className={styles.form} onSubmit={handleSubmit}>
+      <form id={formId} className={styles.form} onSubmit={handleSubmit}>
         <div className={styles.field}>
           <label className={styles.label} htmlFor={nameId}>
             제품 이름 <span className={styles.required}>필수</span>
@@ -103,7 +214,7 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
             onChange={(e) => setProductName(e.target.value)}
             placeholder="예: 어성초 77 수딩 토너"
             required
-            disabled={working}
+            disabled={busy}
           />
         </div>
 
@@ -119,7 +230,7 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
               onChange={(e) => setCapacity(e.target.value)}
               placeholder="150"
               inputMode="numeric"
-              disabled={working}
+              disabled={busy}
             />
           </div>
 
@@ -133,103 +244,91 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
               value={productCompany}
               onChange={(e) => setProductCompany(e.target.value)}
               placeholder="아누아"
-              disabled={working}
+              disabled={busy}
             />
           </div>
         </div>
 
+        {/* 두 사진은 쓰임이 다르다. 라벨만으로는 헷갈려서 한 줄씩 설명을 붙인다. */}
         <div className={styles.field}>
-          <label className={styles.label} htmlFor={photoId}>
-            성분표 사진
+          <label className={styles.label} htmlFor={productPhotoId}>
+            제품 사진
           </label>
+          <p className={styles.fieldHint}>
+            선반에서 제품을 알아보는 데 쓰여요. 성분은 읽지 않아요.
+          </p>
           <div className={styles.photoRow}>
             <input
-              id={photoId}
-              ref={fileInputRef}
+              id={productPhotoId}
+              ref={productInputRef}
               className={styles.file}
               type="file"
               accept="image/*"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              disabled={working}
+              onChange={(e) => setProductFile(e.target.files?.[0] ?? null)}
+              disabled={busy}
             />
             <button
               type="button"
               className={styles.camera}
-              onClick={() => setCameraOpen(true)}
-              disabled={working}
+              onClick={() => setCameraMode("product")}
+              disabled={busy}
             >
               <Icon name="photo_camera" filled size="sm" />
               촬영
             </button>
           </div>
-          {file && <p className={styles.fileName}>{file.name}</p>}
+          {productFile && <p className={styles.fileName}>{productFile.name}</p>}
         </div>
 
-        <button className={styles.submit} type="submit" disabled={working}>
-          {working ? (
-            <>
-              <Icon name="progress_activity" className={styles.spinner} />
-              성분 분석 중… {elapsed}초
-            </>
-          ) : (
-            <>
-              <Icon name="add_circle" filled />
-              선반에 담기
-            </>
-          )}
-        </button>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={labelPhotoId}>
+            성분표 사진
+          </label>
+          <p className={styles.fieldHint}>
+            올리면 검색을 건너뛰고 성분표를 그대로 읽어요.
+          </p>
+          <div className={styles.photoRow}>
+            <input
+              id={labelPhotoId}
+              ref={labelInputRef}
+              className={styles.file}
+              type="file"
+              accept="image/*"
+              onChange={(e) => setLabelFile(e.target.files?.[0] ?? null)}
+              disabled={busy}
+            />
+            <button
+              type="button"
+              className={styles.camera}
+              onClick={() => setCameraMode("label")}
+              disabled={busy}
+            >
+              <Icon name="photo_camera" filled size="sm" />
+              촬영
+            </button>
+          </div>
+          {labelFile && <p className={styles.fileName}>{labelFile.name}</p>}
+        </div>
 
-        {/* 사진 없이 이름만으로 추론할 때 특히 오래 걸린다 — 더 빠른 길을 알려 준다 */}
-        {working && !file && elapsed >= 15 && (
+        {/*
+          진행 상황은 버튼이 좁아 초만 보여 준다. 무엇을 하는 중인지는 여기서 말한다
+          — 실측 18~37초라 아무 설명이 없으면 멈춘 줄 안다.
+        */}
+        {searching && (
           <p className={styles.hint}>
-            이름만으로 찾는 중이라 1~2분 걸릴 수 있어요. 다음엔 성분표 사진을
-            올리면 훨씬 빠릅니다.
+            {progressLabel(elapsed)}…
+            {elapsed >= 15 &&
+              " 실제 판매 중인 제품을 찾고 있어요. 성분표 사진을 올리면 검색을 건너뛰고 바로 읽을 수 있습니다."}
           </p>
         )}
       </form>
 
-      {status === "error" && error && (
+      {/* 검색 실패. 성분 추출·저장 실패는 모달 안에서 보여 준다(그쪽이 결과를 들고 있다). */}
+      {phase === "idle" && error && (
         <p className={styles.error} role="alert">
           <Icon name="error" size="sm" />
           {error}
         </p>
-      )}
-
-      {status === "done" && saved && (
-        <div className={styles.result} role="status">
-          <p className={styles.resultTitle}>
-            <Icon name="check_circle" filled size="sm" />
-            선반에 담았어요 · 총 {shelfCount}개
-          </p>
-
-          <p className={styles.resultName}>
-            {saved.productName}
-            <span className={styles.chip}>{saved.category}</span>
-          </p>
-
-          {/*
-            빈 배열은 실패가 아니라 정상 응답이다 — 프롬프트가 "확신 없으면 []" 를 요구한다.
-            성분을 지어내지 않았다는 뜻이므로 그대로 알리고 다음 행동을 제안한다.
-          */}
-          {saved.ingredients.length === 0 ? (
-            <p className={styles.emptyIngredients}>
-              성분 정보를 찾지 못했어요. 성분표 사진을 올리면 정확히 읽을 수
-              있습니다.
-            </p>
-          ) : (
-            <ul className={styles.ingredients}>
-              {saved.ingredients.map((ingredient) => (
-                <li key={ingredient} className={styles.ingredient}>
-                  {ingredient}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <button type="button" className={styles.another} onClick={clearForm}>
-            다른 제품 등록하기
-          </button>
-        </div>
       )}
     </section>
   );

@@ -1,0 +1,372 @@
+/* 검색 → 후보 선택 → 성분 확인 → 등록. 한 모달 안에서 단계가 바뀐다. */
+
+/*
+ * **화면 가운데.** 노치·홈 인디케이터를 피하도록 위아래 safe-area 를 여백에 더한다.
+ * (내용 높이가 단계마다 크게 달라지지만 — 후보 5개 vs 성분 60개 — max-height 안에서
+ *  본문만 스크롤되므로 시트 자체가 튀지는 않는다.)
+ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(16px + env(safe-area-inset-top)) 16px
+    calc(16px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--inverse-surface) 55%, transparent);
+}
+
+/*
+ * max-height 를 두고 본문만 스크롤시킨다 — 성분이 60개 넘는 제품이 실제로 있다.
+ * 하단 버튼은 스크롤 밖(footer)이라 목록이 길어도 계속 보인다.
+ */
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(
+    100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  overflow: hidden;
+}
+
+/* 뒤로 / 제목 / 닫기 3칸. 제목이 가운데 오도록 양쪽 폭을 맞춘다. */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 8px;
+}
+
+.title {
+  flex: 1;
+  font: var(--text-body-lg);
+  font-weight: 600;
+  text-align: center;
+}
+
+.back,
+.close {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+}
+
+.back:hover,
+.close:hover:not(:disabled) {
+  background: var(--surface-container-high);
+}
+
+.close:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 뒤로 버튼이 없을 때 제목이 한쪽으로 쏠리지 않게 자리만 잡는다. */
+.barSpacer {
+  flex-shrink: 0;
+  width: 44px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 20px 20px;
+  overflow-y: auto;
+}
+
+.lead {
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+}
+
+/* ── 후보 목록 ─────────────────────────────────────────── */
+
+.candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.candidate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  /* 목록 항목도 터치 타깃을 지킨다 */
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.candidate:hover {
+  background: var(--surface-container-low);
+}
+
+.candidate:active {
+  transform: scale(0.995);
+}
+
+.candidateText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.candidateName {
+  font: var(--text-body-md);
+  font-weight: 600;
+  /* 긴 제품명이 화살표를 밀어내지 않게 한다 */
+  overflow-wrap: anywhere;
+}
+
+.candidateMeta {
+  color: var(--on-surface-variant);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.candidateArrow {
+  flex-shrink: 0;
+  color: var(--on-surface-variant);
+}
+
+/* ── 성분 추출 대기 ────────────────────────────────────── */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+}
+
+/* ── 결과 ──────────────────────────────────────────────── */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.thumb {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius);
+  background: var(--surface-container);
+  color: var(--on-surface-variant);
+  overflow: hidden;
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.name {
+  font: var(--text-body-lg);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.meta {
+  color: var(--on-surface-variant);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+}
+
+.count {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.empty {
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  line-height: 1.5;
+}
+
+.ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+}
+
+.ingredient {
+  padding: 6px 12px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  font: var(--text-body-md);
+}
+
+/* ── 등록 완료 ─────────────────────────────────────────── */
+
+.saved {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 8px 8px;
+  text-align: center;
+}
+
+.savedIcon {
+  color: var(--primary);
+  font-size: 48px;
+}
+
+.savedTitle {
+  font: var(--text-body-lg);
+  font-weight: 600;
+}
+
+.savedName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  overflow-wrap: anywhere;
+}
+
+.savedCount {
+  color: var(--on-surface-variant);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+/* ── 하단 ──────────────────────────────────────────────── */
+
+/* 하단 버튼은 스크롤과 무관하게 항상 보인다 — 본문이 길어도 등록을 못 찾는 일이 없게. */
+.footer:empty {
+  display: none;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--outline-variant);
+  background: var(--surface-container-lowest);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font: var(--text-body-md);
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* 16 + 24(아이콘) + 16 = 56px — 터치 타깃 여유 */
+  min-height: 56px;
+  padding: 16px 24px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-lg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.submit:disabled {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: progress;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
