@@ -14,11 +14,16 @@ export type NavTab = {
   href: Route;
 };
 
+/**
+ * ⚠️ 순서가 곧 사용 흐름이다 — 고민에서 출발해 루틴으로 끝난다(2026-08-19 재배치).
+ * 예전에는 `루틴 → 프로필` 이었는데, 프로필이 "내 고민"이 되면서 **루틴보다 앞**으로 왔다.
+ * 고민을 정해야 성분·제품이 정해지고, 그 제품으로 루틴을 만들기 때문이다.
+ */
 export const NAV_TABS: readonly NavTab[] = [
   { icon: "home", label: "홈", href: "/" },
   { icon: "center_focus_strong", label: "스캔", href: "/scan" },
+  { icon: "psychology", label: "내 고민", href: "/concern" },
   { icon: "event_repeat", label: "루틴", href: "/routine" },
-  { icon: "person", label: "프로필", href: "/profile" },
 ];
 
 /**

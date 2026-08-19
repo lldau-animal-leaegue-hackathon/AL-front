@@ -9,7 +9,7 @@ import { SkinProfileSection } from "./components/SkinProfileSection";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "프로필",
+  title: "내 고민",
 };
 
 // 다른 화면(예: 홈)과 이름을 맞춘 자리표시자 — 이 앱에는 로그인/사용자 이름
@@ -17,13 +17,18 @@ export const metadata: Metadata = {
 const USER_NAME = "Glow";
 
 /**
- * 프로필 화면.
+ * "내 고민" 화면 — 예전 프로필 자리다(`/profile` → `/concern`, 2026-08-19).
  *
- * 모든 섹션이 localStorage 데이터를 보여주므로 각 섹션 본문만 클라이언트로
- * 내린다 — `"use client"` 는 `components/*` 각 leaf 에 있고, 이 페이지와 섹션
- * 제목은 서버 컴포넌트로 남는다.
+ * ⚠️ **아직 옮겨 오기만 한 상태다.** 계획대로면 여기는 고민 등록 → 성분 추천 →
+ * 제품 추천 → 루틴 생성으로 이어지는 흐름이 들어오고, 지금 있는 선반·리포트는
+ * 스캔 탭으로, 기록은 루틴 탭으로 나간다
+ * ([계획서](../../../docs/plans/2026-08-19-concern-flow/README.md) Step 3~6).
+ * 한 번에 옮기면 되돌릴 수 없어 경로 이동만 먼저 한다.
+ *
+ * 각 섹션 본문만 클라이언트로 내린다 — `"use client"` 는 `components/*` 각 leaf 에 있고,
+ * 이 페이지와 섹션 제목은 서버 컴포넌트로 남는다.
  */
-export default function ProfilePage() {
+export default function ConcernPage() {
   return (
     <>
       <TopAppBar userName={USER_NAME} />

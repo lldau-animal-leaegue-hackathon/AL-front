@@ -76,6 +76,15 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  /*
+   * 프로필 → 내 고민 재배치(2026-08-19). 옛 주소를 북마크했거나 열어 둔 사용자가
+   * 404 를 보지 않게 넘겨 준다. **permanent 로 하지 않는다** — 구조가 또 바뀔 수 있는데
+   * 301 은 브라우저가 캐시해 되돌리기 어렵다.
+   */
+  async redirects() {
+    return [{ source: "/profile", destination: "/concern", permanent: false }];
+  },
+
   async rewrites() {
     if (!BACKEND_ORIGIN) return [];
 
