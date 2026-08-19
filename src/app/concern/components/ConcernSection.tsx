@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { DataState } from "@/components/DataState/DataState";
@@ -206,6 +207,22 @@ export function ConcernSection() {
           일반적인 정보이며 의학적 조언이 아닙니다. 피부 질환이 의심되면
           전문의와 상담하세요.
         </p>
+      </section>
+
+      {/*
+        이 탭의 마지막 칸이다 — 고민 → 성분 → 제품까지 왔으면 다음은 루틴이다.
+        여기서 나가면 `condition = "고민 집중"` 으로 저장돼 기본 루틴을 덮지 않는다.
+      */}
+      <section className={styles.card}>
+        <h2 className={styles.heading}>이 고민으로 루틴 만들기</h2>
+        <p className={styles.lead}>
+          선반에 담은 제품으로 이 고민에 집중한 아침·저녁 루틴을 짜 드려요. 기본
+          루틴은 그대로 남습니다.
+        </p>
+        <Link className={styles.cta} href="/routine/new?focus=1">
+          <Icon name="auto_awesome" filled size="sm" />
+          집중 케어 만들기
+        </Link>
       </section>
     </>
   );

@@ -7,6 +7,7 @@ import { ApiError } from "@/api/client";
 import { saveProfile, saveRoutines, useProducts } from "@/lib/data";
 import type { Routine, RoutineStep, RoutineTime } from "@/types/skincare";
 
+import { ROUTINE_CONDITION, type RoutineCondition } from "../condition";
 import { TIME_LABEL, totalMinutes } from "../routineTime";
 
 export type GenerateStatus = "idle" | "working" | "done" | "error";
@@ -15,6 +16,8 @@ export type GenerateInput = {
   /** 피부 고민 (프롬프트 `wonder`) */
   wonder: string;
   usableTime: { morning: string; evening: string };
+  /** 기본 루틴인지 고민 집중 케어인지. **저장 시 교체 범위를 정한다.** */
+  condition: RoutineCondition;
 };
 
 /**
@@ -58,19 +61,25 @@ function toStep(raw: RoutineStepResponse): RoutineStep {
  *
  * `name`·`summary`·`condition` 은 **LLM 출력에 없다.** 프롬프트에 새 필드를 요구하지 않고
  * (프롬프트 무수정 원칙) 생성 시점에 만든다:
- *  - `name`   : 시간대 고정 문구
+ *  - `name`   : 시간대 + 성격 고정 문구
  *  - `summary`: 단계 수·소요 시간에서 **파생**한다. 지어낸 문구가 아니라 실제 값이다.
- *  - `condition`: 이번 범위는 "평소" 1벌뿐이다. 생리 기간 등 조건 루틴은 같은 프롬프트를
- *    `wonder` 에 조건을 붙여 재호출하면 확장되므로 모델만 호환되게 둔다.
+ *  - `condition`: 호출자가 정한다(기본 / 고민 집중). 프롬프트 입력은 `wonder` 하나뿐이라
+ *    **결과가 갈리는 것도 `wonder` 때문이다.** 조건은 그 결과를 저장·표시할 칸을 정할 뿐,
+ *    AI 에게 다른 지시를 넣지 않는다.
  */
-function toRoutine(raws: RoutineStepResponse[], time: RoutineTime): Routine {
+function toRoutine(
+  raws: RoutineStepResponse[],
+  time: RoutineTime,
+  condition: RoutineCondition,
+): Routine {
   const steps = raws.map(toStep);
   const minutes = totalMinutes(steps);
+  const focus = condition === ROUTINE_CONDITION.focus;
 
   return {
     id: tempId(),
-    name: `${TIME_LABEL[time]} 루틴`,
-    condition: "평소",
+    name: `${TIME_LABEL[time]} ${focus ? "집중 케어" : "루틴"}`,
+    condition,
     time,
     summary:
       minutes === null
@@ -144,8 +153,10 @@ export function useRoutineGenerate() {
         // 한쪽이 비는 경우가 있다(제품이 적으면 저녁만 나오기도 한다).
         // 빈 시간대는 루틴을 만들지 않는다 — 단계 0개짜리 카드는 사용자에게 의미가 없다.
         const routines: Routine[] = [];
-        if (raw.morning.length > 0) routines.push(toRoutine(raw.morning, "am"));
-        if (raw.evening.length > 0) routines.push(toRoutine(raw.evening, "pm"));
+        if (raw.morning.length > 0)
+          routines.push(toRoutine(raw.morning, "am", input.condition));
+        if (raw.evening.length > 0)
+          routines.push(toRoutine(raw.evening, "pm", input.condition));
 
         if (routines.length === 0) {
           setStatus("error");

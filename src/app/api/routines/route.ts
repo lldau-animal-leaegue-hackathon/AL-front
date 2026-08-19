@@ -1,8 +1,9 @@
 /**
  * 생성된 루틴 — `routines` × `routine_steps`.
  *
- * 저장은 **통째 교체**다. 루틴은 한 번 생성할 때 아침·저녁이 한 세트로 나오므로
- * 부분 갱신보다 세트 교체가 상태를 단순하게 유지한다(반쪽만 남는 경우가 없다).
+ * 저장은 **`condition` 단위 교체**다. 루틴은 한 번 생성할 때 아침·저녁이 한 세트로 나오므로
+ * 세트 교체가 상태를 단순하게 유지하고(반쪽만 남는 경우가 없다), 조건으로 범위를 좁혀서
+ * 기본 루틴과 고민 집중 루틴이 서로를 지우지 않는다.
  */
 
 import { currentUserId } from "@/lib/auth/anonUser";
@@ -13,7 +14,13 @@ import {
   selectRows,
   withTransaction,
 } from "@/lib/db/pool";
-import { intInRange, LIMITS, text, textArray } from "@/lib/db/input";
+import {
+  intInRange,
+  LIMITS,
+  optionalText,
+  text,
+  textArray,
+} from "@/lib/db/input";
 import { groupSteps, toRoutine } from "@/lib/db/rows";
 
 export const runtime = "nodejs";
@@ -127,9 +134,17 @@ function narrowRoutine(value: unknown): RoutineInput | null {
   const rawSteps = Array.isArray(routine.steps) ? routine.steps : [];
   if (rawSteps.length > LIMITS.steps) return null;
 
+  /*
+   * ⚠️ 길이를 넘긴 `condition` 을 "평소"로 떨어뜨리면 안 된다.
+   *    저장이 조건 단위 교체라, 그 순간 **사용자의 기본 루틴이 지워진다.**
+   *    없는 것(undefined)만 기본값을 쓰고, 잘못된 값은 그 루틴을 통째로 거부한다.
+   */
+  const condition = optionalText(routine.condition, LIMITS.condition);
+  if (condition === null) return null;
+
   return {
     name,
-    condition: text(routine.condition, LIMITS.condition) ?? "평소",
+    condition: condition ?? "평소",
     time: routine.time === "pm" ? "pm" : "am",
     summary: text(routine.summary, LIMITS.summary) ?? "",
     steps: rawSteps.map(narrowStep).filter((s) => s !== null),
@@ -160,16 +175,42 @@ export async function PUT(request: Request) {
   }
   const routines = body.routines.map(narrowRoutine).filter((r) => r !== null);
 
+  /*
+   * ⚠️ 걸러진 루틴을 **조용히 버리면 안 된다.** 저장이 조건 단위 교체라, 2벌 중 1벌이
+   *    걸러지면 기존 2벌을 지우고 1벌만 넣는다 — 화면은 "루틴을 만들었어요"를 띄운
+   *    채로 아침 루틴이 사라진다. 부분 저장 대신 요청 전체를 거부한다.
+   */
+  if (routines.length !== body.routines.length) {
+    return Response.json(
+      { message: "루틴 형식이 올바르지 않아 저장하지 못했습니다." },
+      { status: 400 },
+    );
+  }
+
   try {
     const userId = await currentUserId();
 
     /*
-     * 삭제와 삽입 사이에서 실패하면 루틴이 통째로 사라진다. 반드시 한 트랜잭션 안에서 한다.
+     * ⭐ **`condition` 단위로 교체한다.** 예전에는 사용자의 루틴을 전부 지우고 다시 넣었는데,
+     *    그러면 "고민 집중 케어"를 만든 뒤 기본 루틴을 다시 만들면 고민 루틴이 사라진다.
+     *    이번 요청에 담긴 조건만 갈아 끼우면 나머지 조건은 그대로 남는다.
+     *
+     *    전부 지우려면 `DELETE /api/routines` 를 쓴다 — 그쪽이 그 일을 하는 자리다.
+     *
+     * 삭제와 삽입 사이에서 실패하면 그 조건의 루틴이 사라진다. 반드시 한 트랜잭션 안에서 한다.
      * (routine_steps 는 FK CASCADE 라 따로 지우지 않아도 함께 사라진다.)
      */
+    const conditions = [...new Set(routines.map((r) => r.condition))];
+
     await withTransaction(async (conn) => {
       await ensureUser(userId, conn);
-      await conn.execute(`DELETE FROM routines WHERE user_id = ?`, [userId]);
+
+      for (const condition of conditions) {
+        await conn.execute(
+          `DELETE FROM routines WHERE user_id = ? AND \`condition\` = ?`,
+          [userId, condition],
+        );
+      }
 
       for (const routine of routines) {
         /*

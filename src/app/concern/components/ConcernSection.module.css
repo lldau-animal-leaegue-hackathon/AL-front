@@ -89,6 +89,29 @@
   cursor: not-allowed;
 }
 
+/* 이 탭의 출구 — 루틴 생성으로 가는 링크. .submit 과 같은 모양이되 앵커다. */
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.cta:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
 .ghost {
   display: flex;
   align-items: center;

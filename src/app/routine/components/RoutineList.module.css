@@ -1,6 +1,13 @@
 /* 목록 헤더·빈 상태. 옛 page.module.css 에서 옮겨왔다 —
    저장소를 읽는 조각이 클라이언트로 내려가면서 스타일도 같이 따라왔다. */
 
+/* 기본 루틴 / 고민 집중 케어 — 저장 단위가 달라 시각적으로도 갈라 둔다. */
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
 .heading {
   /* --text-headline-lg 가 R-Step 1 에서 clamp 로 유동화돼 -mobile 토큰과
      미디어 쿼리 스위칭이 필요 없어졌다. */
@@ -22,6 +29,18 @@
   gap: 16px;
   margin-top: 20px;
   list-style: none;
+}
+
+/* 한쪽 그룹만 비어 있을 때. 전체가 빈 상태(.empty)와 달리 안내만 짧게 준다. */
+.groupEmpty {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .regenerate {

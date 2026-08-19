@@ -6,6 +6,7 @@ import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 import { useRoutines, useRuns } from "@/lib/data";
 
+import { isFocusRoutine } from "../condition";
 import { RoutineCard } from "./RoutineCard";
 import styles from "./RoutineList.module.css";
 
@@ -78,27 +79,75 @@ export function RoutineList() {
     );
   }
 
+  /*
+   * 두 갈래로 나눠 보여준다 — 저장이 조건 단위 교체라 **실제로 따로 사는 루틴**이다.
+   * 한 목록에 섞으면 "다시 만들기"가 무엇을 지우는지 알 수 없다.
+   */
+  const focus = routines.filter((r) => isFocusRoutine(r.condition));
+  const basic = routines.filter((r) => !isFocusRoutine(r.condition));
+
+  const cards = (list: typeof routines) => (
+    <ul className={styles.list}>
+      {list.map((routine) => (
+        <RoutineCard
+          key={routine.id}
+          routine={routine}
+          done={doneToday.has(routine.id)}
+        />
+      ))}
+    </ul>
+  );
+
   return (
-    <section>
-      <h2 className={styles.heading}>내 루틴 {routines.length}개</h2>
-      <p className={styles.lead}>
-        카드를 펼치면 단계를 볼 수 있어요. 다시 만들면 기존 루틴은 교체됩니다.
-      </p>
+    <div className={styles.groups}>
+      <section>
+        <h2 className={styles.heading}>기본 루틴</h2>
+        <p className={styles.lead}>
+          매일 하는 아침·저녁 루틴이에요. 카드를 펼치면 단계를 볼 수 있어요.
+        </p>
 
-      <ul className={styles.list}>
-        {routines.map((routine) => (
-          <RoutineCard
-            key={routine.id}
-            routine={routine}
-            done={doneToday.has(routine.id)}
+        {basic.length === 0 ? (
+          <p className={styles.groupEmpty}>
+            아직 기본 루틴이 없어요. 보유한 제품으로 매일 쓸 루틴을 먼저 만들어
+            보세요.
+          </p>
+        ) : (
+          cards(basic)
+        )}
+
+        <Link className={styles.regenerate} href="/routine/new">
+          <Icon
+            name={basic.length === 0 ? "add_circle" : "refresh"}
+            size="sm"
           />
-        ))}
-      </ul>
+          {basic.length === 0 ? "기본 루틴 만들기" : "기본 루틴 다시 만들기"}
+        </Link>
+      </section>
 
-      <Link className={styles.regenerate} href="/routine/new">
-        <Icon name="refresh" size="sm" />
-        루틴 다시 만들기
-      </Link>
-    </section>
+      <section>
+        <h2 className={styles.heading}>고민 집중 케어</h2>
+        <p className={styles.lead}>
+          등록한 피부 고민에 맞춘 루틴이에요. 다시 만들어도 기본 루틴은 그대로
+          남아요.
+        </p>
+
+        {focus.length === 0 ? (
+          <p className={styles.groupEmpty}>
+            아직 집중 케어가 없어요. <strong>내 고민</strong> 탭에서 고민을
+            등록하면 그 고민에 맞춰 짜 드려요.
+          </p>
+        ) : (
+          cards(focus)
+        )}
+
+        <Link className={styles.regenerate} href="/routine/new?focus=1">
+          <Icon
+            name={focus.length === 0 ? "add_circle" : "refresh"}
+            size="sm"
+          />
+          {focus.length === 0 ? "집중 케어 만들기" : "집중 케어 다시 만들기"}
+        </Link>
+      </section>
+    </div>
   );
 }
