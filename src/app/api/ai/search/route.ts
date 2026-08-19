@@ -13,6 +13,7 @@ import { acquire, release } from "@/lib/ai/guard";
 import { currentUserId } from "@/lib/auth/anonUser";
 import { parseJsonObject } from "@/lib/claude/parseJson";
 import { runClaude } from "@/lib/claude/runner";
+import { isAllowedImageUrl } from "@/lib/images";
 import {
   buildProductSearchPrompt,
   MAX_CANDIDATES,
@@ -33,6 +34,8 @@ type Candidate = {
   product_name: string;
   brand: string | null;
   volume: string | null;
+  /** 화이트리스트 호스트로 확인된 것만 남는다. 아니면 null. */
+  image_url: string | null;
 };
 
 /**
@@ -55,10 +58,19 @@ function narrowCandidate(value: unknown): Candidate | null {
     return trimmed;
   };
 
+  /*
+   * ⛔ **이미지 주소는 LLM 이 만든 값이다.** 그대로 내보내면 브라우저가 임의 주소를 요청하고,
+   *    나중에 서버가 그걸 받아 저장하는 경로에서는 SSRF 가 된다.
+   *    허용 호스트인지 여기서 한 번 거르고, 저장 시 `fetchImageAsDataUrl` 이 다시 확인한다.
+   */
+  const rawImage = text(item.image_url);
+  const imageUrl = rawImage && isAllowedImageUrl(rawImage) ? rawImage : null;
+
   return {
     product_name: productName,
     brand: text(item.brand),
     volume: text(item.volume),
+    image_url: imageUrl,
   };
 }
 

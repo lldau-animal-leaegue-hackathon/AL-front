@@ -19,6 +19,11 @@ export type ProductCandidate = {
   brand: string | null;
   /** 페이지에 없으면 null (규칙 7) */
   volume: string | null;
+  /**
+   * 제품 썸네일 주소 (규칙 9). 확인 못 하면 null.
+   * **서버가 허용 호스트인지 이미 걸렀다** — 화면은 그대로 띄워도 된다.
+   */
+  image_url: string | null;
 };
 
 export type ProductSearchResponse = {

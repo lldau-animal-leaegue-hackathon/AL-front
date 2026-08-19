@@ -41,7 +41,13 @@ const nextConfig: NextConfig = {
     // next/image 로 불러올 외부 이미지 도메인을 여기에 화이트리스트로 등록합니다.
     // 예시이므로 실제 사용하는 도메인으로 교체하세요.
     remotePatterns: [
-      // 네이버 쇼핑 검색 결과의 상품 썸네일
+      /*
+       * 화해 CDN — 후보 검색이 주는 제품 썸네일(`/api/ai/search`).
+       * **후보를 고르는 동안만** 이 주소를 직접 띄운다. 선반에 담을 때는 서버가 한 번 받아
+       * data URL 로 바꿔 저장하므로(`src/lib/images.ts`), 담긴 뒤에는 외부 요청이 없다.
+       */
+      { protocol: "https", hostname: "img.hwahae.co.kr" },
+      // 네이버 쇼핑 검색 결과의 상품 썸네일 (현재 미사용 — 검색 API 가 막혀 제거됐다)
       { protocol: "https", hostname: "**.pstatic.net" },
     ],
   },

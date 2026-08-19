@@ -107,7 +107,10 @@ export async function addProduct(input: {
   productCompany?: string;
   category: string;
   ingredients: string[];
+  /** 직접 찍은 사진(256px data URL) */
   thumbnail?: string;
+  /** 검색 결과 이미지 주소. 서버가 받아서 저장한다(직접 찍은 사진이 우선). */
+  thumbnailUrl?: string;
   ingredientSource?: IngredientSource;
 }): Promise<Product> {
   const created = await createProduct(input);

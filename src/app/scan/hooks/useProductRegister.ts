@@ -44,6 +44,12 @@ export type SearchResult = {
   ingredientSource: "photo" | "manual";
   /** 후보 검색에서 얻은 용량. 저장하지 않고 확인 화면에만 쓴다(DB 컬럼이 없다). */
   volume?: string;
+  /**
+   * 후보 검색에서 얻은 이미지 주소.
+   * 확인 화면에 그대로 띄우고, 담을 때 **서버가 받아서** data URL 로 저장한다.
+   * 직접 찍은 `thumbnail` 이 있으면 그쪽이 우선이다.
+   */
+  imageUrl?: string;
 };
 
 /**
@@ -95,6 +101,7 @@ export function useProductRegister() {
       capacity?: string;
       productCompany?: string;
       volume?: string;
+      imageUrl?: string;
       productFile: File | null;
       labelFile: File | null;
     }) => {
@@ -131,6 +138,7 @@ export function useProductRegister() {
           // 성분을 어디서 얻었는지다. 제품 사진은 성분 근거가 아니므로 판단에 넣지 않는다.
           ingredientSource: input.labelFile ? "photo" : "manual",
           volume: input.volume,
+          imageUrl: input.imageUrl,
         });
         setPhase("found");
       } catch (cause: unknown) {
@@ -193,6 +201,8 @@ export function useProductRegister() {
         productName: candidate.product_name,
         productCompany: candidate.brand ?? undefined,
         volume: candidate.volume ?? undefined,
+        // 서버가 허용 호스트인지 이미 걸렀다. 저장 시 서버가 다시 확인하고 받아 온다.
+        imageUrl: candidate.image_url ?? undefined,
         // 검색 시 올린 제품 사진을 그대로 썸네일로 쓴다.
         productFile,
         // 이 경로에는 성분표가 없다. 이름·브랜드로 추론한다(빈 배열이 올 수 있다).
@@ -220,7 +230,9 @@ export function useProductRegister() {
       const product = await addProduct({
         productName: found.productName,
         productCompany: found.productCompany,
+        // 직접 찍은 사진이 우선. 없으면 서버가 검색 결과 이미지를 받아 저장한다.
         thumbnail: found.thumbnail,
+        thumbnailUrl: found.imageUrl,
         category: found.category,
         ingredients: found.ingredients,
         ingredientSource: found.ingredientSource,

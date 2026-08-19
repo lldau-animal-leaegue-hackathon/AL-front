@@ -14,6 +14,10 @@
  * ⛔ **가격은 요구하지 않는다**(사용자 결정 2026-08-18). 실측에서 검색어에 따라
  *    0/5 또는 5/5 로 갈렸고, 나오더라도 정가가 아니라 사은품 묶음 "최저가"였다.
  *    재현되지 않는 값을 화면에 정가처럼 보여 줄 수 없다.
+ *
+ * ✅ **이미지는 요구한다**(2026-08-19 실측). 후보 4/4 에서 `img.hwahae.co.kr` 의 썸네일
+ *    주소가 나왔고, Referer 없이도 200 이었다(상세 페이지의 403 은 CDN 에 적용되지 않는다).
+ *    ⚠️ 다만 **여기서 온 주소는 LLM 이 만든 값**이다. 라우트가 호스트를 검증한다(`src/lib/images.ts`).
  */
 
 export type ProductSearchInput = {
@@ -45,7 +49,8 @@ export function buildProductSearchPrompt(input: ProductSearchInput): string {
 6. brand 에는 제조사(브랜드)명을 적으세요. 페이지에서 확인되지 않으면 null 로 두세요. 추측하지 마세요.
 7. volume 은 페이지에 명시된 용량만 적으세요. 없으면 null 로 두세요. 추정하지 마세요.
 8. 같은 제품의 용량만 다른 항목이 여러 개면 대표 1개만 남기세요.
-9. 반드시 아래 JSON 형식으로만 응답하세요. 설명, 코드블록 표시, 추가 텍스트를 포함하지 마세요.
+9. image_url 에는 그 제품의 이미지 주소를 페이지에서 **실제로 확인한 경우에만** 넣으세요. 확인되지 않으면 null 로 두세요. 주소를 추측하거나 만들어내지 마세요.
+10. 반드시 아래 JSON 형식으로만 응답하세요. 설명, 코드블록 표시, 추가 텍스트를 포함하지 마세요.
 
 출력 형식:
 {
@@ -53,7 +58,8 @@ export function buildProductSearchPrompt(input: ProductSearchInput): string {
     {
       "product_name": string, // 판촉 문구를 제거한 제품 이름
       "brand": string | null, // 제조사(브랜드). 모르면 null
-      "volume": string | null // 용량. 페이지에 없으면 null
+      "volume": string | null, // 용량. 페이지에 없으면 null
+      "image_url": string | null // 제품 이미지 주소. 확인 못 하면 null
     }
   ]
 }`;

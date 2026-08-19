@@ -196,6 +196,25 @@ function CandidateList({
               className={styles.candidate}
               onClick={() => onSelect(candidate)}
             >
+              <span className={styles.candidateThumb}>
+                {/*
+                  화해 CDN 썸네일(96x96). 서버가 허용 호스트인지 이미 걸렀다.
+                  최적화는 끈다 — 이미 작은 이미지라 얻을 게 없고 서버 부하만 는다.
+                */}
+                {candidate.image_url ? (
+                  <Image
+                    src={candidate.image_url}
+                    alt=""
+                    width={48}
+                    height={48}
+                    unoptimized
+                    className={styles.candidateThumbImg}
+                  />
+                ) : (
+                  <Icon name="image" className={styles.candidateThumbIcon} />
+                )}
+              </span>
+
               <span className={styles.candidateText}>
                 <span className={styles.candidateName}>
                   {candidate.product_name}
@@ -265,10 +284,14 @@ function ResultView({ result }: { result: SearchResult }) {
     <>
       <div className={styles.head}>
         <span className={styles.thumb}>
-          {result.thumbnail ? (
-            // 이미 256px 로 축소된 로컬 data URL 이라 next/image 최적화가 필요 없다.
+          {/*
+            직접 찍은 사진이 우선, 없으면 검색 결과 이미지. 둘 다 없으면 카테고리 아이콘.
+            (담을 때 서버가 검색 이미지를 받아 data URL 로 바꿔 저장하므로,
+             담긴 뒤에는 어느 쪽이든 같은 모양이 된다.)
+          */}
+          {result.thumbnail || result.imageUrl ? (
             <Image
-              src={result.thumbnail}
+              src={result.thumbnail ?? result.imageUrl ?? ""}
               alt=""
               width={112}
               height={112}

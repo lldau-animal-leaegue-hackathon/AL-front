@@ -18,7 +18,15 @@ export const createProduct = (input: {
   productCompany?: string;
   category: string;
   ingredients: string[];
+  /** 직접 찍은 사진의 256px data URL */
   thumbnail?: string;
+  /**
+   * 검색 결과에서 온 이미지 주소.
+   * **서버가 받아서 data URL 로 바꿔 저장한다** — 클라이언트가 외부 이미지를 가져오지 않는다
+   * (CORS 에 걸리고, 무엇보다 허용 호스트 검증이 서버에 있어야 한다).
+   * `thumbnail` 이 함께 오면 직접 찍은 사진이 우선이다.
+   */
+  thumbnailUrl?: string;
   ingredientSource?: IngredientSource;
 }) => api.post<Product>("/products", input);
 

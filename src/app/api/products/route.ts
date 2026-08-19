@@ -16,6 +16,7 @@ import {
 } from "@/lib/db/pool";
 import { LIMITS, text, textArray } from "@/lib/db/input";
 import { toProduct } from "@/lib/db/rows";
+import { fetchImageAsDataUrl } from "@/lib/images";
 
 // mysql2 는 Node API 를 쓴다. Edge 런타임에서는 동작하지 않는다.
 export const runtime = "nodejs";
@@ -44,6 +45,8 @@ type Body = {
   category?: unknown;
   ingredients?: unknown;
   thumbnail?: unknown;
+  /** 검색 결과에서 온 외부 이미지 주소. 서버가 받아서 data URL 로 바꾼다. */
+  thumbnailUrl?: unknown;
   ingredientSource?: unknown;
 };
 
@@ -96,15 +99,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const thumbnail =
+  const uploaded =
     typeof body.thumbnail === "string" && body.thumbnail
       ? body.thumbnail
       : null;
-  if (thumbnail && thumbnail.length > LIMITS.thumbnail) {
+  if (uploaded && uploaded.length > LIMITS.thumbnail) {
     return Response.json(
       { message: "이미지가 너무 큽니다. 다시 촬영해 주세요." },
       { status: 400 },
     );
+  }
+
+  /*
+   * 직접 찍은 사진이 우선이다. 없을 때만 검색 결과 이미지를 받아 온다.
+   *
+   * ⛔ **주소는 클라이언트가 준 값이라 믿지 않는다.** `fetchImageAsDataUrl` 이 허용 호스트인지
+   *    다시 확인한다(SSRF 방어). 실패하면 `null` 을 주고 **등록은 그대로 진행한다** —
+   *    썸네일은 부가 정보라 이것 때문에 제품 등록이 막히면 안 된다.
+   */
+  let thumbnail = uploaded;
+  if (!thumbnail && typeof body.thumbnailUrl === "string") {
+    thumbnail = await fetchImageAsDataUrl(body.thumbnailUrl);
   }
 
   const source =
