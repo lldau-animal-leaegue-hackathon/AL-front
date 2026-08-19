@@ -75,6 +75,35 @@ export type ConcernResponse = {
   ingredients: ConcernIngredient[];
 };
 
+/** 피부 타입별 주의 1건 — interactions 프롬프트 출력 스키마 그대로(snake_case) */
+export type SkinTypeCaution = {
+  skin_type: "건성" | "지성" | "복합성" | "민감성";
+  ingredient: string;
+  products: string[];
+  caution: string;
+};
+
+/** 충돌(conflicts)·시너지(synergies) 공용 — 서로 다른 제품에 나뉜 성분 조합 */
+export type IngredientPair = {
+  ingredients: string[];
+  products: string[];
+  description: string;
+};
+
+export type ShelfSuggestion = {
+  /** 보유하지 **않은** 성분(규칙 5 — 라우트가 보유 성분 제안을 걸러낸다) */
+  ingredient: string;
+  reason: string;
+};
+
+export type ShelfReportResponse = {
+  /** 네 배열 모두 **빈 배열이 정상 응답이다** (규칙 2: 확신 없으면 []) */
+  skin_type_cautions: SkinTypeCaution[];
+  conflicts: IngredientPair[];
+  synergies: IngredientPair[];
+  suggestions: ShelfSuggestion[];
+};
+
 /**
  * 검색어로 제품 후보를 찾는다.
  *
@@ -114,6 +143,15 @@ export function generateRoutine(input: {
  */
 export function recommendConcernIngredients(input: { wonder: string }) {
   return api.post<ConcernResponse>("/ai/concern", input);
+}
+
+/**
+ * 선반 전체 상호작용 분석 (시너지·충돌·타입별 주의·추가 추천).
+ * **선반은 서버가 직접 읽으므로 body 가 없다.** 캐시 히트면 수백 ms,
+ * 최초 생성이면 1~2분 — 화면에 진행 표시가 필요하다.
+ */
+export function fetchShelfReport() {
+  return api.post<ShelfReportResponse>("/ai/report", {});
 }
 
 /** 제품 단독 사용 주의사항 (최대 6개) */

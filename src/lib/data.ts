@@ -16,7 +16,12 @@
 
 import useSWR, { mutate, type SWRConfiguration } from "swr";
 
-import { recommendConcernIngredients, type ConcernIngredient } from "@/api/ai";
+import {
+  fetchShelfReport,
+  recommendConcernIngredients,
+  type ConcernIngredient,
+  type ShelfReportResponse,
+} from "@/api/ai";
 import { ApiError } from "@/api/client";
 
 import {
@@ -52,6 +57,8 @@ const KEYS = {
   profile: "/profile",
   /** 고민 성분 추천. **실제 키에는 고민 문자열이 붙는다**(아래 훅 참조). */
   concern: "/ai/concern",
+  /** 선반 상호작용 분석. 서버가 지문으로 무효화하므로 클라이언트 키는 고정이다. */
+  shelfReport: "/ai/report",
   /** 성분으로 찾은 제품. 실제 키에는 성분명이 붙는다. */
   byIngredient: "/products/by-ingredient",
 } as const;
@@ -178,6 +185,21 @@ export function useConcernIngredients(
  * ⚠️ **빈 배열은 "아직 담긴 제품이 없다"** 는 뜻이다(카탈로그는 누군가 담아야 채워진다).
  * 화면이 "그런 제품이 없다"로 읽히지 않게 안내를 구분해야 한다.
  */
+/**
+ * 선반 상호작용 분석 리포트.
+ *
+ * `enabled=false` 면 **호출하지 않는다** — 하위 탭을 열 때만 부른다.
+ * 최초 생성은 1~2분짜리 AI 호출이라, 리포트 탭을 안 여는 사용자에게 태우면 안 된다.
+ * 서버가 선반 지문으로 캐시하므로 선반이 안 바뀌면 캐시 히트(수백 ms)다.
+ */
+export const useShelfReport = (enabled: boolean) =>
+  useResource<ShelfReportResponse | null>(
+    enabled ? KEYS.shelfReport : null,
+    fetchShelfReport,
+    null,
+    AI_SWR_OPTIONS,
+  );
+
 export const useProductsByIngredient = (name: string | null) =>
   useResource(
     name ? `${KEYS.byIngredient}?n=${encodeURIComponent(name)}` : null,
@@ -210,6 +232,12 @@ export async function addProduct(input: {
 }): Promise<Product> {
   const created = await createProduct(input);
   await mutate(KEYS.products);
+  /*
+   * 선반이 바뀌면 분석 리포트 캐시를 **지우기만** 한다(재검증 없음).
+   * mutate 로 즉시 재검증하면 1~2분짜리 AI 호출이 등록 직후에 나간다 —
+   * 비우면 다음에 리포트 탭을 열 때 새로 만든다(서버 지문도 그때 바뀐 걸 안다).
+   */
+  await mutate(KEYS.shelfReport, undefined, { revalidate: false });
   return created;
 }
 
@@ -224,6 +252,8 @@ export async function setProductWarnings(input: {
 export async function removeProduct(input: { id: string }): Promise<void> {
   await removeProductRequest(input);
   await mutate(KEYS.products);
+  // 선반 구성이 바뀌었다 — addProduct 와 같은 이유로 리포트 캐시만 비운다.
+  await mutate(KEYS.shelfReport, undefined, { revalidate: false });
 }
 
 export async function saveRoutines(routines: RoutineInput[]): Promise<void> {
