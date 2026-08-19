@@ -60,15 +60,25 @@ export async function PUT(request: Request) {
     const userId = await currentUserId();
     await ensureUser(userId);
 
-    // PK 가 user_id 라 사용자당 1행이다. 두 번째부터는 갱신된다.
+    /*
+     * PK 가 user_id 라 사용자당 1행이다. 두 번째부터는 갱신된다.
+     *
+     * `concern_ingredients` 는 **wonder 가 바뀔 때만** 비운다 — 루틴 생성이 같은
+     * 고민으로 가용 시간만 저장해도 성분 추천 캐시가 날아가면 30초를 다시 산다.
+     * ⚠️ 할당 순서가 중요하다: wonder 를 덮기 **전에** 옛 wonder 와 비교해야 한다
+     *    (MariaDB 는 SET 절을 왼쪽부터 순서대로 평가한다).
+     * ⚠️ `VALUES()` 를 함수 인자로 넣지 않는다 — `JSON_LENGTH(VALUES(...))` 가
+     *    MariaDB 에서 오작동한 실측(2026-08-19)이 있어 placeholder 로 비교한다.
+     */
     await execute(
       `INSERT INTO skin_profiles (user_id, wonder, usable_morning, usable_evening)
        VALUES (?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
+         concern_ingredients = IF(wonder = ?, concern_ingredients, NULL),
          wonder         = VALUES(wonder),
          usable_morning = VALUES(usable_morning),
          usable_evening = VALUES(usable_evening)`,
-      [userId, wonder, morning, evening],
+      [userId, wonder, morning, evening, wonder],
     );
 
     return Response.json({ ok: true });
