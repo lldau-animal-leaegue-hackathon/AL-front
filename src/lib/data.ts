@@ -17,6 +17,7 @@
 import useSWR, { mutate, type SWRConfiguration } from "swr";
 
 import { recommendConcernIngredients, type ConcernIngredient } from "@/api/ai";
+import { ApiError } from "@/api/client";
 
 import {
   createProduct,
@@ -61,13 +62,51 @@ const KEYS = {
  */
 const SWR_OPTIONS: SWRConfiguration = { errorRetryCount: 3 };
 
+/**
+ * **AI 호출 전용 옵션.** 위 기본값을 그대로 쓰면 429("이미 처리 중")가 쏟아진다.
+ *
+ * `/api/ai/*` 는 쿠키 사용자당 동시 1건만 허용하는데(`src/lib/ai/guard.ts`),
+ * 이 호출은 10~30초가 걸린다. SWR 기본값은 그 사이에 **스스로 두 번째 요청을 만든다**:
+ *  - `revalidateOnFocus`   창을 갔다 오면 재요청
+ *  - `revalidateIfStale`   컴포넌트가 다시 마운트되면 재요청(탭 이동·HMR)
+ *  - `dedupingInterval`    기본이 2초뿐이라 중복으로 안 쳐 준다
+ *
+ * 그리고 **나중에 시작한 요청이 이긴다.** 30초 걸려 성공한 첫 응답이 버려지고
+ * 429 에러가 화면에 남는다 — 사용자 눈에는 "계속 429"로 보인다.
+ *
+ * `errorRetryCount: 0` 인 이유: 429 를 자동 재시도하면 앞 요청이 아직 살아 있어 또 429다.
+ * 다시 부를지는 사람이 정한다(`Resource.retry`).
+ */
+const AI_SWR_OPTIONS: SWRConfiguration = {
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  revalidateIfStale: false,
+  errorRetryCount: 0,
+  /* 호출 자체가 10~30초다. 그 안에 들어온 같은 요청은 전부 한 건으로 묶는다. */
+  dedupingInterval: 120_000,
+};
+
 export type Resource<T> = {
   /** 첫 로딩이 끝났는가. **성공 여부가 아니다** — `error` 를 따로 봐야 한다. */
   ready: boolean;
   value: T;
   error: boolean;
+  /**
+   * 서버가 준 실패 사유. 없으면 `null`(네트워크 자체가 끊긴 경우 등).
+   *
+   * 이게 없으면 화면이 전부 "인터넷 연결을 확인해 주세요"로 뭉개진다 —
+   * 429("이미 처리 중")처럼 **연결과 무관한 실패**를 사용자가 오해한다.
+   */
+  errorMessage: string | null;
   retry: () => void;
 };
+
+/** 서버가 준 `{ message }` 만 꺼낸다. 그 밖의 오류 내용은 화면에 올리지 않는다. */
+function serverMessage(error: unknown): string | null {
+  if (!(error instanceof ApiError)) return null;
+  const body = error.body as { message?: unknown } | null;
+  return typeof body?.message === "string" ? body.message : null;
+}
 
 /**
  * `key` 가 `null` 이면 **호출하지 않는다**(SWR 의 조건부 fetch).
@@ -77,18 +116,16 @@ function useResource<T>(
   key: string | null,
   fetcher: () => Promise<T>,
   fallback: T,
+  options: SWRConfiguration = SWR_OPTIONS,
 ): Resource<T> {
-  const {
-    data,
-    error,
-    mutate: revalidate,
-  } = useSWR<T>(key, fetcher, SWR_OPTIONS);
+  const { data, error, mutate: revalidate } = useSWR<T>(key, fetcher, options);
 
   return {
     // 호출하지 않기로 한 상태는 "기다릴 것도 없다" — 로딩으로 보이면 안 된다.
     ready: key === null || data !== undefined || error !== undefined,
     value: data ?? fallback,
     error: error !== undefined,
+    errorMessage: serverMessage(error),
     retry: () => void revalidate(),
   };
 }
@@ -127,6 +164,8 @@ export function useConcernIngredients(
     // 키가 null 이면 이 함수는 호출되지 않는다. 그래서 빈 문자열 폴백이 실행될 일이 없다.
     () => recommendConcernIngredients({ wonder: wonder ?? "" }),
     null,
+    // 이 레포에서 SWR 로 부르는 유일한 AI 엔드포인트다 — 자동 재검증을 끈다.
+    AI_SWR_OPTIONS,
   );
 
   // 응답이 `{ ingredients }` 한 겹이라 화면이 쓰기 좋게 벗겨 준다.

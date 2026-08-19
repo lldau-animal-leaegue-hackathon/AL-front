@@ -19,9 +19,16 @@ type Props = {
   onRetry?: () => void;
   /** 무엇을 못 불러왔는지. 예: "루틴" → "루틴을 불러오지 못했어요" */
   label?: string;
+  /**
+   * 서버가 준 실패 사유(`Resource.errorMessage`). 있으면 기본 안내를 대신한다.
+   *
+   * 없을 때만 "인터넷 연결을 확인해 주세요"를 쓴다 — 429("이미 처리 중")처럼
+   * 연결과 무관한 실패까지 그렇게 안내하면 사용자가 엉뚱한 데를 고치려 든다.
+   */
+  message?: string | null;
 };
 
-export function DataState({ loading, error, onRetry, label }: Props) {
+export function DataState({ loading, error, onRetry, label, message }: Props) {
   if (loading) {
     return (
       // aria-live 로 알리면 짧은 로딩에도 스크린리더가 매번 말한다. 존재만 알린다.
@@ -39,7 +46,7 @@ export function DataState({ loading, error, onRetry, label }: Props) {
       <p className={styles.text}>
         {label ? `${label}을(를) 불러오지 못했어요.` : "불러오지 못했어요."}
         <br />
-        인터넷 연결을 확인해 주세요.
+        {message ?? "인터넷 연결을 확인해 주세요."}
       </p>
       {onRetry && (
         <button type="button" className={styles.retry} onClick={onRetry}>

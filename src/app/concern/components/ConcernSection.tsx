@@ -153,7 +153,13 @@ export function ConcernSection() {
         {!ingredients.ready ? (
           <DataState loading label="성분" />
         ) : ingredients.error ? (
-          <DataState error onRetry={ingredients.retry} label="성분" />
+          /* 429("이미 처리 중")를 "인터넷 연결을 확인해 주세요"로 안내하면 안 된다. */
+          <DataState
+            error
+            onRetry={ingredients.retry}
+            label="성분"
+            message={ingredients.errorMessage}
+          />
         ) : ingredients.value.length === 0 ? (
           /* 빈 배열은 실패가 아니다 — 프롬프트 규칙 7(고를 수 없으면 [])의 결과다. */
           <p className={styles.empty}>
