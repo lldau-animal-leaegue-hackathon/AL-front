@@ -74,7 +74,14 @@ export function RoutineForm({ focus = false }: { focus?: boolean }) {
    * 제출 시점에 `useRoutineGenerate` 가 목록이 왔는지 다시 확인한다.
    */
   if (products.error) {
-    return <DataState error onRetry={products.retry} label="제품 목록" />;
+    return (
+      <DataState
+        error
+        onRetry={products.retry}
+        label="제품 목록"
+        message={products.errorMessage}
+      />
+    );
   }
 
   if (shelfCount === 0) {

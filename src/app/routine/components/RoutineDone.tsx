@@ -36,7 +36,7 @@ const NO_START: RunStart | null = null;
  *    이유가 없다고 봤다. 실패하면 시작 표시가 남아 다음 진입 때 자동으로 재시도된다.
  */
 export function RoutineDone({ routineId }: { routineId: string }) {
-  const { ready, value: routines, error, retry } = useRoutines();
+  const { ready, value: routines, error, errorMessage, retry } = useRoutines();
   /** 소비되지 않은 시작 표시가 있으면 아직 기록 전이다. */
   const { value: start } = useStored<RunStart | null>(RUN_START_KEY, NO_START);
   /** StrictMode 이중 실행이나 재렌더로 같은 시작 표시가 두 번 기록 요청되는 것을 막는다. */
@@ -71,7 +71,10 @@ export function RoutineDone({ routineId }: { routineId: string }) {
   }, [ready, routine, routineId, start]);
 
   if (!ready) return <DataState loading label="루틴" />;
-  if (error) return <DataState error onRetry={retry} label="루틴" />;
+  if (error)
+    return (
+      <DataState error onRetry={retry} label="루틴" message={errorMessage} />
+    );
 
   if (!routine) {
     return (

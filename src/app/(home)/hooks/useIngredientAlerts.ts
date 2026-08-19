@@ -15,7 +15,7 @@ export type IngredientAlertItem = {
 
 export type IngredientAlertsState =
   | { kind: "checking" }
-  | { kind: "error"; retry: () => void }
+  | { kind: "error"; retry: () => void; errorMessage: string | null }
   | { kind: "no-products" }
   | { kind: "no-warnings" }
   | { kind: "ready"; alerts: IngredientAlertItem[] };
@@ -47,7 +47,7 @@ function toAlerts(products: Product[]): IngredientAlertItem[] {
  * 그만큼 뜬다.
  */
 export function useIngredientAlerts(): IngredientAlertsState {
-  const { ready, value: products, error, retry } = useProducts();
+  const { ready, value: products, error, errorMessage, retry } = useProducts();
   const [generating, setGenerating] = useState(false);
   /*
    * 생성 루프는 **한 번만** 시작한다.
@@ -125,7 +125,7 @@ export function useIngredientAlerts(): IngredientAlertsState {
   }, [ready, error]);
 
   if (!ready) return { kind: "checking" };
-  if (error) return { kind: "error", retry };
+  if (error) return { kind: "error", retry, errorMessage };
   if (generating) return { kind: "checking" };
   if (products.length === 0) return { kind: "no-products" };
 

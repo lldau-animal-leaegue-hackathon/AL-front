@@ -25,10 +25,13 @@ function shelfNote(product: Product, flagged: boolean): string | null {
 }
 
 export function ShelfSection() {
-  const { ready, value: products, error, retry } = useProducts();
+  const { ready, value: products, error, errorMessage, retry } = useProducts();
 
   if (!ready) return <DataState loading label="제품" />;
-  if (error) return <DataState error onRetry={retry} label="제품" />;
+  if (error)
+    return (
+      <DataState error onRetry={retry} label="제품" message={errorMessage} />
+    );
 
   if (products.length === 0) {
     return (

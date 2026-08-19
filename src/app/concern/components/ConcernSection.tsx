@@ -63,7 +63,14 @@ export function ConcernSection() {
 
   if (!profile.ready) return <DataState loading label="고민" />;
   if (profile.error)
-    return <DataState error onRetry={profile.retry} label="고민" />;
+    return (
+      <DataState
+        error
+        onRetry={profile.retry}
+        label="고민"
+        message={profile.errorMessage}
+      />
+    );
 
   // 고민이 없거나 고치는 중이면 입력 화면
   if (!wonder || editing) {

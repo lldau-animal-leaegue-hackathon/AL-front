@@ -87,10 +87,13 @@ function warningsByProduct(products: readonly Product[]): ProductWarnings[] {
  * (같은 화면이 두 번 호출을 태우면 `claude -p` 프로세스가 중복으로 뜬다).
  */
 export function ReportSection() {
-  const { ready, value: products, error, retry } = useProducts();
+  const { ready, value: products, error, errorMessage, retry } = useProducts();
 
   if (!ready) return <DataState loading label="제품" />;
-  if (error) return <DataState error onRetry={retry} label="제품" />;
+  if (error)
+    return (
+      <DataState error onRetry={retry} label="제품" message={errorMessage} />
+    );
 
   const uniqueIngredientCount = new Set(
     products.flatMap((product) => product.ingredients),

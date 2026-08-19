@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 import { usePopularProducts } from "@/lib/data";
 import type { Product } from "@/types/skincare";
@@ -35,7 +36,12 @@ export function ProductSearch({
   const trimmed = query.trim();
   const results = trimmed ? searchProducts(trimmed) : null;
 
-  /** 카탈로그가 비었으면 시드로 폴백한다. 둘은 카드 클릭 동작이 다르다. */
+  /**
+   * 카탈로그가 비었으면 시드로 폴백한다. 둘은 카드 클릭 동작이 다르다.
+   *
+   * ⚠️ **`ready`·`error` 를 먼저 봐야 한다.** 실패해도 `value` 는 빈 배열이라,
+   * 안 보면 서버 장애가 "아직 아무도 안 담음"으로 위장돼 조용히 시드가 뜬다.
+   */
   const catalog = popular.value;
   const useCatalog = catalog.length > 0;
 
@@ -63,7 +69,20 @@ export function ProductSearch({
           {results && <span className={styles.status}>{results.length}개</span>}
         </h2>
 
-        {results ? (
+        {/*
+          검색 결과는 로컬 시드라 네트워크와 무관하다 — 검색 중일 때는 카탈로그 상태를
+          따지지 않는다. 인기 제품을 그릴 때만 로딩·실패를 확인한다.
+        */}
+        {!results && !popular.ready ? (
+          <DataState loading label="인기 제품" />
+        ) : !results && popular.error ? (
+          <DataState
+            error
+            onRetry={popular.retry}
+            label="인기 제품"
+            message={popular.errorMessage}
+          />
+        ) : results ? (
           results.length === 0 ? (
             <p className={styles.empty}>
               검색 결과가 없습니다. &lsquo;등록&rsquo; 탭에서 이름으로

@@ -59,7 +59,7 @@ function pickSuggestion(
  * 알 수 없어 숫자 진행률바를 보여주지 않는다 — 근거 없는 숫자를 지어내지 않는다.
  */
 export function NextStepCard() {
-  const { ready, value: routines, error, retry } = useRoutines();
+  const { ready, value: routines, error, errorMessage, retry } = useRoutines();
   /*
    * 수행 중 표시는 **기기별 임시 상태**라 서버에 테이블이 없다(계획서 Step 3 메모).
    * 다른 기기에서 이어서 하기를 원하는 게 아니므로 localStorage 그대로 둔다.
@@ -70,7 +70,10 @@ export function NextStepCard() {
   );
 
   if (!ready) return <DataState loading label="루틴" />;
-  if (error) return <DataState error onRetry={retry} label="루틴" />;
+  if (error)
+    return (
+      <DataState error onRetry={retry} label="루틴" message={errorMessage} />
+    );
 
   const suggestion = pickSuggestion(routines, runStart, new Date());
 

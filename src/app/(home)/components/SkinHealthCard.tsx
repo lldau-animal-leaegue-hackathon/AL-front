@@ -59,6 +59,8 @@ export function SkinHealthCard() {
       <DataState
         error
         label="달성률"
+        // 둘 다 실패할 수도 있다 — 먼저 있는 쪽(routines)의 메시지를 우선한다.
+        message={routinesRes.errorMessage ?? runsRes.errorMessage}
         onRetry={() => {
           routinesRes.retry();
           runsRes.retry();

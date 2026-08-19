@@ -29,24 +29,31 @@ export function RecordsSection() {
     ready: routinesReady,
     value: routines,
     error: routinesError,
+    errorMessage: routinesErrorMessage,
     retry: retryRoutines,
   } = useRoutines();
   const {
     ready: runsReady,
     value: runs,
     error: runsError,
+    errorMessage: runsErrorMessage,
     retry: retryRuns,
   } = useRuns();
 
   const ready = routinesReady && runsReady;
   const error = routinesError || runsError;
+  // 둘 다 실패할 수도 있다 — 먼저 있는 쪽(routines)의 메시지를 우선한다.
+  const errorMessage = routinesErrorMessage ?? runsErrorMessage;
   const retry = () => {
     retryRoutines();
     retryRuns();
   };
 
   if (!ready) return <DataState loading label="기록" />;
-  if (error) return <DataState error onRetry={retry} label="기록" />;
+  if (error)
+    return (
+      <DataState error onRetry={retry} label="기록" message={errorMessage} />
+    );
 
   if (routines.length === 0) {
     return (

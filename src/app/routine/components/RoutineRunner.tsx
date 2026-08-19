@@ -34,7 +34,7 @@ export function RoutineRunner({
   routineId: string;
   step: string;
 }) {
-  const { ready, value: routines, error, retry } = useRoutines();
+  const { ready, value: routines, error, errorMessage, retry } = useRoutines();
 
   const routine = routines.find((item) => item.id === routineId);
   const index = Number(step) - 1;
@@ -53,7 +53,10 @@ export function RoutineRunner({
   if (!ready) return <DataState loading label="루틴" />;
 
   // 네트워크 실패를 "루틴 없음"으로 오판하면 안 되므로 404 판정보다 먼저 처리한다.
-  if (error) return <DataState error onRetry={retry} label="루틴" />;
+  if (error)
+    return (
+      <DataState error onRetry={retry} label="루틴" message={errorMessage} />
+    );
 
   const valid =
     routine !== undefined &&

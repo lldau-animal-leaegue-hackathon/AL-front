@@ -27,7 +27,14 @@ export function IngredientProducts({ ingredient }: { ingredient: string }) {
 
   if (!products.ready) return <DataState loading label="제품" />;
   if (products.error)
-    return <DataState error onRetry={products.retry} label="제품" />;
+    return (
+      <DataState
+        error
+        onRetry={products.retry}
+        label="제품"
+        message={products.errorMessage}
+      />
+    );
 
   if (products.value.length === 0) {
     return (

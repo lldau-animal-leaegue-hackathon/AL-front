@@ -3,8 +3,8 @@
 .bar {
   display: flex;
   gap: 4px;
-  /* 폰트 폴백(Pretendard CDN 실패 → Malgun Gothic)으로 라벨이 넓어져도 넘친 폭이
-     body 로 새어 페이지 전체가 좌우로 흔들리는 것을 막는 안전망이다. */
+  /* 균등분할이라 넘칠 일이 없지만, 폰트 폴백(Pretendard CDN 실패 → Malgun Gothic)으로
+     라벨이 넓어졌을 때 넘친 폭이 body 로 새어 페이지가 좌우로 흔들리는 것을 막는 안전망이다. */
   overflow-x: auto;
   scrollbar-width: none;
   border-bottom: 1px solid var(--outline-variant);
@@ -19,14 +19,19 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  /* flex: 1 균등분할을 쓰지 않는다 — 셀 폭이 라벨보다 좁아지면 ellipsis 없이
-     조용히 잘린다. 자연폭으로 두면 4개 합이 358px 안에 들어간다. */
-  flex: 0 0 auto;
+  /* 네 탭이 항상 같은 폭이어야 한다(사용자 요청 2026-08-19).
+     `1 1 0` 이라 내용 폭과 무관하게 남은 공간을 정확히 4등분한다
+     (`flex: 1` 의 기본 basis 는 0% 라 결과는 같지만, 의도를 드러내려고 0 을 적는다). */
+  flex: 1 1 0;
+  /* 이게 없으면 flex 아이템의 min-width 가 auto 라 내용보다 작아지지 못한다
+     — 그 순간 균등분할이 깨지고 긴 탭만 넓어진다. */
+  min-width: 0;
   /* 44px 이 하한(반응형 계획서 R7). 48px 는 8px 베이스라인에 맞으면서
      BottomNav 항목(약 56px)보다 낮아 두 바가 시각적으로 구분된다. */
   min-height: 48px;
-  /* 실측으로 정한 값이다. 14px 이면 390px 화면에서 368px 이 되어 10px 넘친다. */
-  padding: 0 10px;
+  /* 균등분할이라 셀 폭이 고정된다(390px 에서 86.5px). 여백을 10px 로 두면
+     가장 긴 "리포트"+아이콘(71px)이 66.5px 안에 안 들어가 잘린다. */
+  padding: 0 4px;
   color: var(--on-surface-variant);
   font: var(--text-body-md);
   white-space: nowrap;

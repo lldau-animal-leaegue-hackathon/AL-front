@@ -35,7 +35,12 @@ export function IngredientAlerts() {
       {/* 제품 목록을 못 불러온 것과 "제품이 없다"는 다르다 — 구분하지 않으면
           네트워크 실패가 "제품을 등록하세요"로 잘못 안내된다. */}
       {state.kind === "error" && (
-        <DataState error onRetry={state.retry} label="성분 알림" />
+        <DataState
+          error
+          onRetry={state.retry}
+          label="성분 알림"
+          message={state.errorMessage}
+        />
       )}
 
       {state.kind === "no-products" && (

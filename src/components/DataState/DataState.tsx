@@ -33,6 +33,12 @@ export function DataState({ loading, error, onRetry, label, message }: Props) {
     return (
       // aria-live 로 알리면 짧은 로딩에도 스크린리더가 매번 말한다. 존재만 알린다.
       <p className={styles.loading} role="status">
+        {/*
+          도는 것이 있어야 "멈춘 화면"과 구분된다. 글자만 흐려졌다 진해지는 것으로는
+          부족하다 — AI 성분 추천은 10~30초가 걸린다. 레포의 다른 대기 화면
+          (ProductForm·RoutineForm 등)이 쓰는 것과 같은 아이콘·같은 회전이다.
+        */}
+        <Icon name="progress_activity" size="sm" className={styles.spinner} />
         {label ? `${label}을(를) 불러오는 중…` : "불러오는 중…"}
       </p>
     );

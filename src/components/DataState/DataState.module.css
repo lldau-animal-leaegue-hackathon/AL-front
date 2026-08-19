@@ -1,29 +1,38 @@
 /* 로딩·실패 표시. 화면마다 빈 상태 문구는 다르지만 이 둘은 같아도 된다. */
 
 .loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin: 0;
   padding: 24px 16px;
   color: var(--on-surface-variant);
   font-size: 0.9375rem;
   text-align: center;
-  /* 몇 초 걸릴 수 있어 "멈춘 것"으로 보이지 않게 은은하게 숨 쉬게 한다. */
-  animation: pulse 1.6s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
+/* 글자 opacity 만 깜빡이는 것으로는 부족했다 — AI 성분 추천은 10~30초가 걸리는데
+   숫자도 아이콘도 안 움직이면 멈춘 화면과 구분되지 않는다. */
+.spinner {
+  flex-shrink: 0;
+  color: var(--primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
 /* 움직임을 줄이도록 설정한 사용자에게는 애니메이션을 걸지 않는다. */
 @media (prefers-reduced-motion: reduce) {
-  .loading {
+  .spinner {
     animation: none;
+  }
+
+  .loading {
     opacity: 0.75;
   }
 }
