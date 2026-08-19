@@ -3,51 +3,94 @@ import Image from "next/image";
 import { Icon } from "@/components/Icon";
 import { stepIcon } from "@/lib/stepIcon";
 
+import card from "../../(home)/components/card.module.css";
 import styles from "./ProductCard.module.css";
 
 /**
- * 제품 카드 — 검색 결과·인기 제품이 같은 모양을 쓴다.
+ * 제품 카드 — **인기 제품·검색 결과·내 선반·성분별 추천이 전부 이 하나를 쓴다.**
+ *
+ * 예전에는 선반이 자기 CSS 로 따로 그렸는데, 같은 것을 두 벌로 그리면 반드시 갈라진다
+ * (실제로 썸네일이 96px/72px 로 어긋나 있었다). 선반 쪽 모양으로 통일했다.
  *
  * ⛔ **가격을 표시하지 않는다.** 화해 실측(2026-08-18)에서 가격은 검색어에 따라 나오기도
  * 안 나오기도 했고, 나오더라도 정가가 아니라 사은품 묶음 "최저가"였다. 재현되지 않는 값을
- * 정가처럼 보여 줄 수 없다(시드에 남아 있던 `price` 도 이 규칙에 따라 화면에서 뺐다).
+ * 정가처럼 보여 줄 수 없다.
  *
- * ⚠️ `image` 에는 **공유해도 되는 이미지만** 넘긴다. 사용자가 직접 찍은 사진은
+ * ⚠️ `image` 에는 그 화면에서 **보여도 되는 이미지만** 넘긴다. 공유 카탈로그
+ * (`products.image`)는 어디서나 되지만, 사용자가 직접 찍은 사진(`shelf_items.thumbnail`)은
  * 내 선반에서만 보여 준다(`db/migrations/002_product_image.sql` 참조).
  */
 type Props = {
   name: string;
-  brand: string;
-  /** 공유 이미지(data URL). 없으면 카테고리 아이콘으로 폴백한다. */
-  image?: string;
-  /** 아이콘 폴백을 고르는 데 쓴다. */
+  /** 카테고리 칩 + 썸네일 아이콘 폴백에 쓴다. */
   category?: string;
-  onSelect: () => void;
+  /** 썸네일(data URL). 없으면 카테고리 아이콘으로 폴백한다. */
+  image?: string;
+  /** 이름 아래 한 줄. 인기·검색은 브랜드, 선반은 성분 요약이나 주의 표시다. */
+  note?: string | null;
+  /** 주의 성분이 있는 제품. 테두리와 아이콘으로 표시한다. */
+  flagged?: boolean;
+  /** 없으면 누를 수 없는 카드다(내 선반). 있으면 버튼이 된다. */
+  onSelect?: () => void;
 };
 
-export function ProductCard({ name, brand, image, category, onSelect }: Props) {
+export function ProductCard({
+  name,
+  category,
+  image,
+  note,
+  flagged = false,
+  onSelect,
+}: Props) {
+  const body = (
+    <>
+      {flagged && (
+        <Icon name="warning" size="sm" filled className={styles.flag} />
+      )}
+
+      <span className={styles.thumb}>
+        {image ? (
+          // 이미 축소된 data URL 이라 next/image 최적화가 필요 없다.
+          <Image
+            src={image}
+            alt=""
+            width={96}
+            height={96}
+            unoptimized
+            className={styles.image}
+          />
+        ) : (
+          <Icon name={stepIcon(category ?? "")} filled />
+        )}
+      </span>
+
+      {category && (
+        <span className={`${card.label} ${styles.chip}`}>{category}</span>
+      )}
+      <h3 className={styles.name}>{name}</h3>
+      {note && (
+        <p className={`${styles.note} ${flagged ? styles.noteAlert : ""}`}>
+          {note}
+        </p>
+      )}
+    </>
+  );
+
+  const className = `${card.card} ${styles.card} ${flagged ? styles.flagged : ""}`;
+
   return (
     <li>
-      <button type="button" className={styles.card} onClick={onSelect}>
-        <div className={styles.thumb}>
-          {image ? (
-            // 이미 축소된 data URL 이라 next/image 최적화가 필요 없다.
-            <Image
-              src={image}
-              alt=""
-              width={72}
-              height={72}
-              unoptimized
-              className={styles.image}
-            />
-          ) : (
-            <Icon name={stepIcon(category ?? "")} filled />
-          )}
-        </div>
-
-        <p className={styles.name}>{name}</p>
-        <p className={styles.brand}>{brand}</p>
-      </button>
+      {/*
+        누를 데가 없는 카드를 button 으로 만들면 포커스는 잡히는데 아무 일도 안 일어난다.
+        선반 카드처럼 동작이 없으면 div 로 둔다.
+      */}
+      {onSelect ? (
+        <button type="button" className={className} onClick={onSelect}>
+          {body}
+        </button>
+      ) : (
+        <div className={className}>{body}</div>
+      )}
     </li>
   );
 }

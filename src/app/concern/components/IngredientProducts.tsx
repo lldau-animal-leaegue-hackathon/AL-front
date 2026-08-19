@@ -52,7 +52,7 @@ export function IngredientProducts({ ingredient }: { ingredient: string }) {
           <ProductCard
             key={product.id}
             name={product.productName}
-            brand={product.productCompany ?? ""}
+            note={product.productCompany}
             // 공유 이미지만 온다 — 개인 사진은 조회에서 빠져 있다.
             image={product.image}
             category={product.category}

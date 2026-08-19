@@ -1,84 +1,38 @@
+/* 카드 모양은 ProductCard.module.css 가 든다 — 인기·검색·선반이 같은 카드를 쓴다.
+   여기 남은 것은 그리드와 "제품 추가" 타일뿐이다. */
+
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  /* 모든 카드가 같은 크기여야 한다(사용자 요청 2026-08-19).
+     같은 행끼리는 stretch 로 맞지만 행마다는 달라진다 — 이름이 두 줄인 카드가 낀
+     행만 커진다. 1fr 로 두면 **모든 행이 가장 큰 행에 맞춰진다.** */
+  grid-auto-rows: 1fr;
   gap: 16px;
   list-style: none;
 }
 
-.item,
+/* li 자체가 그리드 아이템이라, 안의 카드가 100% 를 받으려면 li 도 늘어나야 한다. */
+.grid > li {
+  display: flex;
+}
+
 .addCard {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 100%;
-  padding: 16px;
-  text-align: center;
-}
-
-.thumb {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 96px;
-  height: 96px;
-  margin-bottom: 16px;
-  overflow: hidden;
-  border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--surface-variant) 30%, transparent);
-  color: var(--on-surface-variant);
-}
-
-.thumbImg {
+  justify-content: center;
+  /* li 가 flex 컨테이너라 폭을 명시하지 않으면 내용만큼만 늘어난다(실측 95px). */
   width: 100%;
   height: 100%;
-  object-fit: cover;
-}
-
-.chip {
-  margin-bottom: 8px;
-  padding: 2px 8px;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--surface-variant) 50%, transparent);
-  color: var(--on-surface-variant);
-  font-size: 10px;
-  letter-spacing: var(--tracking-label-sm);
-}
-
-.name {
-  font: var(--text-body-md);
-  font-weight: 600;
-  color: var(--on-surface);
-}
-
-.note {
-  margin-top: 4px;
-  font: var(--text-label-sm);
-  font-weight: 400;
-  color: var(--on-surface-variant);
-}
-
-.noteAlert {
-  color: var(--error);
-}
-
-.flagged {
-  border: 1px solid color-mix(in srgb, var(--error) 20%, transparent);
-}
-
-.flag {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  color: var(--error);
-}
-
-.addCard {
-  justify-content: center;
+  /* ProductCard 와 같은 값 — 카드 크기가 전부 같아야 한다. */
   min-height: 220px;
+  padding: 16px;
   border: 2px dashed var(--outline-variant);
   border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--surface-variant) 20%, transparent);
+  text-align: center;
 }
 
 .addCard:hover {
@@ -95,6 +49,12 @@
   background: var(--surface-container-lowest);
   box-shadow: var(--shadow-card);
   color: var(--primary);
+}
+
+.addLabel {
+  font: var(--text-body-md);
+  font-weight: 600;
+  color: var(--on-surface);
 }
 
 @media (min-width: 768px) {

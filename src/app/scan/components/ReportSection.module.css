@@ -26,24 +26,132 @@
   letter-spacing: var(--tracking-label-sm);
 }
 
-/* 왼쪽 세로선으로 인사이트를 구분한다 */
-.insight {
-  margin-bottom: 20px;
+/*
+ * 왼쪽 세로선으로 블록을 구분한다.
+ * ⛔ 블록 전체에 배경색을 깔지 않는다 — 주의사항이 길어질수록 화면 대부분이 빨개져
+ *    읽기 힘들어진다(사용자 지적 2026-08-19). 색은 제목·표식에만 쓴다.
+ */
+.block {
+  margin-bottom: 24px;
   padding-left: 16px;
   border-left: 4px solid var(--primary);
-  border-radius: var(--radius-sm);
 }
 
-.insightTitle {
-  margin-bottom: 4px;
+.block:last-child {
+  margin-bottom: 0;
+}
+
+.blockTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
   font: var(--text-body-lg);
   font-weight: 600;
   color: var(--primary);
 }
 
-.insightBody {
+/* ── 자주 쓰는 성분 ────────────────────────────────────── */
+
+.sharedList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+}
+
+/* 예전에는 " · " 로 한 줄에 이어 붙여 어디까지가 성분명인지 안 보였다. */
+.sharedItem {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sharedName {
   font: var(--text-body-md);
+  color: var(--on-surface);
+}
+
+.sharedCount {
+  flex-shrink: 0;
   color: var(--on-surface-variant);
+  font-size: 13px;
+}
+
+/* ── 자극 우려 성분 ────────────────────────────────────── */
+
+.alertTitle {
+  color: var(--error);
+}
+
+/* 제품 단위로 묶는다 — 같은 제품 이름이 줄마다 반복되지 않는다. */
+.product {
+  margin-bottom: 16px;
+}
+
+.product:last-of-type {
+  margin-bottom: 0;
+}
+
+.productName {
+  margin-bottom: 6px;
+  font: var(--text-body-md);
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.line {
+  position: relative;
+  padding-left: 14px;
+}
+
+/* 글머리표. 텍스트 흐름에 넣으면 두 번째 줄이 밀려 들여쓰기가 어긋난다. */
+.line::before {
+  content: "·";
+  position: absolute;
+  top: 0;
+  left: 2px;
+  color: var(--error);
+  font-weight: 700;
+}
+
+.ingredient {
+  font: var(--text-body-md);
+  font-weight: 600;
+  color: var(--error);
+}
+
+.desc {
+  font: var(--text-body-md);
+  line-height: 1.6;
+  color: var(--on-surface-variant);
+}
+
+.alertCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 터치 타깃 44px */
+  min-height: 44px;
+  margin-top: 16px;
+  padding: 8px 16px;
+  border: 1px solid color-mix(in srgb, var(--error) 20%, transparent);
+  border-radius: var(--radius);
+  background: var(--surface-container-lowest);
+  color: var(--error);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.alertCta:hover {
+  background: var(--error-container);
 }
 
 /* 주의 성분이 없을 때 — 중립 표면 위에 안전한 on-surface-variant 짝을 쓴다.
@@ -62,53 +170,4 @@
 .safeIcon {
   flex-shrink: 0;
   color: var(--primary);
-}
-
-.alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid color-mix(in srgb, var(--error) 10%, transparent);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--error-container) 30%, transparent);
-}
-
-.alertIcon {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--error);
-}
-
-.alertTitle {
-  margin-bottom: 4px;
-  font: var(--text-body-lg);
-  font-weight: 600;
-  color: var(--error);
-}
-
-.warningList {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  list-style: none;
-}
-
-.alertCta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* 터치 타깃 44px */
-  min-height: 44px;
-  margin-top: 12px;
-  padding: 8px 16px;
-  border: 1px solid color-mix(in srgb, var(--error) 20%, transparent);
-  border-radius: var(--radius);
-  background: var(--surface-container-lowest);
-  color: var(--error);
-  letter-spacing: var(--tracking-label-sm);
-}
-
-.alertCta:hover {
-  background: var(--error-container);
 }

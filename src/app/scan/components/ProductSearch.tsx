@@ -75,7 +75,7 @@ export function ProductSearch({
                 <ProductCard
                   key={product.id}
                   name={product.name}
-                  brand={product.brand}
+                  note={product.brand}
                   category={product.category}
                   onSelect={() =>
                     onSelect({ name: product.name, brand: product.brand })
@@ -90,7 +90,7 @@ export function ProductSearch({
               <ProductCard
                 key={product.id}
                 name={product.productName}
-                brand={product.productCompany ?? ""}
+                note={product.productCompany}
                 // 공유 이미지만 온다 — 개인 사진은 조회 자체에서 빠져 있다.
                 image={product.image}
                 category={product.category}
@@ -104,7 +104,7 @@ export function ProductSearch({
               <ProductCard
                 key={product.id}
                 name={product.name}
-                brand={product.brand}
+                note={product.brand}
                 category={product.category}
                 onSelect={() =>
                   onSelect({ name: product.name, brand: product.brand })

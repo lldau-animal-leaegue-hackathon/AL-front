@@ -1,17 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
 import { DataState } from "@/components/DataState/DataState";
+import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Icon } from "@/components/Icon";
 import { useProducts } from "@/lib/data";
-import { stepIcon } from "@/lib/stepIcon";
 import type { Product } from "@/types/skincare";
 
-import { EmptyState } from "@/components/EmptyState/EmptyState";
-
-import card from "../../(home)/components/card.module.css";
+import { ProductCard } from "./ProductCard";
 import styles from "./ShelfSection.module.css";
 
 /**
@@ -50,45 +47,17 @@ export function ShelfSection() {
     <ul className={styles.grid}>
       {products.map((product) => {
         const flagged = (product.warnings?.length ?? 0) > 0;
-        const note = shelfNote(product, flagged);
 
         return (
-          <li
+          <ProductCard
             key={product.id}
-            className={`${card.card} ${styles.item} ${flagged ? styles.flagged : ""}`}
-          >
-            {flagged && (
-              <Icon name="warning" size="sm" filled className={styles.flag} />
-            )}
-
-            <span className={styles.thumb}>
-              {product.thumbnail ? (
-                // 이미 256px 로 축소된 로컬 data URL 이라 next/image 최적화가 필요 없다.
-                <Image
-                  src={product.thumbnail}
-                  alt=""
-                  width={96}
-                  height={96}
-                  unoptimized
-                  className={styles.thumbImg}
-                />
-              ) : (
-                <Icon name={stepIcon(product.category)} />
-              )}
-            </span>
-
-            <span className={`${card.label} ${styles.chip}`}>
-              {product.category}
-            </span>
-            <h3 className={styles.name}>{product.productName}</h3>
-            {note && (
-              <p
-                className={`${styles.note} ${flagged ? styles.noteAlert : ""}`}
-              >
-                {note}
-              </p>
-            )}
-          </li>
+            name={product.productName}
+            category={product.category}
+            /* 내 선반에서만 개인 사진을 보여 준다 — 공유 목록에는 넘기지 않는다. */
+            image={product.thumbnail}
+            note={shelfNote(product, flagged)}
+            flagged={flagged}
+          />
         );
       })}
 
@@ -99,7 +68,7 @@ export function ShelfSection() {
           <span className={styles.addIcon}>
             <Icon name="add" />
           </span>
-          <span className={styles.name}>제품 추가</span>
+          <span className={styles.addLabel}>제품 추가</span>
         </Link>
       </li>
     </ul>
