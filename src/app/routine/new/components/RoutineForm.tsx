@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 import { useProducts, useSkinProfile } from "@/lib/data";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 import { ROUTINE_CONDITION } from "../../condition";
 import { useRoutineGenerate } from "../../hooks/useRoutineGenerate";
@@ -16,6 +17,40 @@ const TIME_OPTIONS = ["3분", "5분", "10분", "15분", "20분"] as const;
 
 /** 실측 약 90초. 이 시점부터는 "정상입니다"라고 알려 줘야 사용자가 안 떠난다. */
 const LONG_WAIT_SECONDS = 20;
+
+/**
+ * 생성 중 전면 차단 오버레이 — 사용자 피드백 2026-08-20: 인라인 스피너로는
+ * "AI 가 일하는 중"이 안 읽히고, 기다리는 동안 다른 곳을 눌러 흐름이 깨졌다.
+ * 화면 전체를 덮어 터치를 막고, 스크롤도 잠근다.
+ * (이 라우트는 전용 페이지라 이동하면 언마운트되므로 스크롤 락이 남지 않는다.)
+ */
+function AIWorkingOverlay({
+  elapsed,
+  focus,
+}: {
+  elapsed: number;
+  focus: boolean;
+}) {
+  useBodyScrollLock();
+  return (
+    <div className={styles.overlay} role="status" aria-live="polite">
+      <div className={styles.overlayCard}>
+        <Icon name="auto_awesome" filled className={styles.aiIcon} />
+        <p className={styles.overlayTitle}>
+          AI가 {focus ? "기타 루틴을" : "루틴을"} 짜고 있어요
+        </p>
+        <p className={styles.overlayMeta}>
+          제품과 성분을 하나씩 따져 보는 중 · {elapsed}초
+        </p>
+        {elapsed >= LONG_WAIT_SECONDS && (
+          <p className={styles.overlayHint}>
+            보통 1~2분 걸립니다. 화면을 닫지 말고 잠시만 기다려 주세요.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
  * @param focus 고민 집중 케어를 만드는 중인가. 등록된 고민을 미리 채우고,
@@ -105,7 +140,7 @@ export function RoutineForm({ focus = false }: { focus?: boolean }) {
       <section className={styles.result} role="status">
         <p className={styles.resultTitle}>
           <Icon name="check_circle" filled size="sm" />
-          {focus ? "집중 케어를 만들었어요" : "루틴을 만들었어요"}
+          {focus ? "기타 루틴을 만들었어요" : "루틴을 만들었어요"}
         </p>
 
         {saved.map((routine) => (
@@ -155,12 +190,12 @@ export function RoutineForm({ focus = false }: { focus?: boolean }) {
     <section className={styles.section}>
       <div className={styles.intro}>
         <h2 className={styles.heading}>
-          {focus ? "이 고민에 집중할게요" : "어떤 피부 고민이 있나요?"}
+          {focus ? "기타 루틴을 만들게요" : "어떤 피부 고민이 있나요?"}
         </h2>
         <p className={styles.lead}>
           고민과 쓸 수 있는 시간을 알려 주면, 등록한 제품
           {shelfCount === null ? "" : ` ${shelfCount}개`}로 아침·저녁{" "}
-          {focus ? "집중 케어를" : "루틴을"} 짜 드려요.
+          {focus ? "기타 루틴을" : "루틴을"} 짜 드려요.
           {/* 조건 단위 교체라 기본 루틴은 남는다. 안 알려 주면 덮어쓸까 봐 안 만든다. */}
           {focus && " 기본 루틴은 그대로 두고 따로 저장돼요."}
         </p>
@@ -223,27 +258,14 @@ export function RoutineForm({ focus = false }: { focus?: boolean }) {
           </div>
         </div>
 
+        {/* 진행 표시는 전면 오버레이(AIWorkingOverlay)가 맡는다 — 버튼은 잠그기만 한다. */}
         <button className={styles.submit} type="submit" disabled={working}>
-          {working ? (
-            <>
-              <Icon name="progress_activity" className={styles.spinner} />
-              루틴 짜는 중… {elapsed}초
-            </>
-          ) : (
-            <>
-              <Icon name="auto_awesome" filled />
-              루틴 만들기
-            </>
-          )}
+          <Icon name="auto_awesome" filled />
+          루틴 만들기
         </button>
-
-        {working && elapsed >= LONG_WAIT_SECONDS && (
-          <p className={styles.hint}>
-            제품과 성분을 하나씩 따져 보는 중이에요. 보통 1~2분 걸립니다. 화면을
-            닫지 말고 기다려 주세요.
-          </p>
-        )}
       </form>
+
+      {working && <AIWorkingOverlay elapsed={elapsed} focus={focus} />}
 
       {status === "error" && error && (
         <p className={styles.error} role="alert">

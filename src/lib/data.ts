@@ -41,7 +41,7 @@ import {
 } from "@/api/knowledge";
 import { fetchSkinProfile, saveSkinProfile } from "@/api/profile";
 import {
-  clearRoutines as clearRoutinesRequest,
+  deleteRoutines as deleteRoutinesRequest,
   fetchRoutines,
   saveRoutines as saveRoutinesRequest,
   type RoutineInput,
@@ -324,8 +324,9 @@ export async function saveRoutines(routines: RoutineInput[]): Promise<void> {
   await mutate(KEYS.routines);
 }
 
-export async function clearRoutines(): Promise<void> {
-  await clearRoutinesRequest();
+/** condition 을 주면 그 세트만 지운다(루틴 삭제 버튼 — 사용자 피드백 2026-08-20). */
+export async function deleteRoutines(condition?: string): Promise<void> {
+  await deleteRoutinesRequest(condition ? { condition } : undefined);
   await mutate(KEYS.routines);
 }
 

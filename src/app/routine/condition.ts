@@ -13,8 +13,17 @@
 export const ROUTINE_CONDITION = {
   /** 기본 루틴. 기존 데이터·서버 기본값이 전부 이 값이라 바꾸지 않는다. */
   basic: "평소",
+  /** ⚠️ 저장값은 유지 — 화면 표시는 "기타 루틴"이다(사용자 피드백 2026-08-20, `conditionLabel`). */
   focus: "고민 집중",
 } as const;
+
+/**
+ * 화면 표시용 라벨. "고민 집중 케어" → "기타 루틴" 개명은 표시만 바꾼다 —
+ * 저장값을 바꾸면 기존 사용자의 루틴이 어느 그룹에도 안 잡힌다.
+ */
+export function conditionLabel(condition: string): string {
+  return condition === ROUTINE_CONDITION.focus ? "기타 루틴" : condition;
+}
 
 export type RoutineCondition =
   (typeof ROUTINE_CONDITION)[keyof typeof ROUTINE_CONDITION];

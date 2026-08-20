@@ -19,5 +19,10 @@ export type RoutineInput = Omit<Routine, "id" | "createdAt"> & {
 export const saveRoutines = (input: { routines: RoutineInput[] }) =>
   api.put<{ ok: boolean; count: number }>("/routines", input);
 
-export const clearRoutines = () =>
-  api.delete<{ ok: boolean; deleted: number }>("/routines");
+/** condition 을 주면 그 세트만, 없으면 전부 지운다. */
+export const deleteRoutines = (input?: { condition?: string }) =>
+  api.delete<{ ok: boolean; deleted: number }>(
+    input?.condition
+      ? `/routines?condition=${encodeURIComponent(input.condition)}`
+      : "/routines",
+  );

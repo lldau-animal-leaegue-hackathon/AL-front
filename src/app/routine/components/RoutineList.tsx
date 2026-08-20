@@ -1,14 +1,141 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
-import { useRoutines, useRuns } from "@/lib/data";
+import { deleteRoutines, useRoutines, useRuns } from "@/lib/data";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
-import { isFocusRoutine } from "../condition";
+import { isFocusRoutine, ROUTINE_CONDITION } from "../condition";
 import { RoutineCard } from "./RoutineCard";
 import styles from "./RoutineList.module.css";
+
+/**
+ * 삭제 확인 모달 — 사용자 요청 2026-08-20 ("정말 삭제하시겠습니까"를 모달로).
+ * 스크림·blur·스크롤 락은 앱의 다른 모달과 같은 규칙이다. 이 라우트는 탭 패널이
+ * 아니라 이동 시 언마운트되므로 스크롤 락이 남는 문제(hidden 패널)와 무관하다.
+ */
+function DeleteConfirmModal({
+  label,
+  deleting,
+  failed,
+  onConfirm,
+  onClose,
+}: {
+  label: string;
+  deleting: boolean;
+  failed: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  useBodyScrollLock();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !deleting) onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose, deleting]);
+
+  return (
+    <div
+      className={styles.confirmOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${label} 삭제 확인`}
+    >
+      <div className={styles.confirmSheet}>
+        <Icon name="delete" filled className={styles.confirmIcon} />
+        <p className={styles.confirmTitle}>정말 삭제하시겠습니까?</p>
+        <p className={styles.confirmText}>
+          {label}의 아침·저녁 루틴이 모두 삭제돼요. 되돌릴 수 없습니다.
+        </p>
+
+        {failed && (
+          <p className={styles.confirmError} role="alert">
+            삭제하지 못했어요. 다시 시도해 주세요.
+          </p>
+        )}
+
+        <div className={styles.confirmActions}>
+          <button
+            type="button"
+            className={styles.confirmCancel}
+            onClick={onClose}
+            disabled={deleting}
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            className={styles.confirmDelete}
+            onClick={onConfirm}
+            disabled={deleting}
+          >
+            {deleting ? "삭제 중…" : "삭제"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 세트(condition) 단위 삭제 — 버튼을 누르면 확인 모달이 뜬다. */
+function DeleteRoutineSet({
+  condition,
+  label,
+}: {
+  condition: string;
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function handleConfirm() {
+    setDeleting(true);
+    setFailed(false);
+    try {
+      await deleteRoutines(condition);
+      // 성공하면 routines 캐시 갱신으로 이 섹션의 목록이 비워진다.
+      setOpen(false);
+    } catch {
+      // 모달을 열어 둔 채 에러를 보여 준다 — 닫아 버리면 실패를 알 수 없다.
+      setFailed(true);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.delete}
+        onClick={() => {
+          setFailed(false);
+          setOpen(true);
+        }}
+      >
+        <Icon name="delete" size="sm" />
+        삭제
+      </button>
+
+      {open && (
+        <DeleteConfirmModal
+          label={label}
+          deleting={deleting}
+          failed={failed}
+          onConfirm={handleConfirm}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
 
 /** 같은 날짜인가 — 기록은 ISO 문자열이라 로컬 시간대로 비교한다. */
 function isToday(iso: string, today: Date): boolean {
@@ -30,6 +157,8 @@ function isToday(iso: string, today: Date): boolean {
 export function RoutineList() {
   const routinesRes = useRoutines();
   const runsRes = useRuns();
+  // Pro 업셀 안내 — early return(로딩/에러)보다 앞에 있어야 한다(훅 규칙).
+  const [proNotice, setProNotice] = useState(false);
 
   // "오늘 완료" 표시가 기록에서 나오므로 둘 다 있어야 한 번에 정확히 그린다.
   if (!routinesRes.ready || !runsRes.ready)
@@ -118,38 +247,76 @@ export function RoutineList() {
           cards(basic)
         )}
 
-        <Link className={styles.regenerate} href="/routine/new">
-          <Icon
-            name={basic.length === 0 ? "add_circle" : "refresh"}
-            size="sm"
-          />
-          {basic.length === 0 ? "기본 루틴 만들기" : "기본 루틴 다시 만들기"}
-        </Link>
+        <div className={styles.groupActions}>
+          <Link className={styles.regenerate} href="/routine/new">
+            <Icon
+              name={basic.length === 0 ? "add_circle" : "refresh"}
+              size="sm"
+            />
+            {basic.length === 0 ? "기본 루틴 만들기" : "기본 루틴 다시 만들기"}
+          </Link>
+          {basic.length > 0 && (
+            <DeleteRoutineSet
+              condition={ROUTINE_CONDITION.basic}
+              label="기본 루틴"
+            />
+          )}
+        </div>
       </section>
 
       <section>
-        <h2 className={styles.heading}>고민 집중 케어</h2>
+        {/* 표시명만 "기타 루틴" — 저장값은 "고민 집중" 그대로다(condition.ts 참조). */}
+        <h2 className={styles.heading}>기타 루틴</h2>
         <p className={styles.lead}>
-          등록한 피부 고민에 맞춘 루틴이에요. 다시 만들어도 기본 루틴은 그대로
-          남아요.
+          피부 고민이나 특별한 상황에 맞춘 두 번째 루틴이에요. 다시 만들어도
+          기본 루틴은 그대로 남아요.
         </p>
 
         {focus.length === 0 ? (
           <p className={styles.groupEmpty}>
-            아직 집중 케어가 없어요. <strong>내 고민</strong> 탭에서 고민을
+            아직 기타 루틴이 없어요. <strong>내 고민</strong> 탭에서 고민을
             등록하면 그 고민에 맞춰 짜 드려요.
           </p>
         ) : (
           cards(focus)
         )}
 
-        <Link className={styles.regenerate} href="/routine/new?focus=1">
-          <Icon
-            name={focus.length === 0 ? "add_circle" : "refresh"}
-            size="sm"
-          />
-          {focus.length === 0 ? "집중 케어 만들기" : "집중 케어 다시 만들기"}
-        </Link>
+        <div className={styles.groupActions}>
+          <Link className={styles.regenerate} href="/routine/new?focus=1">
+            <Icon
+              name={focus.length === 0 ? "add_circle" : "refresh"}
+              size="sm"
+            />
+            {focus.length === 0 ? "기타 루틴 만들기" : "기타 루틴 다시 만들기"}
+          </Link>
+          {focus.length > 0 && (
+            <DeleteRoutineSet
+              condition={ROUTINE_CONDITION.focus}
+              label="기타 루틴"
+            />
+          )}
+        </div>
+      </section>
+
+      {/*
+        무료 티어는 루틴 2세트(기본+기타)까지 — 사용자 결정 2026-08-20.
+        결제 흐름은 없다. 자리와 안내만 두는 업셀 표시다.
+      */}
+      <section className={styles.pro}>
+        <button
+          type="button"
+          className={styles.proButton}
+          onClick={() => setProNotice(true)}
+        >
+          <Icon name="add_circle" size="sm" />
+          루틴 더 만들기
+        </button>
+        {proNotice && (
+          <p className={styles.proNotice} role="status">
+            무료 버전에서는 루틴을 2개(기본·기타)까지 만들 수 있어요. 더
+            만들려면 <strong>Pro 업그레이드</strong>가 필요해요.
+          </p>
+        )}
       </section>
     </div>
   );

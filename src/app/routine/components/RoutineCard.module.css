@@ -149,9 +149,6 @@
   margin-top: 16px;
 }
 
-/* 손으로 켜는 "완료" 버튼(.complete/.completeDone)은 Step 7 에서 없앴다 —
-   새로고침하면 풀리는 가짜 상태였고 주간 달성률과도 어긋났다.
-   완료 여부는 이제 수행 기록에서 파생된다. 그래서 CSS 도 함께 지운다. */
 .start {
   display: flex;
   flex: 1;
@@ -178,6 +175,43 @@
 
 .start:active {
   transform: scale(0.98);
+}
+
+/*
+ * 단계 화면 없이 바로 완료로 기록하는 보조 버튼(사용자 피드백 2026-08-20).
+ * 옛 로컬 토글(.complete, Step 7 에서 삭제)과 달리 실제 수행 기록을 남긴다.
+ */
+.markDone {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.markDone:hover:not(:disabled) {
+  background: var(--surface-container-low);
+}
+
+.markDone:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.markError {
+  margin-top: 8px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--error);
 }
 
 @media (prefers-reduced-motion: reduce) {

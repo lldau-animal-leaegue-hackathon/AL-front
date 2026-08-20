@@ -121,6 +121,15 @@ export function RoutineRunner({
             </h2>
           </div>
 
+          {/*
+            순서는 사용법 → 주의사항 → 팁 (사용자 피드백 2026-08-20).
+            지금 해야 할 일(사용법)이 첫눈에 오고, 안전(주의)이 참고(팁)보다 앞선다.
+            단계가 바뀌면 체크 상태를 초기화한다(key).
+          */}
+          <HowToList key={current.id} items={current.howToUse} />
+
+          <StepWarnings items={current.warning} />
+
           {current.tips.length > 0 && (
             <aside className={styles.expert}>
               <span className={styles.expertBadge} aria-hidden="true">
@@ -138,11 +147,6 @@ export function RoutineRunner({
               </div>
             </aside>
           )}
-
-          <StepWarnings items={current.warning} />
-
-          {/* 단계가 바뀌면 체크 상태를 초기화한다 */}
-          <HowToList key={current.id} items={current.howToUse} />
         </div>
       </main>
 

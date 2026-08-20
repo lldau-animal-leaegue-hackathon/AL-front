@@ -303,3 +303,77 @@
     flex: 1;
   }
 }
+
+/* ── 생성 중 전면 오버레이 ──────────────────────────────────────── */
+
+/* 모달과 같은 스크림 규칙(검은 계통 + blur) — 터치·스크롤을 전부 막는다. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--scrim) 72%, transparent);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.overlayCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  padding: 32px 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  text-align: center;
+}
+
+.aiIcon {
+  font-size: 48px;
+  color: var(--primary);
+  animation: ai-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ai-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.65;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aiIcon {
+    animation: none;
+  }
+}
+
+.overlayTitle {
+  font: var(--text-body-lg);
+  font-weight: 600;
+}
+
+.overlayMeta {
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  /* "8초" → "12초" 자릿수 변화에 흔들리지 않게 */
+  font-variant-numeric: tabular-nums;
+}
+
+.overlayHint {
+  margin-top: 8px;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  font-size: 14px;
+  line-height: 1.6;
+}

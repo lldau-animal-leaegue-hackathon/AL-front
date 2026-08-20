@@ -260,11 +260,26 @@ export async function PUT(request: Request) {
   }
 }
 
-export async function DELETE() {
+/** `?condition=` 을 주면 그 세트만 지운다(루틴 삭제 — 사용자 피드백 2026-08-20). 없으면 전부. */
+export async function DELETE(request: Request) {
+  const condition = new URL(request.url).searchParams.get("condition");
+  // 컬럼이 VARCHAR(60)이라 넘치는 값은 어차피 존재할 수 없는 조건이다 — 400 으로 먼저 막는다.
+  if (condition !== null && (condition.length === 0 || condition.length > 60)) {
+    return Response.json(
+      { message: "condition 이 올바르지 않습니다." },
+      { status: 400 },
+    );
+  }
+
   try {
-    const changed = await execute(`DELETE FROM routines WHERE user_id = ?`, [
-      await currentUserId(),
-    ]);
+    const changed = condition
+      ? await execute(
+          `DELETE FROM routines WHERE user_id = ? AND \`condition\` = ?`,
+          [await currentUserId(), condition],
+        )
+      : await execute(`DELETE FROM routines WHERE user_id = ?`, [
+          await currentUserId(),
+        ]);
     return Response.json({ ok: true, deleted: changed });
   } catch (error) {
     return dbErrorResponse("api/routines DELETE", error);
