@@ -27,7 +27,7 @@ export function SideNav() {
     <nav className={styles.nav} aria-label="주요 메뉴">
       <span className={styles.brand}>
         <Icon name="spa" filled className={styles.brandIcon} />
-        <span className={styles.brandName}>Dermis</span>
+        <span className={styles.brandName}>youtine</span>
       </span>
 
       <ul className={styles.list}>

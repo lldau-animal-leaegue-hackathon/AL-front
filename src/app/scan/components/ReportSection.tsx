@@ -170,7 +170,11 @@ export function ReportSection() {
 
   const selectTab = (id: SubTab) => setSubTab(id);
 
-  /** 충돌·시너지 공용 목록. 계약상 빈 배열이 정상이라 빈 문구를 밖에서 받는다. */
+  /**
+   * 충돌·시너지 공용 목록. 계약상 빈 배열이 정상이라 빈 문구를 밖에서 받는다.
+   * 순서는 **제품 → 성분 → 설명** — 종합 탭의 자극 우려 목록과 같은 구조로
+   * 통일한다(사용자 결정 2026-08-20 Q2).
+   */
   const pairList = (pairs: IngredientPair[], empty: string) =>
     pairs.length === 0 ? (
       <p className={styles.groupEmpty}>{empty}</p>
@@ -178,6 +182,9 @@ export function ReportSection() {
       <ul className={styles.pairList}>
         {pairs.map((pair) => (
           <li key={pair.ingredients.join("+")} className={styles.pairItem}>
+            {pair.products.length > 0 && (
+              <p className={styles.pairProducts}>{pair.products.join(" · ")}</p>
+            )}
             <p className={styles.pairChips}>
               {pair.ingredients.map((name) => (
                 <IngredientChip
@@ -187,9 +194,6 @@ export function ReportSection() {
                 />
               ))}
             </p>
-            {pair.products.length > 0 && (
-              <p className={styles.pairProducts}>{pair.products.join(" · ")}</p>
-            )}
             <p className={styles.desc}>{pair.description}</p>
           </li>
         ))}
