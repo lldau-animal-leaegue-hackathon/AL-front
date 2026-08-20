@@ -1,4 +1,5 @@
-# youtine 앱 이미지 — GitHub Actions 가 main 푸시마다 서버에서 빌드한다.
+# youtine 앱 이미지 — main 의 CI 가 성공하면 GitHub Actions 러너가 이 파일로 빌드해
+# Docker Hub 로 push 하고, 서버는 그것을 pull 만 한다(서버에서 빌드하지 않는다).
 #
 # ⚠️ **자격 증명을 이미지에 넣지 않는다.** 헤드리스 Claude 의 구독 인증은
 #    호스트에 1회 심어 둔 `~/.claude` 를 compose 가 볼륨으로 마운트한다.

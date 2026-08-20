@@ -33,7 +33,21 @@ concurrency:
 jobs:
   build-push:
     # main 의 CI 가 성공했을 때만. deploy 잡은 needs 로 이 게이트를 물려받는다.
-    if: github.event.workflow_run.conclusion == 'success'
+    #
+    # ⚠️ conclusion 조건만 두면 안 된다. workflow_run 의 `branches: [main]` 필터는
+    #    트리거한 실행의 **head branch 이름**만 본다 — fork 의 브랜치 이름이 `main` 이면
+    #    fork PR 로 돈 CI 도 이 필터를 통과한다. 그 상태로 아래 잡이 돌면 공격자 커밋
+    #    (head_sha)을 checkout 해 DOCKERHUB_TOKEN·DEPLOY_SSH_KEY 로 youtine:latest 를
+    #    덮어쓰고, 서버가 그것을 pull 한다(컨테이너에는 DB 자격 증명과 ~/.claude 가 마운트).
+    #    아래 두 줄 중 하나라도 지우면 그 경로가 다시 열린다.
+    #      - event == 'push'      : 푸시로 돈 CI 만 배포 게이트로 인정(PR 발 CI 는 배제)
+    #      - head_repository 대조 : 이 레포에서 시작한 실행만 인정(fork 배제)
+    #    2026-08-21 현재 레포가 비공개라 외부 fork PR 자체가 불가능해 즉시 악용은 안 되지만,
+    #    **공개로 전환하는 순간 유효해지는 구멍**이라 미리 닫아 둔다.
+    if: >-
+      github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
