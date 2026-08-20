@@ -4,8 +4,8 @@
  * `SkinHealthCard` 는 원래 "피부 건강 점수"였지만 **산출 근거가 없었다.**
  * 그래서 이름과 내용을 맞춰 **수행 기록에서 계산되는 달성률**로 바꿨다.
  *
- *   달성률 = 이번 주 완료 단계 수 ÷ 이번 주 예정 단계 수 × 100
- *   주간 변화 = 이번 주 − 지난주 (%p)
+ *   달성률 = 이번 주 완료 단계 수 ÷ 이번 주 예정 단계 수(경과 일수 기준) × 100
+ *   주간 변화 = 이번 주 − 지난주 (%p, 지난주는 7일 전체가 분모)
  *
  * 순수 함수로 둔 이유: 홈과 프로필이 같은 숫자를 써야 하는데, 각자 계산하면
  * 두 화면이 다른 값을 보여 주는 사고가 난다. React 에 의존하지 않아 검증도 쉽다.
@@ -16,7 +16,7 @@ import type { Routine, RoutineRun } from "@/types/skincare";
 export type Achievement = {
   /** 이번 주 완료 단계 수 */
   done: number;
-  /** 이번 주 예정 단계 수 (저장된 루틴을 매일 1회씩 한다고 볼 때) */
+  /** 이번 주 예정 단계 수 — 경과 일수(월~오늘) × 하루 예정 단계 수 */
   planned: number;
   /** 0~100. 예정이 0이면 계산 불가라 null */
   percent: number | null;
@@ -45,15 +45,6 @@ function countSteps(runs: readonly RoutineRun[], from: number, to: number) {
   }, 0);
 }
 
-/** 저장된 루틴을 **매일 1회씩** 수행한다고 볼 때 한 주 예정 단계 수. */
-function plannedPerWeek(routines: readonly Routine[]): number {
-  const perDay = routines.reduce(
-    (sum, routine) => sum + routine.steps.length,
-    0,
-  );
-  return perDay * 7;
-}
-
 export function weeklyAchievement(
   runs: readonly RoutineRun[],
   routines: readonly Routine[],
@@ -61,7 +52,26 @@ export function weeklyAchievement(
 ): Achievement {
   const thisWeek = startOfWeek(now);
   const lastWeek = thisWeek - WEEK_MS;
-  const planned = plannedPerWeek(routines);
+  // 저장된 루틴을 **매일 1회씩** 수행한다고 볼 때 하루 예정 단계 수.
+  const perDay = routines.reduce(
+    (sum, routine) => sum + routine.steps.length,
+    0,
+  );
+  /*
+   * 이번 주 분모는 **경과 일수**(월요일~오늘 포함)로 센다 — 아직 오지 않은
+   * 요일을 미완료로 치면 주 초마다 달성률이 거짓으로 낮아지고, 완결된
+   * 지난주와 비교하면 "86%p 하락" 같은 허위 델타가 나온다(리뷰 m7).
+   * DST 가 있는 시간대에서 하루가 23/25시간일 수 있어 round 로 나눈다.
+   */
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ).getTime();
+  const elapsedDays = Math.round((startOfToday - thisWeek) / DAY_MS) + 1;
+  const planned = perDay * elapsedDays;
+  // 지난주는 완결된 주 — 7일 전체가 분모다.
+  const lastPlanned = perDay * 7;
 
   /*
    * 분모(예정)가 현재 루틴 기준이므로 분자(완료)도 현재 루틴의 수행만 센다 —
@@ -86,9 +96,9 @@ export function weeklyAchievement(
     return !Number.isNaN(at) && at >= lastWeek && at < thisWeek;
   });
   const lastPercent =
-    planned === 0
+    lastPlanned === 0
       ? null
-      : Math.min(100, Math.round((lastDone / planned) * 100));
+      : Math.min(100, Math.round((lastDone / lastPlanned) * 100));
 
   return {
     done,
