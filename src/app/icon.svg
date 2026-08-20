@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- 배경 소프트 그라데이션 -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F4F6F4"/>
+    </linearGradient>
+
+    <!-- 선인장 세이지 그린 주조색 그라데이션 -->
+    <linearGradient id="sageGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#557564"/>
+      <stop offset="100%" stop-color="#466253"/>
+    </linearGradient>
+
+    <!-- 웜 샌드 포인트 컬러 그라데이션 -->
+    <linearGradient id="sandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBDEC0"/>
+      <stop offset="100%" stop-color="#E8C39E"/>
+    </linearGradient>
+
+    <!-- 앱 아이콘 소프트 그림자 -->
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#1A2B44" flood-opacity="0.06"/>
+    </filter>
+  </defs>
+
+  <!-- 앱 아이콘 스퀴클(Squircle) 배경 -->
+  <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#bgGrad)" stroke="#E1E5E2" stroke-width="2" filter="url(#softShadow)"/>
+
+  <!-- 심볼: 선인장 + 물방울 + 3분 데일리 루틴 타이머 아크 -->
+  <g transform="translate(0, -6)">
+    <!-- 외곽 루틴 타이머 아크 (습관 & 타이머 메타포) -->
+    <circle cx="256" cy="262" r="142" fill="none" stroke="#DDE3DF" stroke-width="12" stroke-linecap="round" stroke-dasharray="620 180" transform="rotate(-110 256 262)"/>
+
+    <!-- 중앙 선인장 에센스 물방울 (수분 & 생명력) -->
+    <path d="M 256 128 
+             C 256 128, 206 210, 206 266 
+             A 50 50 0 0 0 306 266 
+             C 306 210, 256 128, 256 128 Z" 
+          fill="url(#sageGrad)"/>
+
+    <!-- 좌측 선인장 가지 -->
+    <path d="M 216 256
+             H 182 
+             A 26 26 0 0 1 156 230
+             V 204" 
+          fill="none" 
+          stroke="url(#sageGrad)" 
+          stroke-width="20" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+
+    <!-- 우측 선인장 가지 -->
+    <path d="M 296 270
+             H 330 
+             A 26 26 0 0 0 356 244
+             V 190" 
+          fill="none" 
+          stroke="url(#sageGrad)" 
+          stroke-width="20" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+
+    <!-- 웜 샌드 포인트 이슬/광채 -->
+    <circle cx="356" cy="160" r="14" fill="url(#sandGrad)"/>
+    
+    <!-- 하단 앵커 포인트 점 -->
+    <circle cx="256" cy="358" r="8" fill="#466253"/>
+  </g>
+</svg>

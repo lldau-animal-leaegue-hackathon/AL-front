@@ -5,15 +5,15 @@ import { AppShell } from "@/components/AppShell/AppShell";
 import "./globals.css";
 import { MigrateLocalData } from "./MigrateLocalData";
 
-// 서비스명 youtine 으로 통일 — 사용자 결정 2026-08-20 (구: "Animal League"/"Dermis" 혼재).
-const SITE_NAME = "youtine";
+// 서비스명 "유틴"(youtine) — 사용자 결정 2026-08-20. 아이콘은 src/app/icon.svg (파일 컨벤션).
+const SITE_NAME = "유틴";
 const SITE_DESCRIPTION =
-  "제품 등록부터 AI 루틴 생성·수행 기록까지 — 나만의 스킨케어 루틴 youtine";
+  "제품 등록부터 AI 루틴 생성·수행 기록까지 — 나만의 스킨케어 루틴, 유틴(youtine)";
 
 export const metadata: Metadata = {
   title: {
     default: SITE_NAME,
-    // 하위 페이지에서 title: "루틴" 이라고만 쓰면 "루틴 | youtine" 가 됩니다.
+    // 하위 페이지에서 title: "루틴" 이라고만 쓰면 "루틴 | 유틴" 이 됩니다.
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
