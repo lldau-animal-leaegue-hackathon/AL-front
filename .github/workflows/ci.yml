@@ -44,6 +44,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # 빌드보다 먼저 돌린다 — 빌드는 수십 초 걸리는데 테스트는 1초라,
+      # 로직이 깨졌으면 빌드를 기다리지 않고 바로 빨간불을 본다.
+      - name: Test
+        run: npm run test
+
       - name: Build
         run: npm run build
 

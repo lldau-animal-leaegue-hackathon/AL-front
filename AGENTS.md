@@ -41,20 +41,34 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ```bash
 npm ci               # 의존성 설치 (package-lock 기준)
 npm run dev          # 개발 서버 http://localhost:3000 (Turbopack)
-npm run check        # 타입 + 린트 + 포맷 일괄 검사  ← 커밋 전 필수
+npm run check        # 타입 + 린트 + 포맷 + 테스트 일괄 검사  ← 커밋 전 필수
 npm run build        # 프로덕션 빌드
+npm run test         # Vitest 1회 실행 (check 에 포함돼 있다)
+npm run test:watch   # Vitest watch — 사람이 쓰는 것. 에이전트는 쓰지 말 것(끝나지 않는다)
 npm run lint:fix     # ESLint 자동 수정
 npm run format       # Prettier 자동 정렬
 ```
 
-- **`npm run check` / `npm run build` / `npm run lint`는 직접 실행해도 된다.**
-  이 레포에는 테스트 러너가 없으므로 **이 명령들이 사실상의 테스트 스위트**다.
+- **`npm run check` / `npm run build` / `npm run lint` / `npm run test`는 직접 실행해도 된다.**
+  이것들이 이 레포의 검증 수단 전부다.
   (jikjikjik 레포는 이들을 deny하지만, 여기서는 검증 수단이 이것뿐이라 정반대로 허용한다.)
 - **`npm run dev`는 백그라운드로만 실행**하고, 이미 떠 있으면 다시 띄우지 않는다.
   포그라운드로 띄우면 세션이 멈춘다. 확인이 끝나면 반드시 종료한다.
-- **테스트 러너 없음.** 테스트 파일을 새로 만들거나 찾으려 시도하지 말 것.
-  (도입한다면 Vitest + Testing Library를 먼저 사용자와 합의한다.)
 - Turbopack 관련 문제가 나면 `npm run dev:webpack` / `npm run build:webpack`으로 우회한다.
+
+### 테스트 (Vitest + Testing Library, 2026-08-21 사용자 합의 후 도입)
+
+- 테스트 파일은 **대상 파일 옆에** `Xxx.test.ts(x)` 로 둔다. `include` 는 `src/**/*.{test,spec}.{ts,tsx}`.
+- **환경은 확장자로 갈린다**(`vitest.config.mts` 의 `projects`):
+  `.ts` → `node`(순수 로직), `.tsx` → `jsdom` + `vitest.setup.ts`(jest-dom 매처·RTL cleanup·matchMedia 스텁).
+  Vitest 4 에서 `environmentMatchGlobs` 는 제거됐다 — 새 환경이 필요하면 `projects` 에 추가한다.
+- `globals: false` 다. `describe`/`it`/`expect` 를 **`vitest` 에서 import** 한다.
+  전역으로 바꾸려면 `tsconfig.json` 에 `types` 배열을 넣어야 하는데, 그러면 `@types/node`·next 타입의
+  자동 포함이 꺼져 typecheck 가 깨진다. 건드리지 말 것.
+- **무엇을 테스트하는가**: 순수 함수(파서·정규화·계산)와 props→DOM 이 전부인 표시용 컴포넌트.
+- **무엇을 테스트하지 않는가**: Route Handler·DB 쿼리(실 DB 필요), 헤드리스 Claude 호출(느리고 비결정적 —
+  `ai-contract-prober` 서브에이전트가 맡는다), 레이아웃·시각 회귀(`browser-prober` 가 맡는다).
+- 커버리지 목표는 두지 않는다. **테스트를 채우려고 자명한 코드에 테스트를 쓰지 말 것.**
 
 ## 아키텍처
 
@@ -221,6 +235,7 @@ git config core.hooksPath .githooks
 
 - `npm run check`는 `next typegen`을 먼저 돌린다 — `typedRoutes`가 켜져 있어 라우트 타입이
   생성돼야 `tsc`가 통과한다. 신규 라우트를 추가했으면 반드시 이 경로로 검증한다.
+  마지막 단계로 `npm run test`(Vitest)까지 돌아간다 — 따로 실행할 필요 없다.
 - 하나라도 실패하면 커밋을 멈추고 먼저 알린다.
 
 ### 작업 완료 시 자동 제시
@@ -319,7 +334,8 @@ VRAM 16GB에 안 맞고(35B 모델이 40% CPU 오프로드) 품질 근거도 없
 **충돌 시 우선순위 — 이 문서(프로젝트 규칙)가 ponytail보다 우선한다.** 알려진 충돌:
 
 - ponytail은 "프레임워크 없는 assert 기반 검증 파일"을 요구하지만,
-  **이 레포는 테스트 러너를 두지 않는다.** `npm run check` + `npm run build`가 검증 수단이다.
+  **이 레포는 Vitest 를 쓴다**(2026-08-21 도입). 남길 검증은 `Xxx.test.ts` 한 개로 쓴다 —
+  `demo()`/`__main__` 스타일 자체 점검 파일을 따로 만들지 말 것. 범위는 위 "테스트" 절을 따른다.
 - `/ponytail-review`·`/ponytail-audit`은 `adversarial-code-review`·`refactor-equivalence-check`와
   범위가 겹친다. **도메인 이상 광역 리뷰는 프로젝트 스킬을, 과설계 점검은 ponytail을** 쓴다.
 
