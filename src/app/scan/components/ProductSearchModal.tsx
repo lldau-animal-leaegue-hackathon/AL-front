@@ -207,16 +207,21 @@ function CandidateList({
   typedName: string;
   onUseTypedName: () => void;
 }) {
-  /** 후보에 원하는 제품이 없을 때의 탈출구 — 어떤 제품이든 등록은 가능해야 한다. */
+  /*
+   * 후보에 원하는 제품이 없을 때의 탈출구 — 어떤 제품이든 등록은 가능해야 한다.
+   * 문구가 "더 깊게 검색"인 이유: 이 버튼은 단순 건너뛰기가 아니라 **다음 단계에서
+   * 카탈로그 → 브랜드 공식몰 → AI 순으로 더 파고든다**(성분 추출 경로). 후보 목록보다
+   * 실제로 더 많은 곳을 뒤진다.
+   */
   const typedOption = typedName.trim() ? (
     <button
       type="button"
       className={styles.typedOption}
       onClick={onUseTypedName}
     >
-      <Icon name="edit" size="sm" />
+      <Icon name="travel_explore" size="sm" />
       <span>
-        찾는 제품이 없나요? <strong>{typedName}</strong> 이름 그대로 등록하기
+        더 <strong>{typedName}</strong> 를 깊게 검색해보기
       </span>
     </button>
   ) : null;
@@ -230,8 +235,7 @@ function CandidateList({
       <>
         <p className={styles.empty}>
           검색 결과가 없어요.
-          <br />
-          입력한 이름 그대로 등록하거나, 성분표 사진을 올려 직접 읽을 수 있어요.
+          <br />더 깊게 찾아보거나, 성분표 사진을 올려 직접 읽을 수 있어요.
         </p>
         {typedOption}
       </>
