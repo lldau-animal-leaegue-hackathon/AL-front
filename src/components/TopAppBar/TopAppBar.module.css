@@ -32,17 +32,13 @@
   min-width: 0;
 }
 
+/* 유틴 아이콘이 자체 스퀴클 프레임을 갖고 있어 배경·테두리를 두지 않는다. */
 .avatar {
   flex-shrink: 0;
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
-  border: 2px solid var(--primary-fixed);
-  border-radius: var(--radius-full);
-  background: var(--primary-fixed);
-  color: var(--on-primary-fixed);
-  font: var(--text-headline-md);
 }
 
 .title {
@@ -51,6 +47,148 @@
   color: var(--primary);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 우측 끝 설정 진입점 — 10 + 24 + 10 = 44px 터치 타깃. */
+.gear {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  padding: 10px;
+  border-radius: var(--radius-full);
+  color: var(--on-surface-variant);
+  transition: background 0.2s ease;
+}
+
+.gear:hover {
+  background: var(--surface-container);
+}
+
+/* ── 설정 모달 (이름·화면 모드) — 공통 스크림 규칙 ─────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--scrim) 72%, transparent);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 360px;
+  padding: 20px 24px 28px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+}
+
+.sheetBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheetTitle {
+  font: var(--text-body-lg);
+  font-weight: 600;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  border-radius: var(--radius-full);
+  color: var(--on-surface-variant);
+}
+
+.close:hover {
+  background: var(--surface-container-high);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+}
+
+/* ProductForm 인풋과 같은 규칙 — 테두리 없는 연회색 필드 + 포커스 글로우. */
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  font: var(--text-body-md);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.fieldHint {
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+}
+
+.segment {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.segmentItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 8px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.segmentItem:hover {
+  background: var(--surface-container-low);
+}
+
+.segmentActive {
+  border-color: var(--primary);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font-weight: 600;
 }
 
 @media (min-width: 768px) {

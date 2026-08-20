@@ -8,13 +8,11 @@ import { TopAppBar } from "@/components/TopAppBar/TopAppBar";
 
 import styles from "./page.module.css";
 
-// 백엔드 연동 전까지 쓰는 목업 데이터. API가 붙으면 이 블록만 걷어내면 된다.
-const USER_NAME = "Glow";
-
 export default function Home() {
   return (
     <>
-      <TopAppBar userName={USER_NAME} />
+      {/* 인사말 이름은 설정 모달에서 저장한 값(localStorage)을 TopAppBar 가 직접 읽는다. */}
+      <TopAppBar />
 
       <main className={styles.main}>
         <div className={styles.full}>

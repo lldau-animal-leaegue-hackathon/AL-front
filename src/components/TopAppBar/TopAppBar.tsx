@@ -1,21 +1,186 @@
+"use client";
+
+import { useEffect, useId, useRef, useState } from "react";
+
+import { Icon } from "@/components/Icon";
+import { YoutineIcon } from "@/components/YoutineIcon";
+import { load, remove, save } from "@/lib/storage/local";
+import { useStored } from "@/lib/storage/useStored";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
+
 import styles from "./TopAppBar.module.css";
 
-export function TopAppBar({ userName }: { userName: string }) {
+/** 표시 이름 — 계정이 없는 앱이라 기기(localStorage)가 정본이다. */
+const NAME_KEY = "user-name";
+/**
+ * 테마 선택("light"|"dark", 없으면 시스템).
+ * ⚠️ layout.tsx 의 부트스트랩 스크립트가 같은 키(al:v1:theme)를 원문으로 읽는다 —
+ * 키를 바꾸면 그쪽도 함께 바꿀 것.
+ */
+const THEME_KEY = "theme";
+
+type ThemeMode = "system" | "light" | "dark";
+
+const THEME_OPTIONS: { value: ThemeMode; label: string; icon: string }[] = [
+  { value: "system", label: "시스템", icon: "contrast" },
+  { value: "light", label: "라이트", icon: "light_mode" },
+  { value: "dark", label: "다크", icon: "dark_mode" },
+];
+
+/**
+ * 선택을 저장하고 즉시 적용한다. "시스템"은 저장을 지우고 현재 OS 값을 반영한다
+ * (세션 중 OS 설정이 또 바뀌는 경우는 다음 로드에서 부트스트랩이 따라간다).
+ */
+function applyTheme(mode: ThemeMode) {
+  if (mode === "system") {
+    remove(THEME_KEY);
+    document.documentElement.dataset.theme = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches
+      ? "dark"
+      : "light";
+    return;
+  }
+  save(THEME_KEY, mode);
+  document.documentElement.dataset.theme = mode;
+}
+
+/** 설정 모달 — 이름·화면 모드. 스크림·Esc·포커스 규칙은 앱의 다른 모달과 동일. */
+function SettingsModal({ onClose }: { onClose: () => void }) {
+  useBodyScrollLock();
+  const nameId = useId();
+
+  // 열릴 때 한 번 읽는다 — 입력은 즉시 저장되므로 별도 저장 버튼이 없다.
+  const [name, setName] = useState(() => load<string>(NAME_KEY, ""));
+  const theme = useStored<ThemeMode | null>(THEME_KEY, null);
+  const mode: ThemeMode = theme.value ?? "system";
+
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className={styles.overlay}
+      role="dialog"
+      aria-modal="true"
+      aria-label="설정"
+    >
+      <div className={styles.sheet}>
+        <div className={styles.sheetBar}>
+          <p className={styles.sheetTitle}>설정</p>
+          <button
+            ref={closeRef}
+            type="button"
+            className={styles.close}
+            onClick={onClose}
+            aria-label="닫기"
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.fieldLabel} htmlFor={nameId}>
+            이름
+          </label>
+          <input
+            id={nameId}
+            className={styles.input}
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              // 입력 즉시 저장 — subscribe 로 상단바 인사말도 실시간 갱신된다.
+              save(NAME_KEY, event.target.value);
+            }}
+            placeholder="어떻게 불러 드릴까요?"
+            maxLength={20}
+          />
+          <p className={styles.fieldHint}>이 기기에만 저장돼요.</p>
+        </div>
+
+        <div className={styles.field}>
+          <p className={styles.fieldLabel}>화면 모드</p>
+          <div
+            className={styles.segment}
+            role="radiogroup"
+            aria-label="화면 모드"
+          >
+            {THEME_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={mode === option.value}
+                className={`${styles.segmentItem} ${
+                  mode === option.value ? styles.segmentActive : ""
+                }`}
+                onClick={() => applyTheme(option.value)}
+              >
+                <Icon
+                  name={option.icon}
+                  size="sm"
+                  filled={mode === option.value}
+                />
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 홈·내 고민·루틴 상단 바 — 인사말(저장된 이름) + 설정(이름·화면 모드) 진입점. */
+export function TopAppBar() {
+  const name = useStored<string>(NAME_KEY, "");
+  const [open, setOpen] = useState(false);
+  const gearRef = useRef<HTMLButtonElement>(null);
+
+  // 이름이 없으면 이름 없이 인사한다 — 가짜 이름("Glow")으로 개인화를 흉내 내지 않는다(P14).
+  const trimmed = name.ready ? name.value.trim() : "";
+  const greeting = trimmed ? `${trimmed}님, 안녕하세요` : "안녕하세요";
+
   return (
     <header className={styles.bar}>
       {/* fixed 바는 좌우로 꽉 채우고, 내용만 여기서 --container-max 로 좁힌다(m25). */}
       <div className={styles.inner}>
         <div className={styles.identity}>
-          {/* 목업의 프로필 사진 자리. 실제 이미지는 사용자 데이터가 붙을 때 교체한다. */}
           <div className={styles.avatar} aria-hidden="true">
-            {userName.charAt(0)}
+            <YoutineIcon size={40} />
           </div>
-          <h1 className={styles.title}>{userName}님, 안녕하세요</h1>
+          <h1 className={styles.title}>{greeting}</h1>
         </div>
 
-        {/* 알림 버튼은 제거했다(m18) — 알림 기능 자체가 없어서 눌러도 아무 일도
-            일어나지 않는 죽은 요소였다. 알림이 생기면 그때 붙인다. */}
+        <button
+          ref={gearRef}
+          type="button"
+          className={styles.gear}
+          onClick={() => setOpen(true)}
+          aria-label="설정"
+        >
+          <Icon name="settings" />
+        </button>
       </div>
+
+      {open && (
+        <SettingsModal
+          onClose={() => {
+            setOpen(false);
+            gearRef.current?.focus();
+          }}
+        />
+      )}
     </header>
   );
 }

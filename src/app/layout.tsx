@@ -57,6 +57,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ko" suppressHydrationWarning>
       <head>
         {/*
+          테마 부트스트랩 — 페인트 전에 data-theme 를 확정해 깜빡임(FOUC)을 막는다.
+          우선순위: 저장된 선택(al:v1:theme — TopAppBar 설정 모달이 쓴다) > OS 설정.
+          globals.css 의 다크 팔레트가 이 속성(:root[data-theme="dark"])에 반응한다.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=null;try{t=JSON.parse(localStorage.getItem("al:v1:theme"))}catch(e){}if(t!=="dark"&&t!=="light"){try{t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){t="light"}}document.documentElement.dataset.theme=t})()`,
+          }}
+        />
+
+        {/*
           Pretendard (한글 웹폰트) — CDN 방식.
           폰트 파일을 public/fonts 에 넣고 next/font/local 로 바꾸면
           외부 요청이 사라지고 CLS(레이아웃 이동)도 줄어듭니다. README 참고.

@@ -10,10 +10,6 @@ export const metadata: Metadata = {
   title: "내 고민",
 };
 
-// 다른 화면(예: 홈)과 이름을 맞춘 자리표시자 — 이 앱에는 로그인/사용자 이름
-// 저장소가 없다. 실제 계정 시스템이 붙기 전까지는 하드코딩이 맞다.
-const USER_NAME = "Glow";
-
 /**
  * "내 고민" 화면 — 예전 프로필 자리다(`/profile` → `/concern`, 2026-08-19).
  *
@@ -28,7 +24,7 @@ const USER_NAME = "Glow";
 export default function ConcernPage() {
   return (
     <>
-      <TopAppBar userName={USER_NAME} />
+      <TopAppBar />
 
       <main className={styles.main}>
         {/* 제목을 컴포넌트가 직접 갖는다 — 입력 화면과 결과 화면의 제목이 다르다. */}
