@@ -1,3 +1,9 @@
+/*
+ * ⚠️ 카메라 오버레이는 **테마와 무관하게 항상 어둡다** — 촬영 프리뷰의 대비를 지키기
+ * 위해서다. 예전의 inverse-surface 는 다크 모드에서 밝은 색으로 뒤집혀 흰 화면이 됐다
+ * (사용자 피드백 2026-08-20). 그래서 여기만 토큰 대신 고정 색을 쓴다 —
+ * stage 의 #000 레터박스와 같은, 문서화된 예외다(design-debt.md).
+ */
 .overlay {
   position: fixed;
   inset: 0;
@@ -11,8 +17,8 @@
     max(16px, env(safe-area-inset-right, 0px))
     calc(16px + env(safe-area-inset-bottom, 0px))
     max(16px, env(safe-area-inset-left, 0px));
-  background: var(--inverse-surface);
-  color: var(--inverse-on-surface);
+  background: #000;
+  color: rgb(255 255 255 / 92%);
   overflow-y: auto;
 }
 
@@ -33,11 +39,12 @@
   /* 10 + 24 + 10 = 44px 터치 타깃 */
   padding: 10px;
   border-radius: var(--radius-full);
-  color: var(--inverse-on-surface);
+  /* 오버레이가 항상 어두우므로 글자도 항상 밝다(위 예외 주석 참조) */
+  color: inherit;
 }
 
 .close:hover {
-  background: color-mix(in srgb, var(--inverse-on-surface) 16%, transparent);
+  background: rgb(255 255 255 / 16%);
 }
 
 .stage {
@@ -76,7 +83,8 @@
 
 .hint {
   font: var(--text-body-md);
-  color: var(--outline-variant);
+  /* 다크 고정 배경 위의 보조 텍스트 — outline-variant 는 다크에서 대비가 무너진다 */
+  color: rgb(255 255 255 / 65%);
   text-align: center;
 }
 

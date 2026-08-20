@@ -28,6 +28,11 @@ function progressLabel(elapsed: number): string {
   return elapsed >= 35 ? "거의 다 됐어요" : "제품 찾는 중";
 }
 
+/** 성분표 유무에 따라 버튼이 실제로 할 일을 말한다(사용자 피드백 2026-08-20: "AI"를 명시). */
+function submitLabel(hasLabelFile: boolean): string {
+  return hasLabelFile ? "AI 성분 읽기" : "AI 성분 검색";
+}
+
 /**
  * `prefill` 은 **초기값으로만** 쓴다.
  * 검색에서 제품을 고르면 부모가 `key` 를 바꿔 이 컴포넌트를 리마운트한다 —
@@ -158,43 +163,17 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
           onConfirm={confirm}
           onRegisterAnother={clearForm}
           onClose={phase === "done" ? clearForm : dismiss}
+          onRetakeLabel={() => {
+            // 성분을 못 찾았을 때의 다음 행동 — 모달을 닫고 바로 성분표 촬영으로 보낸다.
+            // 폼 입력은 남아 있으므로 촬영 후 "AI 성분 읽기"를 누르면 검색 없이 바로 읽는다.
+            dismiss();
+            setCameraMode("label");
+          }}
         />
       )}
 
-      {/*
-        검색 버튼을 제목 줄 오른쪽에 둔다. 폼 밖이지만 `form` 속성으로 연결돼 있어
-        submit 이 정상 동작한다(엔터 제출도 유지된다).
-      */}
       <div className={styles.intro}>
-        <div className={styles.introRow}>
-          <h2 className={styles.heading}>제품 등록</h2>
-
-          <button
-            className={styles.submit}
-            type="submit"
-            form={formId}
-            disabled={busy}
-          >
-            {searching ? (
-              <>
-                <Icon name="progress_activity" className={styles.spinner} />
-                {elapsed}초
-              </>
-            ) : (
-              <>
-                <Icon name={labelFile ? "document_scanner" : "search"} filled />
-                {/* 성분표가 있으면 검색을 건너뛴다 — 버튼도 실제로 할 일을 말한다. */}
-                {labelFile ? "성분 읽기" : "검색"}
-              </>
-            )}
-          </button>
-        </div>
-
-        {/*
-          설명은 **버튼과 같은 줄에 두지 않는다.** 그렇게 하면 컬럼이 195px 로 좁아져
-          문장 하나가 저절로 접히고 `<br>` 의도가 무력화된다(390px 실측 3줄).
-          전폭을 쓰면 문장 단위로 정확히 2줄이 된다.
-        */}
+        <h2 className={styles.heading}>제품 등록</h2>
         <p className={styles.lead}>
           제품 이름만 있어도 찾을 수 있어요.
           <br />
@@ -310,17 +289,31 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
           {labelFile && <p className={styles.fileName}>{labelFile.name}</p>}
         </div>
 
-        {/*
-          진행 상황은 버튼이 좁아 초만 보여 준다. 무엇을 하는 중인지는 여기서 말한다
-          — 실측 18~37초라 아무 설명이 없으면 멈춘 줄 안다.
-        */}
-        {searching && (
+        {/* 15초를 넘기면 왜 오래 걸리는지와 빠른 길을 알려 준다 — 진행 문구 자체는 버튼이 맡는다. */}
+        {searching && elapsed >= 15 && (
           <p className={styles.hint}>
-            {progressLabel(elapsed)}…
-            {elapsed >= 15 &&
-              " 실제 판매 중인 제품을 찾고 있어요. 성분표 사진을 올리면 검색을 건너뛰고 바로 읽을 수 있습니다."}
+            실제 판매 중인 제품을 찾고 있어요. 성분표 사진을 올리면 검색을
+            건너뛰고 바로 읽을 수 있습니다.
           </p>
         )}
+
+        {/*
+          마지막에 누르는 버튼이라는 것이 읽히도록 **폼 맨 아래 전폭**으로 둔다
+          (사용자 피드백 2026-08-20 — 상단에 있으니 제출 버튼처럼 안 보였다).
+        */}
+        <button className={styles.submit} type="submit" disabled={busy}>
+          {searching ? (
+            <>
+              <Icon name="progress_activity" className={styles.spinner} />
+              {progressLabel(elapsed)}… {elapsed}초
+            </>
+          ) : (
+            <>
+              <Icon name={labelFile ? "document_scanner" : "search"} filled />
+              {submitLabel(Boolean(labelFile))}
+            </>
+          )}
+        </button>
       </form>
 
       {/* 검색 실패. 성분 추출·저장 실패는 모달 안에서 보여 준다(그쪽이 결과를 들고 있다). */}

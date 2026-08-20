@@ -411,6 +411,52 @@
   cursor: progress;
 }
 
+/* 보조 동작(다른 제품 등록하기) — 주 버튼과 나란히 서되 시각 무게를 낮춘다. */
+.secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 14px 24px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--on-surface);
+  font: var(--text-body-lg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.secondary:hover {
+  background: var(--surface-container-low);
+}
+
+/* 빈 성분 안내 아래의 다음 행동 — 모달을 닫고 성분표 촬영으로 보낸다. */
+.emptyAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: var(--text-body-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.emptyAction:hover {
+  background: var(--secondary);
+  color: var(--on-secondary);
+}
+
 .spinner {
   animation: spin 1s linear infinite;
 }
