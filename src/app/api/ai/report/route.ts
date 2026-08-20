@@ -155,6 +155,48 @@ function narrowReport(
   return { skin_type_cautions: cautions, conflicts, synergies, suggestions };
 }
 
+/**
+ * 새로 생성된 분석에서 **공유 지식**을 수확한다(사용자 지시 2026-08-20).
+ *
+ * 같은 지식(레티놀×비타민C 충돌 등)을 사용자마다 AI 로 다시 사지 않도록,
+ * 사용자와 무관한 부분 — 성분 쌍(시너지·충돌)과 타입별 주의 — 을
+ * `ingredient_pairs`·`ingredient_effects` 에 INSERT IGNORE 로 쌓는다.
+ * 유니크 키가 중복을 걸러 주므로 이미 아는 지식은 조용히 무시된다.
+ *
+ * - 캐시 히트 경로에서는 부르지 않는다(처음 생성될 때 이미 수확했다).
+ * - 쌍은 정확히 2개짜리만(스키마가 이진 관계다). 3개 조합은 건너뛴다.
+ * - 실패해도 응답을 막지 않는다 — 지식 축적은 부산물이지 기능이 아니다.
+ */
+async function harvestKnowledge(report: ShelfReport): Promise<void> {
+  const pairRows = [...report.conflicts, ...report.synergies].flatMap(
+    (item) => {
+      if (item.ingredients.length !== 2) return [];
+      const kind = report.conflicts.includes(item) ? "conflict" : "synergy";
+      const [a, b] = [...item.ingredients].sort((x, y) => x.localeCompare(y));
+      if (a === b) return [];
+      return [{ a, b, kind, description: item.description }];
+    },
+  );
+
+  for (const row of pairRows) {
+    await execute(
+      `INSERT IGNORE INTO ingredient_pairs
+         (id, ingredient_a, ingredient_b, kind, description, source)
+       VALUES (UUID(), ?, ?, ?, ?, 'shelf_report')`,
+      [row.a, row.b, row.kind, row.description],
+    );
+  }
+
+  for (const item of report.skin_type_cautions) {
+    await execute(
+      `INSERT IGNORE INTO ingredient_effects
+         (id, scenario_kind, scenario, ingredient, relation, description, source)
+       VALUES (UUID(), 'skin_type', ?, ?, 'caution', ?, 'shelf_report')`,
+      [item.skin_type, item.ingredient, item.caution],
+    );
+  }
+}
+
 type ShelfItem = {
   id: string;
   name: string;
@@ -298,6 +340,13 @@ export async function POST() {
       );
     } catch (error) {
       console.warn("[api/ai/report] 캐시 저장 실패:", error);
+    }
+
+    // 공유 지식 수확 — 실패는 로그만(부산물이지 기능이 아니다).
+    try {
+      await harvestKnowledge(report);
+    } catch (error) {
+      console.warn("[api/ai/report] 지식 수확 실패:", error);
     }
 
     return Response.json(report);
