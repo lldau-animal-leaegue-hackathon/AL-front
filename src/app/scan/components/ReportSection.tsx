@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { DataState } from "@/components/DataState/DataState";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Icon } from "@/components/Icon";
+import { IngredientChip } from "@/components/IngredientChip/IngredientChip";
+import { IngredientDetailModal } from "@/components/IngredientDetail/IngredientDetailModal";
 import { IngredientProducts } from "@/components/IngredientProducts/IngredientProducts";
 import { useProducts, useShelfReport } from "@/lib/data";
 import { SKIN_TYPES } from "@/lib/prompts/interactions";
@@ -13,7 +15,6 @@ import type { IngredientPair } from "@/api/ai";
 import type { Product } from "@/types/skincare";
 
 import card from "../../(home)/components/card.module.css";
-import { IngredientChip } from "./IngredientChip";
 import styles from "./ReportSection.module.css";
 
 /** 2개 이상 제품에 공통으로 들어간 성분 — 상위 3개만 인사이트로 보여준다. */
@@ -127,6 +128,8 @@ export function ReportSection() {
 
   /** 시너지 탭에서 펼친 추천 성분. 하나만 연다(ConcernSection 과 같은 이유). */
   const [expanded, setExpanded] = useState<string | null>(null);
+  /** 성분 상세 모달. 칩을 누르면 그 성분의 공유 지식이 뜬다. */
+  const [detail, setDetail] = useState<string | null>(null);
 
   if (!ready) return <DataState loading label="제품" />;
   if (error)
@@ -155,7 +158,11 @@ export function ReportSection() {
           <li key={pair.ingredients.join("+")} className={styles.pairItem}>
             <p className={styles.pairChips}>
               {pair.ingredients.map((name) => (
-                <IngredientChip key={name} name={name} />
+                <IngredientChip
+                  key={name}
+                  name={name}
+                  onSelect={() => setDetail(name)}
+                />
               ))}
             </p>
             {pair.products.length > 0 && (
@@ -200,6 +207,15 @@ export function ReportSection() {
 
   return (
     <section className={`${card.card} ${styles.section}`}>
+      {/* key 로 리마운트 — 다른 성분을 열면 그 성분부터 시작한다 */}
+      {detail && (
+        <IngredientDetailModal
+          key={detail}
+          name={detail}
+          onClose={() => setDetail(null)}
+        />
+      )}
+
       <div className={styles.header}>
         <span className={styles.badge}>
           <Icon name="science" />
@@ -340,7 +356,10 @@ export function ReportSection() {
                                 className={styles.pairItem}
                               >
                                 <p className={styles.pairChips}>
-                                  <IngredientChip name={item.ingredient} />
+                                  <IngredientChip
+                                    name={item.ingredient}
+                                    onSelect={() => setDetail(item.ingredient)}
+                                  />
                                 </p>
                                 {item.products.length > 0 && (
                                   <p className={styles.pairProducts}>

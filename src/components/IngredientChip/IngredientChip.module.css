@@ -4,10 +4,27 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 10px;
+  border: none;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--secondary) 20%, transparent);
   color: var(--tertiary);
   font: var(--text-label-sm);
   letter-spacing: var(--tracking-label-sm);
   white-space: nowrap;
+}
+
+/* 누르면 성분 상세가 열리는 칩. 표시 전용과 구분되게 살짝만 반응한다. */
+.clickable {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.clickable:hover {
+  background: color-mix(in srgb, var(--secondary) 32%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clickable {
+    transition: none;
+  }
 }

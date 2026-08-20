@@ -33,6 +33,12 @@ import {
   updateProductWarnings,
   type IngredientSource,
 } from "@/api/products";
+import {
+  fetchConcernKnowledge,
+  fetchIngredientKnowledge,
+  type ConcernKnowledge,
+  type IngredientKnowledge,
+} from "@/api/knowledge";
 import { fetchSkinProfile, saveSkinProfile } from "@/api/profile";
 import {
   clearRoutines as clearRoutinesRequest,
@@ -61,6 +67,9 @@ const KEYS = {
   shelfReport: "/ai/report",
   /** 성분으로 찾은 제품. 실제 키에는 성분명이 붙는다. */
   byIngredient: "/products/by-ingredient",
+  /** 성분 하나의 공유 지식. 실제 키에는 성분명이 붙는다. DB 읽기라 AI 옵션이 아니다. */
+  ingredientKnowledge: "/knowledge/ingredient",
+  concernKnowledge: "/knowledge/concerns",
 } as const;
 
 /**
@@ -230,6 +239,25 @@ export function useShelfReport(
     AI_SWR_OPTIONS,
   );
 }
+
+/**
+ * 성분 하나의 공유 지식(고민별 도움·타입별 주의·시너지·충돌). DB 읽기라 즉시 답한다.
+ * `name` 이 없으면(모달 닫힘) 호출하지 않는다.
+ */
+export const useIngredientKnowledge = (name: string | null) =>
+  useResource<IngredientKnowledge | null>(
+    name ? `${KEYS.ingredientKnowledge}?n=${encodeURIComponent(name)}` : null,
+    () => fetchIngredientKnowledge({ name: name ?? "" }),
+    null,
+  );
+
+/** 고민 시나리오별 성분 사전. `enabled` 는 사전 카드를 펼쳤을 때만 부르기 위한 것. */
+export const useConcernKnowledge = (enabled: boolean) =>
+  useResource<ConcernKnowledge | null>(
+    enabled ? KEYS.concernKnowledge : null,
+    fetchConcernKnowledge,
+    null,
+  );
 
 export const useProductsByIngredient = (name: string | null) =>
   useResource(

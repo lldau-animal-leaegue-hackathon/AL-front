@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { TopAppBar } from "@/components/TopAppBar/TopAppBar";
 
+import { ConcernDictionary } from "./components/ConcernDictionary";
 import { ConcernSection } from "./components/ConcernSection";
 import styles from "./page.module.css";
 
@@ -32,6 +33,12 @@ export default function ConcernPage() {
       <main className={styles.main}>
         {/* 제목을 컴포넌트가 직접 갖는다 — 입력 화면과 결과 화면의 제목이 다르다. */}
         <ConcernSection />
+
+        {/*
+          자유 입력(위, AI)과 별개인 0원짜리 지식 경로 — 자주 찾는 고민 8종은
+          기다림 없이 바로 본다. 고민 등록 전에도, 후에도 쓸 수 있어 페이지에 둔다.
+        */}
+        <ConcernDictionary />
       </main>
     </>
   );
