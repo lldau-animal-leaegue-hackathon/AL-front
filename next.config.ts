@@ -31,6 +31,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Docker 배포용 — 빌드가 .next/standalone 에 자립 서버(server.js + 필요한
+  // node_modules 만)를 추적 복사한다. Dockerfile runner 가 이것만 담아
+  // 런타임 npm ci 없이 `node server.js` 로 뜬다.
+  output: "standalone",
+
   // 응답에서 `X-Powered-By: Next.js` 제거 (불필요한 버전 노출 차단)
   poweredByHeader: false,
 

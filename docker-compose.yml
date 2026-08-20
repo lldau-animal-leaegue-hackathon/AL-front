@@ -9,6 +9,9 @@
 #
 # ⛔ 서버 주소·배포 경로·다른 서비스가 쓰는 포트를 여기 적지 마라
 #    (2026-08-20 현재 저장소는 비공개지만, 공개 전환 가능성이 있어 규칙은 동일하게 지킨다).
+#
+# ⚠️ 이 파일을 바꾸면 **서버의 사본도 함께 갱신해야 한다** — 배포는 서버에 있는
+#    compose 사본으로 돌므로, 여기만 고치면 서버는 계속 옛 구성으로 뜬다.
 
 services:
   # 서버 전용 — 로컬 개발은 `npm run dev` 를 쓰고 이 서비스를 띄우지 않는다.
@@ -53,8 +56,10 @@ services:
       - "127.0.0.1:3308:3306"
     volumes:
       - db-data:/var/lib/mysql
-      # 첫 기동에만 실행된다. 002 이후는 손으로 적용한다(db/migrations/001_init.sql 주석 참조).
-      - ./db/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+      # 첫 기동(빈 볼륨)에만 파일명 순으로 전부 실행된다 — 새 볼륨이 항상 최신 스키마로 뜬다.
+      # 기존 볼륨에는 실행되지 않으므로 새 마이그레이션은 여전히 손으로 적용한다(m23).
+      # db/seeds 는 개발용이라 자동 실행하지 않는다 — 필요하면 손으로 넣는다.
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
