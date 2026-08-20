@@ -15,7 +15,9 @@
   display: flex;
 }
 
-@media (min-width: 600px) {
+/* 브레이크포인트 단일 출처(globals.css: 480/768/1024/1280)를 따른다.
+   480px 은 세 칸을 세우기엔 좁아 이름이 잘리므로 md(768px)에서 늘린다. */
+@media (min-width: 768px) {
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

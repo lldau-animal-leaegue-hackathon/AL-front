@@ -136,18 +136,25 @@ function fromJsonLd(html: string): string[] | null {
 /**
  * 상품정보제공고시 블록. 화장품법이 문구를 정해 두어 라벨 텍스트가 안정적이다:
  * "화장품법에 따라 기재·표시하여야 하는 모든 성분".
+ *
+ * ⚠️ 라벨을 `전성분` 까지 넓힌 이유(2026-08-21 실측): 고시 표를 직접 만든 몰은 법정 문구
+ * 대신 `<strong>전성분</strong>` 한 단어만 쓴다(리더스가 그렇다). 라벨이 느슨해진 만큼
+ * 오탐 방어는 아래 `looksLikeIngredients` 에 그대로 맡긴다 — **그쪽을 약화시키면 안 된다.**
+ *
+ * 첫 매치만 보지 않고 **모든 매치를 순회**한다. `전성분` 은 짧은 단어라 상단 배너·탭 이름에
+ * 먼저 등장할 수 있는데, 그때 첫 매치만 보면 진짜 표를 놓친다.
  */
 function fromNoticeBlock(html: string): string[] | null {
-  const index = html.search(/화장품법에\s*따라\s*기재/);
-  if (index < 0) return null;
-
-  // 라벨 뒤 3KB 안에서 정제수로 시작하는 줄을 찾는다(고시 표는 라벨 바로 다음 칸이 값이다).
-  const segment = html.slice(index, index + 3_000);
-  const text = segment.replace(/<[^>]+>/g, "\n");
-  for (const line of text.split("\n")) {
-    if (!line.includes("정제수")) continue;
-    const items = splitIngredients(line);
-    if (looksLikeIngredients(items)) return items;
+  for (const label of html.matchAll(/화장품법에\s*따라\s*기재|전성분/g)) {
+    const index = label.index;
+    // 라벨 뒤 3KB 안에서 정제수로 시작하는 줄을 찾는다(고시 표는 라벨 바로 다음 칸이 값이다).
+    const segment = html.slice(index, index + 3_000);
+    const text = segment.replace(/<[^>]+>/g, "\n");
+    for (const line of text.split("\n")) {
+      if (!line.includes("정제수")) continue;
+      const items = splitIngredients(line);
+      if (looksLikeIngredients(items)) return items;
+    }
   }
   return null;
 }
@@ -176,7 +183,13 @@ type BrandAdapter = {
 
 const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, "");
 
-/** Cafe24 공통 — `/product/search.html?keyword=` 결과에서 `/product/...` 상세 경로를 긁는다. */
+/**
+ * Cafe24 공통 — `/product/search.html?keyword=` 결과에서 상세 경로를 긁는다.
+ *
+ * 상세 링크 표기가 몰마다 **두 가지**다(실측): 웰라쥬·라운드랩은 SEO 형태
+ * `/product/{한글슬러그}/{번호}/...`, 리더스·몽디에스는 구형 쿼리 형태
+ * `/product/detail.html?product_no={번호}...`. 한쪽만 받으면 후자 계열이 통째로 0건이 된다.
+ */
 function cafe24Adapter(
   origin: string,
   aliases: readonly string[],
@@ -190,9 +203,10 @@ function cafe24Adapter(
       if (!html) return [];
       const seen = new Set<string>();
       for (const m of html.matchAll(
-        /href="(\/product\/[^"?#]+\/\d+\/[^"]*)"/g,
+        /href="(\/product\/(?:[^"?#]+\/\d+\/[^"]*|detail\.html\?product_no=\d+[^"]*))"/g,
       )) {
-        seen.add(origin + m[1]);
+        // 쿼리형 링크는 HTML 엔티티로 나오는 몰이 있다 — 그대로 fetch 하면 파라미터가 깨진다.
+        seen.add(origin + m[1].replace(/&amp;/g, "&"));
         if (seen.size >= 3) break;
       }
       return [...seen];
@@ -202,6 +216,9 @@ function cafe24Adapter(
 
 const ADAPTERS: readonly BrandAdapter[] = [
   cafe24Adapter("https://www.wellage.co.kr", ["웰라쥬", "wellage"]),
+  cafe24Adapter("https://leaderscosmetics.com", ["리더스", "leaders"]),
+  cafe24Adapter("https://anua.kr", ["아누아", "anua"]),
+  cafe24Adapter("https://mongdies.com", ["몽디에스", "mongdies"]),
   {
     // 토니모리는 자체몰. 사이트맵(102KB)에 제품 351건이 있어 검색 없이 슬러그를 찾는다.
     // ⚠️ www 호스트는 인증서 이름 불일치라 apex 를 쓴다(실측).

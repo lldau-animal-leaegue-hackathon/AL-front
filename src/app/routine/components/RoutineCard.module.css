@@ -143,6 +143,49 @@
   color: var(--on-surface-variant);
 }
 
+/* ── 단계 편집(순서 변경·삭제) ─────────────────────────────────── */
+
+.stepEdit {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  /* 버튼 사이 간격 0 — 44px 타깃 3개가 좁은 화면에서 단계명을 다 먹지 않게 한다 */
+  gap: 0;
+  /* 44px 버튼이 행을 키우는 만큼 위아래 여백을 되돌린다 */
+  margin: -6px 0;
+}
+
+.stepButton {
+  display: grid;
+  place-items: center;
+  /* 터치 타깃 44px (.start 와 같은 기준) */
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--on-surface-variant);
+}
+
+.stepButton:hover:not(:disabled) {
+  background: var(--surface-container-high);
+}
+
+.stepButton:disabled {
+  opacity: 0.35;
+}
+
+.stepRemove {
+  color: var(--error);
+}
+
+.editHint {
+  margin-top: 8px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+}
+
 .actions {
   display: flex;
   gap: 8px;
@@ -175,6 +218,12 @@
 
 .start:active {
   transform: scale(0.98);
+}
+
+/* 보기 모드에선 <a> 라 매칭되지 않는다. 편집 모드의 저장 버튼에만 걸린다. */
+.start:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 /*

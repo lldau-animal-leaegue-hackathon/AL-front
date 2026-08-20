@@ -56,6 +56,43 @@
 - 쿠키 `al_uid` 가 https 에서 Secure 로 내려오는지(X-Forwarded-Proto 경유)
 - 두 번째 배포(작은 커밋 머지)로 파이프라인 재현성 확인
 
+## 백업·복원 (`db/backup.sh`)
+
+DB 는 도커 볼륨(`db-data`) 하나에만 있다. **볼륨 삭제나 디스크 장애 한 번이면
+공유 카탈로그와 전 사용자 데이터가 사라진다.** 스크립트는 `.env`(배포 디렉토리의
+compose 용 파일)에서 접속값을 읽고, gzip 덤프를 뜬 뒤 **빈 파일·gzip 손상·중단된
+덤프면 exit 1** 로 실패를 드러낸다. 디스크가 빠듯해 **최근 3개만** 남긴다.
+
+```sh
+sh db/backup.sh                      # .env·backups/ 는 스크립트 기준 상대 경로 기본값
+sh db/backup.sh <env파일> <출력디렉토리>   # 배포 디렉토리 구조가 다르면 인자로
+```
+
+### 크론 등록 (하루 1회)
+
+`crontab -e` 에 한 줄. 출력은 로그로 남겨야 실패를 알 수 있다:
+
+```cron
+30 4 * * * sh <배포디렉토리>/db/backup.sh >> <배포디렉토리>/backup.log 2>&1
+```
+
+스크립트는 실패 시 stderr + exit 1 이므로 크론 메일/모니터링이 잡을 수 있다.
+
+### 복원 (3줄)
+
+```sh
+gzip -dc <백업파일>.sql.gz > /tmp/restore.sql
+docker exec -i -e MYSQL_PWD="$DB_PASSWORD" al-front-db mariadb -u "$DB_USER" --default-character-set=utf8mb4 "$DB_NAME" < /tmp/restore.sql
+rm -f /tmp/restore.sql   # 덤프에는 사용자 데이터가 들어 있다 — 남기지 않는다
+```
+
+> ⚠️ **복원 리허설을 정례화하라.** 검증된 적 없는 백업은 백업이 아니다.
+> 스크립트의 무결성 검사는 "파일이 안 깨졌다"까지만 보증하고, 그 덤프로 실제
+> 스키마·데이터가 되살아나는지는 보증하지 않는다. **월 1회**(또는 스키마
+> 마이그레이션을 추가할 때마다) 빈 DB — 로컬 도커든 임시 DB 이름이든 — 에
+> 최신 백업을 복원해 4탭이 뜨는지 확인하고, 결과를 이 절에 날짜로 남긴다.
+> 운영 DB 에 대고 리허설하지 말 것.
+
 ## 비범위 (Out of Scope)
 
 - 이미지 레지스트리(GHCR 등) — 서버 빌드로 충분(단일 서버). 필요 시 후속.

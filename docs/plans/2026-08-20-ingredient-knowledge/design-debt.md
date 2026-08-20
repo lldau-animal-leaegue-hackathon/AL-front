@@ -21,24 +21,33 @@
       (9·10·13·14·15px)이 산재. `font: var(--text-body-md)` 선언 뒤 `font-size` 로
       덮어 토큰을 무력화하는 패턴. → 13~15px 수요가 실재하므로 **스케일에
       `--text-body-sm` 급을 추가**하는 쪽이 현실적. DESIGN.md 개정과 같이 갈 것.
-- [ ] **그림자 하드코딩 2건** — `BottomNav`·`StepActions` 의
-      `box-shadow: … rgb(26 43 68 / 4%)` 리터럴이 다크 재정의(`--shadow-card`)를
-      우회 → 다크에서 그 두 바만 그림자가 사실상 소멸.
-- [ ] **모달 스펙 미달** — `productModal.sheet` 가 radius-lg(16px, 규정 xl=24px),
-      패딩 12/20px(규정 32px).
+- [x] **그림자 하드코딩 2건** (2026-08-21 완료) — `BottomNav`·`StepActions` 의 리터럴을
+      `color-mix(in srgb, var(--scrim) N%, transparent)` 로 교체하고 다크 분기
+      (`:global(:root[data-theme="dark"])`)에서 40% 로 올렸다.
+      `--shadow-card` 를 그대로 못 쓰는 이유는 그 토큰이 **아래로 떨어지는 그림자**라
+      화면 맨 아래 고정 바에서는 뷰포트 밖으로 나가 보이지 않기 때문이다(방향만 뒤집음).
+      → 후속: globals.css 에 `--shadow-card-up` 토큰을 두면 두 파일의 다크 분기를 지울 수 있다.
+- [x] **모달 스펙 미달** (2026-08-21 완료) — `productModal.sheet` 를 `--radius-xl` 로 올리고
+      패딩은 `--modal-pad: clamp(20px, 5vw, 32px)` 한 변수로 묶어 bar/body/footer 가 공유한다.
+      규정 32px 를 390px 폰에 그대로 주면 본문이 64px 좁아져 성분 칩이 터지므로
+      좁은 화면은 기존 20px 을 유지하고 넓은 화면에서만 규정치에 도달한다(의도적 이탈).
 - [ ] **루틴 카드 스펙 괴리** — 우상단 24px 아이콘(현재 좌측 40px 배지), 하단
       Sage 진행바 미구현. 수동 완료 버튼 제거는 문서화된 결정이므로 진행바를
       "오늘 완료" 표시와 연결할지 제품 판단 필요.
 
 ## 낮음 — 기록해 두는 수준
 
-- [ ] `DataState` radius 리터럴(16px·999px) → 토큰으로
+- [x] `DataState` radius 리터럴(16px·999px) → `--radius-lg`·`--radius-full` (2026-08-21 완료)
 - [ ] `ProductSearch` 인풋 포커스 글로우 없음(ProductForm 은 있음 — 두 화면 갈라짐)
-- [ ] `PageHeader` 가 deprecated 토큰(`--margin-mobile/-desktop`) 사용
+- [x] `PageHeader` 가 deprecated 토큰(`--margin-mobile/-desktop`) 사용 → `--page-inline`
+      (2026-08-21 완료. 768px 분기는 세로 여백만 남겼다 — 좌우는 clamp 가 처리한다.
+      같은 이유로 `StepActions` 도 함께 전환했다.)
+      → 남은 소비처: `TopAppBar`, `RunHeader`. 둘 다 정리하면 globals 의 두 토큰을 지울 수 있다.
 - [ ] 본문 행간 1.5x/1.6x 혼재(globals `line-height: 1.6` vs 토큰 1.5x)
 - [ ] `ProductForm` 파일 버튼·카메라 버튼이 DESIGN.md 버튼 2종 어디에도 없는 변형
 - [ ] `CameraCapture` `#000` 리터럴(의도는 타당 — 근거 주석만 추가)
-- [ ] `IngredientProducts` `@media 600px` — 브레이크포인트 단일 출처(480/768/1024/1280) 밖
+- [x] `IngredientProducts` `@media 600px` → `768px`(md) (2026-08-21 완료.
+      480px 은 3열에 좁아 이름이 잘린다)
 
 ## DESIGN.md 자체의 문제 (코드가 아니라 문서를 고칠 것)
 

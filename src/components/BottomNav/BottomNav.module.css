@@ -13,7 +13,16 @@
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   background: color-mix(in srgb, var(--surface) 85%, transparent);
   backdrop-filter: blur(var(--glass-blur));
-  box-shadow: 0 -4px 20px rgb(26 43 68 / 4%);
+  /* --shadow-card 를 그대로 쓸 수 없다 — 그 토큰은 아래로 떨어지는 그림자(Y +4px)라
+     화면 맨 아래 고정된 이 바에서는 뷰포트 밖으로 나가 보이지 않는다. 방향만 위로
+     뒤집고, 색은 리터럴 대신 --scrim(라이트 #191c1d / 다크 #000)에서 뽑아
+     --shadow-card 의 라이트 4% / 다크 40% 규칙을 그대로 따라간다.
+     ⛔ 리터럴 rgb 로 되돌리면 다크에서 그림자가 사실상 소멸한다(디자인 부채 항목). */
+  box-shadow: 0 -4px 20px color-mix(in srgb, var(--scrim) 4%, transparent);
+}
+
+:global(:root[data-theme="dark"]) .nav {
+  box-shadow: 0 -4px 20px color-mix(in srgb, var(--scrim) 40%, transparent);
 }
 
 .item {

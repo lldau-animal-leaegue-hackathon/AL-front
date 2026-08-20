@@ -34,6 +34,12 @@
  * 하단 버튼은 스크롤 밖(footer)이라 목록이 길어도 계속 보인다.
  */
 .sheet {
+  /* DESIGN.md:156 "모달은 32px 패딩 + 최대 rounded-xl".
+     다만 390px 폰에서 좌우 32px 를 그대로 주면 본문 폭이 64px 줄어 성분 칩·제품명이
+     줄바꿈으로 터진다 → 좁은 화면은 20px(기존 값), 넓어지면 규정치 32px 까지 올린다.
+     이 변수를 bar/body/footer 가 함께 참조하므로 값은 여기 한 곳만 고치면 된다. */
+  --modal-pad: clamp(20px, 5vw, 32px);
+
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -41,7 +47,7 @@
   max-height: calc(
     100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
   );
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--surface-container-lowest);
   color: var(--on-surface);
   overflow: hidden;
@@ -52,7 +58,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 12px 8px;
+  /* 아이콘 버튼은 44px 박스 안에 24px 아이콘이라 좌우 10px 이 이미 비어 있다.
+     본문과 광학적으로 맞추려고 그만큼 뺀다(본문 32px ↔ 아이콘 글리프 34px). */
+  padding: 12px calc(var(--modal-pad) - 8px) 8px;
 }
 
 .title {
@@ -98,7 +106,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 8px 20px 20px;
+  padding: 8px var(--modal-pad) var(--modal-pad);
   overflow-y: auto;
 }
 
@@ -396,7 +404,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 20px calc(20px + env(safe-area-inset-bottom));
+  padding: 12px var(--modal-pad)
+    calc(var(--modal-pad) + env(safe-area-inset-bottom));
   border-top: 1px solid var(--outline-variant);
   background: var(--surface-container-lowest);
 }

@@ -6,8 +6,9 @@
   width: 100%;
   /* env() 폴백 0px 필수 — 없으면 미지원 브라우저에서 calc() 전체가 무효가 되어
      하단 여백이 통째로 사라진다(globals.css 셸 치수 절과 같은 규칙). */
-  padding: 16px var(--margin-mobile)
-    calc(16px + env(safe-area-inset-bottom, 0px));
+  /* --margin-mobile/-desktop(deprecated) 대신 --page-inline 을 쓴다 —
+     본문(RoutineRunner)이 이미 --page-inline 이라 좌우 정렬이 맞는다. */
+  padding: 16px var(--page-inline) calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--surface-container);
   background: color-mix(
     in srgb,
@@ -15,7 +16,14 @@
     transparent
   );
   backdrop-filter: blur(var(--glass-blur));
-  box-shadow: 0 -4px 24px rgb(26 43 68 / 6%);
+  /* BottomNav 와 같은 이유 — --shadow-card 는 아래로 떨어져 하단 고정 바에서는
+     안 보인다. 방향만 뒤집고 색은 --scrim 에서 뽑아 다크 재정의를 따라간다.
+     ⛔ 리터럴 rgb 로 되돌리면 다크에서 그림자가 소멸한다(디자인 부채 항목). */
+  box-shadow: 0 -4px 24px color-mix(in srgb, var(--scrim) 6%, transparent);
+}
+
+:global(:root[data-theme="dark"]) .bar {
+  box-shadow: 0 -4px 24px color-mix(in srgb, var(--scrim) 40%, transparent);
 }
 
 .inner {
@@ -90,8 +98,5 @@
   text-underline-offset: 4px;
 }
 
-@media (min-width: 768px) {
-  .bar {
-    padding-inline: var(--margin-desktop);
-  }
-}
+/* 768px 분기 삭제 — --page-inline(clamp 16→40px)이 폭에 따라 이미 늘어난다.
+   미디어 쿼리로 다시 덮으면 clamp 와 값이 어긋난다. */

@@ -11,7 +11,9 @@
      사이드바 구간(left:var(--sidebar-w))에서 right:0 을 이기고 우측으로 넘친다(m25 동형). */
   max-width: var(--container-max);
   margin: 0 auto;
-  padding: 12px var(--margin-mobile);
+  /* deprecated 토큰(--margin-mobile/-desktop) 대신 --page-inline(clamp 16→40px).
+     각 페이지 본문이 이미 --page-inline 이라 헤더와 좌우가 맞는다. */
+  padding: 12px var(--page-inline);
   background: color-mix(in srgb, var(--surface) 85%, transparent);
   backdrop-filter: blur(var(--glass-blur));
   box-shadow: var(--shadow-card);
@@ -39,9 +41,11 @@
   color: var(--on-surface);
 }
 
+/* 좌우는 --page-inline 이 알아서 늘어나므로 세로 여백만 키운다
+   (padding 단축으로 덮으면 clamp 가 40px 로 고정돼 좁은 화면 값이 어긋난다). */
 @media (min-width: 768px) {
   .bar {
-    padding: 16px var(--margin-desktop);
+    padding-block: 16px;
   }
 }
 
