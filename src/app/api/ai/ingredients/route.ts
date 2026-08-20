@@ -4,7 +4,7 @@
  * 이미지는 base64 로 모델에 넘기지 않는다. **임시 파일로 저장하고 경로를 프롬프트에 넣어
  * `--allowedTools Read` 로 읽게** 한다(설계 Q3·Q8). 그래서 두 가지 정리가 필수다:
  *  1. 임시 파일 삭제 — `finally` 에서.
- *  2. 세션 트랜스크립트 삭제 — `cleanupSession: true`.
+ *  2. 세션 트랜스크립트 삭제 — 러너의 `cleanupSession` 기본값(true)이 처리한다.
  *     Read 로 읽힌 **제품 사진 사본이 트랜스크립트에 남는다**(실측 확인).
  */
 
@@ -218,7 +218,8 @@ export async function POST(request: Request) {
         // 이미지가 없으면 도구를 주지 않는다 — 불필요한 권한을 열지 않는다.
         allowedTools: imagePath ? ["Read"] : [],
         timeoutMs: TIMEOUT_MS,
-        cleanupSession: Boolean(imagePath),
+        // cleanupSession 은 러너 기본값(true)에 맡긴다.
+        // 예전엔 `Boolean(imagePath)` 라 **사진 없는 경로만** 트랜스크립트를 남겼다.
       });
 
       const parsed = parseJsonObject(raw) as Record<string, unknown>;

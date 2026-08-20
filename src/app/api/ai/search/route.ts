@@ -110,8 +110,14 @@ type DirectResult =
 
 /** 성공 결과 캐시 — 같은 검색어로 외부를 반복해서 치지 않는다(레이트 리밋 회피). */
 const SEARCH_CACHE_MS = 10 * 60_000;
+/**
+ * 엔트리 개수 상한. 후보의 `image_url` 이 data URL 일 수 있어 엔트리 하나가 수 KB~수 MB 다 —
+ * 검색어는 자유 문자열이라 상한이 없으면 프로세스 메모리가 단조 증가한다(m5).
+ */
+const SEARCH_CACHE_MAX = 500;
+type CacheEntry = { at: number; candidates: Candidate[] };
 const globalForSearch = globalThis as typeof globalThis & {
-  __alSearchCache?: Map<string, { at: number; candidates: Candidate[] }>;
+  __alSearchCache?: Map<string, CacheEntry>;
 };
 
 async function fetchHwahae(query: string): Promise<Response> {
@@ -277,19 +283,39 @@ function narrowCandidate(value: unknown): Candidate | null {
   };
 }
 
-export async function POST(request: Request) {
-  // 사용자당 동시 1건. 웹 검색은 claude 프로세스가 뜨고 수십 초가 걸린다.
-  const userId = await currentUserId();
-  if (!acquire(userId)) {
-    return Response.json(
-      {
-        message: "이미 처리 중인 요청이 있습니다. 완료 후 다시 시도해 주세요.",
-      },
-      { status: 429 },
-    );
+/**
+ * 캐시에 넣기 전 정리(m5).
+ *
+ * 예전에는 `set` 만 하고 `delete`·상한이 없어 **엔트리가 영구 잔류**했다. TTL 은 읽을 때
+ * 신선도만 봤을 뿐이라 만료된 것도 그대로 남았고, 후보의 `image_url` 에 data URL 이 들어가
+ * 엔트리 하나가 수 KB~수 MB 다. 재시작 없는 단일 서버라 서로 다른 검색어(최대 100자 자유
+ * 문자열)가 들어올수록 프로세스 메모리가 단조 증가했다.
+ *
+ * ponytail: 만료 정리 + 개수 상한이면 충분하다. 진짜 LRU 가 필요해지면 그때 올린다.
+ */
+function pruneSearchCache(cache: Map<string, CacheEntry>): void {
+  const now = Date.now();
+  for (const [key, entry] of cache) {
+    if (now - entry.at >= SEARCH_CACHE_MS) cache.delete(key);
   }
+  // 전부 신선해도 상한은 지킨다. Map 은 삽입 순서를 지키므로 앞에서부터 = 가장 오래된 것부터.
+  while (cache.size >= SEARCH_CACHE_MAX) {
+    const oldest = cache.keys().next();
+    if (oldest.done) break;
+    cache.delete(oldest.value);
+  }
+}
 
-  try {
+export async function POST(request: Request) {
+  /*
+   * ⚠️ 동시 실행 가드(acquire)는 **AI 폴백 직전**에만 건다(m4).
+   *    캐시·카탈로그·화해 직파싱은 claude 프로세스를 띄우지 않고 0.5~2초에 끝나는데,
+   *    예전에는 이것들까지 가드 뒤에 있어서 루틴 생성(90초)이 도는 동안
+   *    제품 검색·등록 흐름 전체가 429 로 막혔다.
+   *    concern·ingredients·report 라우트가 이미 "AI 를 안 태우는 경로는 가드보다 먼저"를
+   *    원칙으로 삼는다 — 이 라우트만 빠져 있었다.
+   */
+  {
     const contentLength = request.headers.get("content-length");
     if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
       return Response.json(
@@ -347,6 +373,7 @@ export async function POST(request: Request) {
       const direct = await searchHwahaeDirect(query);
       if (direct.status === "ok") {
         const merged = mergeCandidates(local, direct.candidates);
+        pruneSearchCache(cache);
         cache.set(query, { at: Date.now(), candidates: merged });
         return Response.json({ candidates: merged });
       }
@@ -387,6 +414,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // 여기서부터가 claude 프로세스를 띄우는 구간이다 — 사용자당 동시 1건.
+    const userId = await currentUserId();
+    if (!acquire(userId)) {
+      return Response.json(
+        {
+          message:
+            "이미 처리 중인 요청이 있습니다. 완료 후 다시 시도해 주세요.",
+        },
+        { status: 429 },
+      );
+    }
+
     // 2차(폴백): 기존 헤드리스 Claude 경로. 프롬프트·검증 규율은 그대로다.
     try {
       const raw = await runClaude(buildProductSearchPrompt({ query }), {
@@ -394,10 +433,10 @@ export async function POST(request: Request) {
         allowedTools: ["WebSearch", "WebFetch"],
         timeoutMs: TIMEOUT_MS,
         /*
-         * 검색어가 트랜스크립트에 남는다. 제품 사진만큼 민감하지는 않지만
-         * 남길 이유도 없어 다른 엔드포인트와 같은 정책으로 지운다.
+         * 검색어가 트랜스크립트에 남지만 러너 기본값(cleanupSession: true)이 지운다.
+         * 2026-08-21 이전엔 여기만 명시적으로 true 였고 나머지 호출부는 안 지웠다 —
+         * "다른 엔드포인트와 같은 정책"이라던 옛 주석의 전제가 그때는 거짓이었다.
          */
-        cleanupSession: true,
       });
 
       const parsed = parseJsonObject(raw) as Record<string, unknown>;
@@ -431,10 +470,8 @@ export async function POST(request: Request) {
       // 카탈로그 후보를 앞에 두고 AI 결과로 채운다(중복 제거).
       const narrowed = mergeCandidates(local, candidates);
       // 폴백 결과도 캐시한다 — 90초짜리 호출을 같은 검색어로 반복하지 않는다.
-      globalForSearch.__alSearchCache?.set(query, {
-        at: Date.now(),
-        candidates: narrowed,
-      });
+      pruneSearchCache(cache);
+      cache.set(query, { at: Date.now(), candidates: narrowed });
       return Response.json({ candidates: narrowed });
     } catch (error: unknown) {
       // claude CLI 의 stderr·서버 절대 경로가 섞여 나올 수 있어 상세는 로그로만 남긴다.
@@ -443,9 +480,9 @@ export async function POST(request: Request) {
         { message: "제품을 찾지 못했습니다. 잠시 후 다시 시도해 주세요." },
         { status: 502 },
       );
+    } finally {
+      // 예외·타임아웃으로 새면 이 사용자는 영영 AI 를 못 쓰게 되므로 반드시 여기서 푼다.
+      release(userId);
     }
-  } finally {
-    // 예외·타임아웃으로 새면 이 사용자는 영영 AI 를 못 쓰게 되므로 반드시 여기서 푼다.
-    release(userId);
   }
 }

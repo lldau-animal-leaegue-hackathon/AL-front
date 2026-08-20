@@ -10,6 +10,9 @@
  *  - `--allowedTools Read` 로 이미지 파일을 읽게 하면 성분표가 정확히 추출된다.
  *  - 그 뒤 `~/.claude/projects/＊/{session_id}.jsonl` 에 **이미지 base64 사본이 남는다**
  *    (9.5KB 이미지 1장에 트랜스크립트가 59KB 로 불어났다). 그래서 삭제가 필수다.
+ *
+ * 이미지 여부와 무관하게 트랜스크립트에는 **프롬프트 전문**이 남으므로
+ * `cleanupSession` 기본값은 true 다 — `RunClaudeOptions` 주석 참조.
  */
 
 import { spawn } from "node:child_process";
@@ -37,8 +40,13 @@ export type RunClaudeOptions = {
   allowedTools?: readonly string[];
   timeoutMs?: number;
   /**
-   * 세션 트랜스크립트를 지운다.
-   * **이미지를 읽혔다면 반드시 true** — 안 그러면 제품 사진 사본이 디스크에 남는다.
+   * 세션 트랜스크립트를 지운다. **기본값 true** (2026-08-21 사용자 결정으로 뒤집었다).
+   *
+   * 예전 기본값은 false 였고, 그래서 이미지·검색을 뺀 호출부 전부가 트랜스크립트를 남겼다.
+   * 트랜스크립트에는 프롬프트 전문이 들어간다 — 루틴은 피부 고민 원문 + 보유 제품 전체,
+   * report 는 선반 전체 성분이다. DB 에서 사용자 데이터를 지워도 이건 서버 디스크에 남고,
+   * 무인 경로(warningsQueue)까지 있어 아무도 모르게 축적된다.
+   * **false 로 되돌리려면 그 호출부가 왜 남겨야 하는지 근거를 함께 적을 것.**
    */
   cleanupSession?: boolean;
 };
@@ -146,7 +154,7 @@ export async function runClaude(
   const {
     allowedTools = [],
     timeoutMs = DEFAULT_TIMEOUT_MS,
-    cleanupSession = false,
+    cleanupSession = true,
   } = options;
 
   /*
