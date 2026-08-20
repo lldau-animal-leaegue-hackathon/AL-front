@@ -60,7 +60,7 @@ export default async function ScanPage({ searchParams }: PageProps<"/scan">) {
 
         {/* 리포트는 데이터에 따라 배지·부제가 바뀌어 제목까지 컴포넌트가 갖는다. */}
         <section hidden={active !== "report"}>
-          <ReportSection />
+          <ReportSection active={active === "report"} />
         </section>
       </main>
     </>

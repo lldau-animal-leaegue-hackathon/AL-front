@@ -107,7 +107,17 @@ const LONG_WAIT_SECONDS = 20;
  * 버튼은 "아직 분석 전"(최초 1회)이거나 **제품이 담기고 빠져 지문이 어긋났을 때**
  * 자연히 나타난다 — 캐시 전용 조회가 `null` 을 주기 때문이다. 분석이 최신이면 없다.
  */
-export function ReportSection() {
+export function ReportSection({
+  active,
+}: {
+  /**
+   * 이 패널이 현재 탭인지. hidden 뒤에서 모달이 살아 있으면 스크롤 락이 안 풀린다(M6).
+   * `scan/page.tsx` 가 탭 패널을 `hidden` 으로만 토글하고 언마운트하지 않기 때문에,
+   * 이 prop 없이 렌더하면 다른 탭으로 옮겨도 `useBodyScrollLock` 이 살아남아
+   * 네 탭 전부 스크롤이 잠긴다. 형제인 ShelfSection 과 같은 이유·같은 패턴이다.
+   */
+  active: boolean;
+}) {
   const { ready, value: products, error, errorMessage, retry } = useProducts();
 
   const [subTab, setSubTab] = useState<SubTab>("summary");
@@ -246,8 +256,10 @@ export function ReportSection() {
 
   return (
     <section className={`${card.card} ${styles.section}`}>
-      {/* key 로 리마운트 — 다른 성분을 열면 그 성분부터 시작한다 */}
-      {detail && (
+      {/* key 로 리마운트 — 다른 성분을 열면 그 성분부터 시작한다.
+          active 일 때만 렌더(M6) — hidden 뒤에 남으면 useBodyScrollLock 이 페이지 전체를 잠근다.
+          detail 상태는 유지하므로 탭에 돌아오면 모달이 다시 뜬다. */}
+      {active && detail && (
         <IngredientDetailModal
           key={detail}
           name={detail}
