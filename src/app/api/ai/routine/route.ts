@@ -116,6 +116,24 @@ function narrowProducts(value: unknown): RoutineProductInput[] {
   });
 }
 
+/**
+ * 루틴 이름에 붙는 고민 요약(사용자 요청 2026-08-20 — "블랙헤드 - 저녁 루틴").
+ * 프롬프트 규칙 9는 2~8자를 요구하지만 LLM 은 계약을 어길 수 있다 —
+ * 여유를 두고 2~20자 밖이면 **경고 후 null** 로 강등한다. 이름은 요약 없이도 성립한다.
+ */
+function narrowSummary(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed.length < 2 || trimmed.length > 20) {
+    if (trimmed)
+      console.warn(
+        `[api/ai/routine] concern_summary 길이 위반: "${trimmed.slice(0, 30)}"`,
+      );
+    return null;
+  }
+  return trimmed;
+}
+
 export async function POST(request: Request) {
   // 사용자당 동시 1건. 루틴 생성은 90초짜리 claude 프로세스라 특히 중복 실행 비용이 크다.
   const userId = await currentUserId();
@@ -203,7 +221,11 @@ export async function POST(request: Request) {
       warnOnRuleViolations(morningSteps, "morning", known);
       warnOnRuleViolations(eveningSteps, "evening", known);
 
-      return Response.json({ morning: morningSteps, evening: eveningSteps });
+      return Response.json({
+        morning: morningSteps,
+        evening: eveningSteps,
+        concern_summary: narrowSummary(parsed.concern_summary),
+      });
     } catch (error: unknown) {
       // claude CLI 의 stderr·서버 절대 경로가 섞여 나올 수 있어 상세는 로그로만 남긴다.
       console.error("[api/ai/routine]", error);

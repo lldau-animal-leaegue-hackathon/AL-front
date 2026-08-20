@@ -55,6 +55,11 @@ export type RoutineStepResponse = {
 export type RoutineResponse = {
   morning: RoutineStepResponse[];
   evening: RoutineStepResponse[];
+  /**
+   * wonder 요약 키워드(2~8자 요구) — 루틴 이름 "블랙헤드 - 저녁 루틴" 조합용.
+   * 라우트가 길이 위반(2~20자 밖)을 null 로 강등한다(프롬프트 규칙 9, 2026-08-20 추가).
+   */
+  concern_summary: string | null;
 };
 
 export type WarningsResponse = {
