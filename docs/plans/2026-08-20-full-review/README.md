@@ -33,31 +33,31 @@
 
 ## 🔴 Major (9) — 데이터 손실 · 프라이버시 · 프로덕션 잠금
 
-- [ ] **M1. 실패·타임아웃 경로에서 세션 트랜스크립트(제품 사진 base64) 정리 누락** — `src/lib/claude/runner.ts:184`
+- [x] **M1. 실패·타임아웃 경로에서 세션 트랜스크립트(제품 사진 base64) 정리 누락** — `src/lib/claude/runner.ts:184`
       spawn 실패(signal/exit≠0)·봉투 파싱 실패가 전부 정리 코드(196행) 이전에 throw → `~/.claude/projects/*/{session}.jsonl` 에 성분표 사진 사본 잔존. 타임아웃 경로는 session_id 자체를 못 얻어 사후 삭제 불가. 주석의 의도("실패한 호출도 지운다")를 is_error 경로만 충족.
       → 수정: 세션 ID 를 사전 생성해 `--session-id` 로 지정하고 정리를 try/finally 로 이동 — 어떤 실패 경로든 ID 를 알고 지울 수 있다.
-- [ ] **M2. 이관 상한 초과·검증 탈락분이 조용히 버려진 뒤 로컬 원본 삭제 — 복구 불가 손실** — `src/app/MigrateLocalData.tsx:72` + `api/migrate/route.ts:69`
+- [x] **M2. 이관 상한 초과·검증 탈락분이 조용히 버려진 뒤 로컬 원본 삭제 — 복구 불가 손실** — `src/app/MigrateLocalData.tsx:72` + `api/migrate/route.ts:69`
       서버가 products 200건/runs 1000건 초과분과 검증 탈락 항목을 `slice`/`continue` 로 버려도 ok:true → 클라이언트가 migrated 카운트 대조 없이 로컬 4키 전부 삭제. 이름 256자 초과 1건만으로도 발동.
       → 수정: 응답의 migrated 카운트를 로컬 건수와 대조해 전량 일치할 때만 삭제(불일치 시 로컬 유지 + console.warn).
-- [ ] **M3. 이관 성공 후 SWR 무효화 없음 — 이관된 데이터가 화면에 안 보임** — `src/app/MigrateLocalData.tsx:72`
+- [x] **M3. 이관 성공 후 SWR 무효화 없음 — 이관된 데이터가 화면에 안 보임** — `src/app/MigrateLocalData.tsx:72`
       마이그레이션 성공 후 mutate 0건 → 레거시 사용자 첫 실행마다 "제품이 없어요" 빈 화면(재포커스 전까지). data.ts 계층 불변식("쓰기 후 mutate")을 이 경로만 위반.
       → 수정: 성공 블록에서 KEYS.products/routines/runs/profile mutate.
-- [ ] **M4. warnings 작업 유실 시 재시도 경로 전무 — 홈이 영구 "분석 중"** — `src/lib/ai/warningsQueue.ts:108`
+- [x] **M4. warnings 작업 유실 시 재시도 경로 전무 — 홈이 영구 "분석 중"** — `src/lib/ai/warningsQueue.ts:108`
       큐는 인메모리(재시작·배포로 소실), 재큐잉은 동일 (name,brand) 재등록뿐. NULL 고착 시 홈 IngredientAlerts 가 "N개 제품을 분석하고 있어요"를 영원히 표시하고 안전 정보(주의사항)가 영영 미생성.
       → 수정: GET /api/products 응답 시 `warnings IS NULL` 행을 재큐잉(idempotent — 큐의 Set 이 중복 방지 이미 보유). 부트 스윕보다 코드가 짧다.
-- [ ] **M5. 카메라 오버레이 + 뒤로가기 = 스트림이 산 채로 숨겨져 카메라 계속 켜짐** — `src/app/scan/components/ProductForm.tsx:126`
+- [x] **M5. 카메라 오버레이 + 뒤로가기 = 스트림이 산 채로 숨겨져 카메라 계속 켜짐** — `src/app/scan/components/ProductForm.tsx:126`
       탭 패널이 hidden 으로만 감춰져 CameraCapture 가 마운트 유지 → track.stop() 미실행. 모바일은 닫을 수단 전무(표시등 켜진 채). 프라이버시 직결.
       → 수정: ProductForm 이 active 여부를 받아 hidden 전환 시 setCameraMode(null).
-- [ ] **M6. 모달이 hidden 패널 뒤에 남으면 body 스크롤 락 미해제 — 페이지 전체 잠김** — `src/app/scan/components/ProductSearchModal.tsx:55` (+PopularProductModal 동일)
+- [x] **M6. 모달이 hidden 패널 뒤에 남으면 body 스크롤 락 미해제 — 페이지 전체 잠김** — `src/app/scan/components/ProductSearchModal.tsx:55` (+PopularProductModal 동일)
       검색 모달 표시 중 뒤로가기 → 모달이 invisible 인 채 마운트 유지 → overflow:hidden 잔존, 4탭 전부 스크롤 불가. 모바일은 새로고침뿐.
       → 수정: M5 와 동일 패턴(active 연동으로 모달 상태 해제) 또는 락을 "실제로 보이는 동안"으로 좁힘.
-- [ ] **M7. 기록 저장 실패 후 다른 루틴 시작 시 수행 기록 영구 유실** — `src/app/routine/components/RoutineDone.tsx:66` + `history.ts:26`
+- [x] **M7. 기록 저장 실패 후 다른 루틴 시작 시 수행 기록 영구 유실** — `src/app/routine/components/RoutineDone.tsx:66` + `history.ts:26`
       실패해도 성공 UI 표시(콘솔만) → 단일 슬롯 RunStart 를 다음 루틴의 markRunStart 가 덮어씀 → 아침 실패 → 저녁 수행이라는 일상 시나리오에서 확정 유실. 주간 달성률 소급 누락.
       → 수정: 실패 시 완료 화면에 재시도 배너 + markRunStart 가 미소비 표시 발견 시 덮어쓰기 전에 먼저 전송.
-- [ ] **M8. CI cancel-in-progress 가 시크릿 스캔을 통째로 건너뜀 — 연속 푸시 시 첫 범위 영영 미스캔** — `.github/workflows/ci.yml:12`
+- [x] **M8. CI cancel-in-progress 가 시크릿 스캔을 통째로 건너뜀 — 연속 푸시 시 첫 범위 영영 미스캔** — `.github/workflows/ci.yml:12`
       push A(시크릿 포함) 직후 push B → A 의 실행이 취소(중립 상태, 경보 0) → B 는 after_A..after_B 만 스캔. 오늘 실측으로도 main 직접 push 3건이 5.5분 내 연속 — 재현 조건이 상시 존재. 훅 미설치 사용자의 최후 방어선이 조용히 무력화.
       → 수정: secret-scan 잡을 별도 concurrency 그룹으로 분리(또는 cancel-in-progress 해제).
-- [ ] **M9. 성분→제품 매칭 누수 — 복합 표기 성분은 "이 성분이 든 내 제품"이 항상 빈 결과** — `src/app/api/products/by-ingredient/route.ts:31`
+- [x] **M9. 성분→제품 매칭 누수 — 복합 표기 성분은 "이 성분이 든 내 제품"이 항상 빈 결과** — `src/app/api/products/by-ingredient/route.ts:31`
       지식 조회는 별칭 정규화(sameIngredient)를 쓰는데 이 라우트만 원시 `JSON_SEARCH LIKE`. 시드의 복합 표기 6종(`비타민씨(아스코빅애씨드)` 등)은 제품이 있어도 "아직 카탈로그에 없어요". 사전 → 상세 모달 흐름에서 결정적 재현.
       → 수정: 라우트에서 ingredientNames 별칭 확장 후 각 표기로 OR 검색(지식 라우트와 같은 규율).
 
@@ -124,7 +124,20 @@
 4. **CI/배포군: M8 → m21 → m19 → m24 (+P17·P20 은 결정 후)** — 시크릿 스캔 구멍이 우선.
 5. Minor 나머지는 화면 단위로 묶어 처리(루틴군 m13~~m15, 접근성군 m9·m16·m18, 입력 검증군 m1~~m3).
 
+## 결정 확정 (2026-08-20)
+
+- Q1 서비스명 = **youtine** 통일(`ea3f8ba`) / Q2 리포트 전 탭 [제품→성분→설명](`ea3f8ba`) /
+  Q3 실패 배너 빨간 배경 **유지** / Q4 직파싱 조사 승인 → 구현까지 완료(`181ed13`).
+
 ## 진행 상태
 
 - [x] 리뷰 실행 + 적대 검증 + 의도 대조 + 실측 (2026-08-20). 워크플로 46 에이전트(파인더 8·스카우트 2·검증 36) + refuter 6 + prober 1.
-- [ ] 수정 착수 — 사용자 결정 대기 (Q5).
+- [x] **수정 완료 (2026-08-20)** — Major 9 + Minor 28 전건. 파일 비중첩 병렬 에이전트 10 구현
+      → 세션 통합·검증(check+build) → 분할 커밋 10. 커밋 지도:
+      `86fcf1d`(M2·M3·M7·m4) `766f0b4`(M5·M6·m11) `04ba58e`(M1 — --session-id 실측 후 적용)
+      `2ab1e27`(M4·M9·m10 + R4 죽은 코드 삭제) `78cdfb4`(m1·m2·m3·m5·m6)
+      `6c1e458`(m7·m14) `8872b98`(m13·m15 + 수행 히어로 개편) `dd19688`(m9·m12·m16·m18·m25·m26·m28 + PageHeader 동형 결함)
+      `64f165a`(M8·m20·m21) `92a38db`(m19·m22·m23·m24) `ea3f8ba`(m17). m28 은 의도 예외로 문서화.
+- ⚠️ **배포 후 확인 2건**: ① 직파싱이 EC2 IP 에서 WAF 에 막히지 않는지 서버 로그 1회 확인
+  (막혀도 AI 폴백이 받는다) ② compose·deploy.yml 변경분의 **서버 사본 동기화**
+  (compose 는 서버 배포 디렉토리 사본을 직접 갱신해야 한다 — 상단 규칙 참조).

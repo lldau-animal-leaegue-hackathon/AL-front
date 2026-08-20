@@ -39,21 +39,44 @@
 }
 
 /*
- * 사진 위 글자(타이머)와 버튼이 사진 톤과 무관하게 읽히도록 위·아래를 살짝 어둡게.
- * 사진은 테마를 따르지 않으므로 고정 색 그라디언트다(카메라 오버레이와 같은 예외 근거).
+ * 사진 전체를 덮는 **균일 검은 반투명 오버레이** — 모달 스크림과 같은 색 계열
+ * (사용자 요청 2026-08-20: 그라디언트로는 사진 톤에 따라 타이머가 안 보였다).
+ * 위에 얹히는 요소(제목·타이머·버튼)는 전부 이 스크림 위에 그려진다.
+ * 농도만 바꾸려면 아래 % 하나를 조정한다.
  */
 .photoWithImg::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / 35%),
-    transparent 35%,
-    transparent 55%,
-    rgb(0 0 0 / 45%)
-  );
+  background: color-mix(in srgb, var(--scrim) 55%, transparent);
   pointer-events: none;
+}
+
+/* 히어로 좌측 상단 제목 묶음 — 링크가 없어 탭은 아래 타이머가 받는다. */
+.heroIntro {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.heroTitle {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+  overflow-wrap: anywhere;
+}
+
+/* 스크림 위에서는 항상 밝은 글자(카메라 오버레이와 같은 예외 근거). */
+.photoWithImg .heroTitle {
+  color: rgb(255 255 255 / 96%);
+}
+
+.photoWithImg .duration {
+  color: rgb(255 255 255 / 78%);
 }
 
 /* 히어로 하단 — 이전(작게) + 다음(크게). 스크롤로 히어로가 사라지면 고정 바가 이어받는다. */
@@ -123,11 +146,7 @@
   gap: 32px;
 }
 
-.intro {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+/* .intro/.product 는 히어로로 이동하며 .heroIntro/.heroTitle 로 대체됐다(2026-08-20). */
 
 .meta {
   display: flex;
@@ -150,11 +169,6 @@
   font: var(--text-label-sm);
   letter-spacing: var(--tracking-label-sm);
   color: var(--on-surface-variant);
-}
-
-.product {
-  font: var(--text-headline-md);
-  color: var(--on-surface);
 }
 
 .description {

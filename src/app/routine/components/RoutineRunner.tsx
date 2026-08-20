@@ -169,6 +169,31 @@ export function RoutineRunner({
               />
             )}
 
+            {/*
+              제목(단계 칩·소요 시간·제품명)은 히어로 좌측 상단에 얹는다(사용자 요청
+              2026-08-20). 링크가 없어 pointer-events 를 끊는다 — 탭은 타이머가 받는다.
+            */}
+            <div className={styles.heroIntro}>
+              <p className={styles.meta}>
+                <span className={styles.category}>{current.routineName}</span>
+                {/* 시간이 없는 단계에 "약 1분"을 날조하지 않는다(리뷰 m15). */}
+                {current.estimatedTime > 0 && (
+                  <span className={styles.duration}>
+                    약 {Math.max(1, Math.round(current.estimatedTime / 60))}분
+                  </span>
+                )}
+              </p>
+              {/*
+                using_product 는 제품 id 가 아니라 **이름 문자열**이다. 저장된 제품과
+                정확히 안 맞을 수 있으므로 매칭에 실패해도 이름은 그대로 보여준다.
+              */}
+              <h2 className={styles.heroTitle}>
+                {current.usingProduct.length > 0
+                  ? current.usingProduct.join(" + ")
+                  : current.routineName}
+              </h2>
+            </div>
+
             {/* estimated_time 은 초 단위 정수다 — 분이 아니다.
                 0 이하면 잴 시간이 없다 — 타이머를 그리지 않는다(리뷰 m15).
                 key: 단계가 바뀌면 이전 단계의 진행 중 타이머를 버린다(HowToList 와 동일). */}
@@ -201,28 +226,6 @@ export function RoutineRunner({
         </div>
 
         <div className={styles.details}>
-          <div className={styles.intro}>
-            <p className={styles.meta}>
-              <span className={styles.category}>{current.routineName}</span>
-              {/* 시간이 없는 단계에 "약 1분"을 날조하지 않는다(리뷰 m15). */}
-              {current.estimatedTime > 0 && (
-                <span className={styles.duration}>
-                  약 {Math.max(1, Math.round(current.estimatedTime / 60))}분
-                </span>
-              )}
-            </p>
-            {/*
-              using_product 는 제품 id 가 아니라 **이름 문자열**이다. 저장된 제품과
-              정확히 안 맞을 수 있으므로 매칭에 실패해도 이름은 그대로 보여준다.
-              한 단계에 2개 이상은 이중 세안 같은 경우다(프롬프트 규칙 5-2).
-            */}
-            <h2 className={styles.product}>
-              {current.usingProduct.length > 0
-                ? current.usingProduct.join(" + ")
-                : current.routineName}
-            </h2>
-          </div>
-
           {/*
             순서는 사용법 → 주의사항 → 팁 (사용자 피드백 2026-08-20).
             지금 해야 할 일(사용법)이 첫눈에 오고, 안전(주의)이 참고(팁)보다 앞선다.
