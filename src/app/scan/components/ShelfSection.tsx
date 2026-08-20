@@ -69,8 +69,9 @@ export function ShelfSection() {
             key={product.id}
             name={product.productName}
             category={product.category}
-            /* 내 선반에서만 개인 사진을 보여 준다 — 공유 목록에는 넘기지 않는다. */
-            image={product.thumbnail}
+            /* 내가 찍은 사진 우선, 없으면 공유 카탈로그 이미지(화해) — 아이콘은 마지막 폴백.
+               개인 사진(thumbnail)을 공유 목록에 넘기지 않는 규칙은 그대로다(여긴 내 선반). */
+            image={product.thumbnail || product.image}
             note={shelfNote(product, flagged)}
             flagged={flagged}
             onSelect={() => setDetail(product)}
