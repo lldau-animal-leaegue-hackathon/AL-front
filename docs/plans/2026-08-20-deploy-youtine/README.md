@@ -23,8 +23,10 @@
 | 리버스 프록시 | 호스트 nginx. `/api/` 는 **read timeout 600초**(루틴 생성 최장), 업로드 10MB(성분표 사진 8MB), `X-Forwarded-Proto`(쿠키 secure 판정)           |
 | 앱            | `docker-compose.yml` 의 `app` 서비스 — 루프백 포트만 공개, DB 와 같은 네트워크(`DB_HOST=db`)                                                   |
 | AI 인증       | 호스트 `~/.claude`(600) ← 로컬 자격 증명 이전, 서버에서 실호출 검증 완료                                                                       |
-| CI/CD         | main 푸시 → Actions → SSH(전용 키) → 서버 배포 스크립트                                                                                        |
-| 배포 키 2종   | ① GitHub 읽기용 deploy key(서버→GitHub 클론) ② Actions 용 SSH 키 — **forced command 로 배포 스크립트만 실행 가능**(키가 새어도 임의 명령 불가) |
+| CI/CD | main 푸시 → **Actions 가 이미지 빌드 → Docker Hub push** → SSH → 서버는 pull + 재기동만. 사용자 결정(2026-08-20): 서버 빌드·deploy key 불필요, 디스크 부담 해소, sha 태그로 롤백 |
+| SSH 키 | Actions 용 1개 — **forced command 로 배포 스크립트만 실행 가능**(키가 새어도 임의 명령 불가). GitHub deploy key 는 폐기(서버가 클론하지 않음) |
+| compose 동기화 | 서버는 레포를 클론하지 않으므로 compose·초기화 SQL 사본이 배포 디렉토리에 있다 — **compose 를 바꾸면 서버 사본도 갱신할 것**(드묾) |
+| 이미지 비공개 | 빌드 산출물(.next)에 서버 코드가 들어가므로 Docker Hub 저장소는 **Private** — 서버에 docker login 1회 필요 |
 
 ## 구현 순서
 
@@ -34,8 +36,10 @@
       (forced command)·배포 스크립트 준비.
 - [x] 레포 파일 — `Dockerfile`(멀티스테이지, CLI 포함·인증 미포함)·`.dockerignore`
       (env 차단)·compose `app` 서비스·`.github/workflows/deploy.yml`.
-- [ ] **사용자 액션 3건** — ① GitHub deploy key 등록(읽기 전용) ② Actions 시크릿 3개
-      (DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY) ③ taeyeop → main 머지.
+- [ ] **사용자 액션** — ① Docker Hub 계정·비공개 저장소·토큰 ② Actions 시크릿 5개
+      (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN / DEPLOY_HOST / DEPLOY_USER /
+      DEPLOY_SSH_KEY) ③ 서버 docker login 1회 ④ taeyeop → main 머지.
+      ~~GitHub deploy key 등록~~ — Docker Hub 방식 채택으로 폐기(2026-08-20).
 - [ ] 첫 배포 확인 — Actions 로그, 사이트 200, /api 스모크, AI 1건 실호출.
 
 ## 검증 (첫 배포 후)

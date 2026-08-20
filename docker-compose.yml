@@ -13,6 +13,9 @@
 services:
   # 서버 전용 — 로컬 개발은 `npm run dev` 를 쓰고 이 서비스를 띄우지 않는다.
   app:
+    # 이미지는 Actions 가 빌드해 Docker Hub 로 올린다(서버는 pull 만 — 빌드 부하 없음).
+    # 이름은 서버 .env 의 YOUTINE_IMAGE 가 정한다. 로컬에서 굳이 띄우려면 build 를 쓴다.
+    image: ${YOUTINE_IMAGE:-youtine:local}
     build: .
     container_name: youtine-app
     restart: unless-stopped
