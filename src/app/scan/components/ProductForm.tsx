@@ -270,7 +270,9 @@ export function ProductForm({
             제품 사진
           </label>
           <p className={styles.fieldHint}>
-            선반에서 제품을 알아보는 데 쓰여요. 성분은 읽지 않아요.
+            선반에서 제품을 알아보는 데 쓰여요.
+            <br />
+            성분은 읽지 않아요.
           </p>
           <div className={styles.photoRow}>
             <input
@@ -328,8 +330,9 @@ export function ProductForm({
         {/* 15초를 넘기면 왜 오래 걸리는지와 빠른 길을 알려 준다 — 진행 문구 자체는 버튼이 맡는다. */}
         {searching && elapsed >= 15 && (
           <p className={styles.hint}>
-            실제 판매 중인 제품을 찾고 있어요. 성분표 사진을 올리면 검색을
-            건너뛰고 바로 읽을 수 있습니다.
+            실제 판매 중인 제품을 찾고 있어요.
+            <br />
+            성분표 사진을 올리면 검색을 건너뛰고 바로 읽을 수 있습니다.
           </p>
         )}
 

@@ -49,7 +49,9 @@ function AIWorkingOverlay({
         </p>
         {elapsed >= LONG_WAIT_SECONDS && (
           <p className={styles.overlayHint} role="status">
-            보통 1~2분 걸립니다. 화면을 닫지 말고 잠시만 기다려 주세요.
+            보통 1~2분 걸립니다.
+            <br />
+            화면을 닫지 말고 잠시만 기다려 주세요.
           </p>
         )}
       </div>
@@ -130,8 +132,9 @@ export function RoutineForm({ focus = false }: { focus?: boolean }) {
         <Icon name="inventory_2" filled className={styles.emptyIcon} />
         <h2 className={styles.heading}>먼저 제품을 등록해 주세요</h2>
         <p className={styles.lead}>
-          루틴은 보유한 제품으로만 만듭니다. 선반이 비어 있으면 AI 가 쓸 재료가
-          없어요.
+          루틴은 보유한 제품으로만 만듭니다.
+          <br />
+          선반이 비어 있으면 AI 가 쓸 재료가 없어요.
         </p>
         <Link className={styles.cta} href="/scan">
           <Icon name="add_circle" filled size="sm" />내 선반에 추가하기
@@ -202,7 +205,12 @@ export function RoutineForm({ focus = false }: { focus?: boolean }) {
           {shelfCount === null ? "" : ` ${shelfCount}개`}로 아침·저녁{" "}
           {focus ? "기타 루틴을" : "루틴을"} 짜 드려요.
           {/* 조건 단위 교체라 기본 루틴은 남는다. 안 알려 주면 덮어쓸까 봐 안 만든다. */}
-          {focus && " 기본 루틴은 그대로 두고 따로 저장돼요."}
+          {focus && (
+            <>
+              <br />
+              기본 루틴은 그대로 두고 따로 저장돼요.
+            </>
+          )}
         </p>
       </div>
 

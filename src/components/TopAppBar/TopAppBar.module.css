@@ -180,14 +180,16 @@
     border-color 0.2s ease;
 }
 
-.segmentItem:hover {
+/* :not() — 특이도에서 호버가 활성 배경을 이겨 흰 글자+연회색 배경이 되는 사고 방지(실측). */
+.segmentItem:not(.segmentActive):hover {
   background: var(--surface-container-low);
 }
 
+/* 라이트·다크 모두 대비가 확실한 primary/on-primary 조합을 쓴다. */
 .segmentActive {
   border-color: var(--primary);
-  background: var(--primary-container);
-  color: var(--on-primary-container);
+  background: var(--primary);
+  color: var(--on-primary);
   font-weight: 600;
 }
 

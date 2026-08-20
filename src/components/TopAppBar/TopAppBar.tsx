@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Icon } from "@/components/Icon";
 import { YoutineIcon } from "@/components/YoutineIcon";
@@ -173,14 +174,20 @@ export function TopAppBar() {
         </button>
       </div>
 
-      {open && (
-        <SettingsModal
-          onClose={() => {
-            setOpen(false);
-            gearRef.current?.focus();
-          }}
-        />
-      )}
+      {/*
+        ⚠️ 포털 필수 — 바에 backdrop-filter 가 있어 fixed 자손의 기준 박스가 헤더가 된다.
+        헤더 안에서 그리면 오버레이가 72px 헤더 안에 갇혀 모달이 화면 위에 붙는다(실측).
+      */}
+      {open &&
+        createPortal(
+          <SettingsModal
+            onClose={() => {
+              setOpen(false);
+              gearRef.current?.focus();
+            }}
+          />,
+          document.body,
+        )}
     </header>
   );
 }

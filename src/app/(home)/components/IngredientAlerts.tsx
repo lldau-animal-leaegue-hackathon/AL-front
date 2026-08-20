@@ -2,6 +2,7 @@
 
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
+import { SentenceBreak } from "@/components/SentenceBreak";
 
 import { useIngredientAlerts } from "../hooks/useIngredientAlerts";
 
@@ -45,16 +46,22 @@ export function IngredientAlerts() {
 
       {state.kind === "no-products" && (
         <p className={styles.status}>
-          등록된 제품이 없어요. 제품을 등록하면 주의사항을 알려드려요.
+          등록된 제품이 없어요.
+          <br />
+          제품을 등록하면 주의사항을 알려드려요.
         </p>
       )}
 
       {state.kind === "no-warnings" && (
         <p className={styles.status}>
           <Icon name="check_circle" filled />
-          {state.pendingCount > 0
-            ? `${state.pendingCount}개 제품을 분석하고 있어요. 끝나면 여기에 표시됩니다.`
-            : "등록한 제품에 특별한 주의사항이 없어요."}
+          {state.pendingCount > 0 ? (
+            <SentenceBreak
+              text={`${state.pendingCount}개 제품을 분석하고 있어요. 끝나면 여기에 표시됩니다.`}
+            />
+          ) : (
+            "등록한 제품에 특별한 주의사항이 없어요."
+          )}
         </p>
       )}
 

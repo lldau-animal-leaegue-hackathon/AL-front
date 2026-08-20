@@ -61,12 +61,16 @@ function DeleteConfirmModal({
         <Icon name="delete" filled className={styles.confirmIcon} />
         <p className={styles.confirmTitle}>정말 삭제하시겠습니까?</p>
         <p className={styles.confirmText}>
-          {label}의 아침·저녁 루틴이 모두 삭제돼요. 되돌릴 수 없습니다.
+          {label}의 아침·저녁 루틴이 모두 삭제돼요.
+          <br />
+          되돌릴 수 없습니다.
         </p>
 
         {failed && (
           <p className={styles.confirmError} role="alert">
-            삭제하지 못했어요. 다시 시도해 주세요.
+            삭제하지 못했어요.
+            <br />
+            다시 시도해 주세요.
           </p>
         )}
 
@@ -258,13 +262,16 @@ export function RoutineList() {
       <section>
         <h2 className={styles.heading}>기본 루틴</h2>
         <p className={styles.lead}>
-          매일 하는 아침·저녁 루틴이에요. 카드를 펼치면 단계를 볼 수 있어요.
+          매일 하는 아침·저녁 루틴이에요.
+          <br />
+          카드를 펼치면 단계를 볼 수 있어요.
         </p>
 
         {basic.length === 0 ? (
           <p className={styles.groupEmpty}>
-            아직 기본 루틴이 없어요. 보유한 제품으로 매일 쓸 루틴을 먼저 만들어
-            보세요.
+            아직 기본 루틴이 없어요.
+            <br />
+            보유한 제품으로 매일 쓸 루틴을 먼저 만들어 보세요.
           </p>
         ) : (
           cards(basic)
@@ -291,14 +298,17 @@ export function RoutineList() {
         {/* 표시명만 "기타 루틴" — 저장값은 "고민 집중" 그대로다(condition.ts 참조). */}
         <h2 className={styles.heading}>기타 루틴</h2>
         <p className={styles.lead}>
-          피부 고민이나 특별한 상황에 맞춘 두 번째 루틴이에요. 다시 만들어도
-          기본 루틴은 그대로 남아요.
+          피부 고민이나 특별한 상황에 맞춘 두 번째 루틴이에요.
+          <br />
+          다시 만들어도 기본 루틴은 그대로 남아요.
         </p>
 
         {focus.length === 0 ? (
           <p className={styles.groupEmpty}>
-            아직 기타 루틴이 없어요. <strong>내 고민</strong> 탭에서 고민을
-            등록하면 그 고민에 맞춰 짜 드려요.
+            아직 기타 루틴이 없어요.
+            <br />
+            <strong>내 고민</strong> 탭에서 고민을 등록하면 그 고민에 맞춰 짜
+            드려요.
           </p>
         ) : (
           cards(focus)
@@ -336,8 +346,8 @@ export function RoutineList() {
         </button>
         {proNotice && (
           <p className={styles.proNotice} role="status">
-            무료 버전에서는 루틴을 2개(기본·기타)까지 만들 수 있어요. 더
-            만들려면 <strong>Pro 업그레이드</strong>가 필요해요.
+            무료 버전에서는 루틴을 2개(기본·기타)까지 만들 수 있어요.
+            <br />더 만들려면 <strong>Pro 업그레이드</strong>가 필요해요.
           </p>
         )}
       </section>

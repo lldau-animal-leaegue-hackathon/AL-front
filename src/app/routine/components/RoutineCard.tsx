@@ -131,7 +131,9 @@ export function RoutineCard({
 
         {markError && (
           <p className={styles.markError} role="alert">
-            완료를 기록하지 못했어요. 잠시 후 다시 시도해 주세요.
+            완료를 기록하지 못했어요.
+            <br />
+            잠시 후 다시 시도해 주세요.
           </p>
         )}
       </details>

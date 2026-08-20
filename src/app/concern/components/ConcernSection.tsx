@@ -188,7 +188,9 @@ export function ConcernSection() {
         ) : ingredients.value.length === 0 ? (
           /* 빈 배열은 실패가 아니다 — 프롬프트 규칙 7(고를 수 없으면 [])의 결과다. */
           <p className={styles.empty}>
-            성분을 고르지 못했어요. 고민을 조금 더 구체적으로 적어 보세요.
+            성분을 고르지 못했어요.
+            <br />
+            고민을 조금 더 구체적으로 적어 보세요.
           </p>
         ) : (
           <ul className={styles.list}>
@@ -235,8 +237,9 @@ export function ConcernSection() {
 
         {/* 진단으로 읽히지 않도록 결과 옆에 고정한다. 프롬프트 규칙 5 와 짝이다. */}
         <p className={styles.disclaimer}>
-          일반적인 정보이며 의학적 조언이 아닙니다. 피부 질환이 의심되면
-          전문의와 상담하세요.
+          일반적인 정보이며 의학적 조언이 아닙니다.
+          <br />
+          피부 질환이 의심되면 전문의와 상담하세요.
         </p>
       </section>
 
@@ -247,8 +250,9 @@ export function ConcernSection() {
       <section className={styles.card}>
         <h2 className={styles.heading}>이 고민으로 루틴 만들기</h2>
         <p className={styles.lead}>
-          선반에 담은 제품으로 이 고민에 집중한 아침·저녁 루틴을 짜 드려요. 기본
-          루틴은 그대로 남습니다.
+          선반에 담은 제품으로 이 고민에 집중한 아침·저녁 루틴을 짜 드려요.
+          <br />
+          기본 루틴은 그대로 남습니다.
         </p>
         <Link className={styles.cta} href="/routine/new?focus=1">
           <Icon name="auto_awesome" filled size="sm" />

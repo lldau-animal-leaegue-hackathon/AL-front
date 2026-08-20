@@ -119,7 +119,9 @@ export function RoutineDone({ routineId }: { routineId: string }) {
         <div className={styles.warn} role="alert">
           <Icon name="error" size="sm" />
           <span className={styles.warnText}>
-            기록 저장에 실패했어요. 다른 루틴을 시작하면 이 기록이 사라져요.
+            기록 저장에 실패했어요.
+            <br />
+            다른 루틴을 시작하면 이 기록이 사라져요.
           </span>
           <button type="button" className={styles.warnRetry} onClick={sendRun}>
             다시 시도

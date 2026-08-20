@@ -199,8 +199,10 @@ function CandidateList({
   if (candidates.length === 0) {
     return (
       <p className={styles.empty}>
-        검색 결과가 없어요. 이름을 조금 다르게 적어 보거나, 제품 사진을 함께
-        올리면 성분표를 직접 읽어 등록할 수 있어요.
+        검색 결과가 없어요.
+        <br />
+        이름을 조금 다르게 적어 보거나, 제품 사진을 함께 올리면 성분표를 직접
+        읽어 등록할 수 있어요.
       </p>
     );
   }
@@ -208,7 +210,9 @@ function CandidateList({
   return (
     <>
       <p className={styles.lead}>
-        찾은 제품 {candidates.length}개예요. 담을 제품을 골라 주세요.
+        찾은 제품 {candidates.length}개예요.
+        <br />
+        담을 제품을 골라 주세요.
       </p>
 
       <ul className={styles.candidates}>
@@ -364,8 +368,9 @@ function ResultView({
       {result.ingredients.length === 0 ? (
         <>
           <p className={styles.empty}>
-            성분 정보를 찾지 못했어요. 성분표 사진을 올리면 정확히 읽을 수
-            있습니다.
+            성분 정보를 찾지 못했어요.
+            <br />
+            성분표 사진을 올리면 정확히 읽을 수 있습니다.
           </p>
           {/* 문구로만 안내하면 막다른 길이다 — 바로 촬영으로 이어지는 버튼을 준다. */}
           {onRetakeLabel && (

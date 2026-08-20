@@ -111,8 +111,9 @@ export function IngredientDetailModal({
              * 지식은 시드 + 리포트 수확으로 자라므로 그 사실을 그대로 말한다.
              */
             <p className={styles.empty}>
-              아직 이 성분에 대해 쌓인 정보가 없어요. 분석 리포트가 만들어질
-              때마다 지식이 늘어납니다.
+              아직 이 성분에 대해 쌓인 정보가 없어요.
+              <br />
+              분석 리포트가 만들어질 때마다 지식이 늘어납니다.
             </p>
           ) : (
             <>
@@ -201,8 +202,9 @@ export function IngredientDetailModal({
           </section>
 
           <p className={styles.disclaimer}>
-            일반적인 정보이며 의학적 조언이 아닙니다. 피부 질환이 의심되면
-            전문의와 상담하세요.
+            일반적인 정보이며 의학적 조언이 아닙니다.
+            <br />
+            피부 질환이 의심되면 전문의와 상담하세요.
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { Icon } from "@/components/Icon";
+import { SentenceBreak } from "@/components/SentenceBreak";
 
 import styles from "./EmptyState.module.css";
 
@@ -32,7 +33,10 @@ export function EmptyState({
     <div className={styles.empty} role="status">
       <Icon name={icon} filled className={styles.icon} />
       <h3 className={styles.title}>{title}</h3>
-      <p className={styles.text}>{text}</p>
+      {/* 안내문은 문장(마침표) 단위로 줄을 바꾼다 — 모든 호출처에 한 번에 적용된다. */}
+      <p className={styles.text}>
+        <SentenceBreak text={text} />
+      </p>
       <Link className={styles.cta} href={ctaHref}>
         {ctaLabel}
       </Link>

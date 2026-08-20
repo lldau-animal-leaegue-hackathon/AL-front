@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
+import { SentenceBreak } from "@/components/SentenceBreak";
 import { weeklyAchievement } from "@/lib/achievement";
 import { useRoutines, useRuns } from "@/lib/data";
 
@@ -80,7 +81,9 @@ export function SkinHealthCard() {
         <Icon name="auto_awesome" filled className={styles.emptyIcon} />
         <h2 className={card.cardTitle}>이번 주 루틴 달성률</h2>
         <p className={styles.emptyText}>
-          아직 만든 루틴이 없어요. 루틴을 만들면 달성률을 보여드려요.
+          아직 만든 루틴이 없어요.
+          <br />
+          루틴을 만들면 달성률을 보여드려요.
         </p>
         <Link className={styles.emptyCta} href="/routine/new">
           <Icon name="add_circle" filled size="sm" />
@@ -97,7 +100,8 @@ export function SkinHealthCard() {
         <Icon name="auto_awesome" filled className={styles.emptyIcon} />
         <h2 className={card.cardTitle}>이번 주 루틴 달성률</h2>
         <p className={styles.emptyText}>
-          이번 주엔 아직 기록이 없어요. 첫 루틴을 시작해 보세요.
+          이번 주엔 아직 기록이 없어요.
+          <br />첫 루틴을 시작해 보세요.
         </p>
         <Link className={styles.emptyCta} href="/routine">
           <Icon name="play_arrow" filled size="sm" />
@@ -116,7 +120,9 @@ export function SkinHealthCard() {
         <h2 className={`${card.cardTitle} ${styles.heading}`}>
           이번 주 루틴 달성률
         </h2>
-        <p className={styles.summary}>{summaryText(percent)}</p>
+        <p className={styles.summary}>
+          <SentenceBreak text={summaryText(percent)} />
+        </p>
         <p className={`${card.label} ${styles.delta}`}>
           <Icon name={icon} size="sm" />
           {text}

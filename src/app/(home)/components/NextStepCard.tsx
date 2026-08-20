@@ -84,7 +84,9 @@ export function NextStepCard() {
         <Icon name="auto_awesome" filled className={styles.emptyIcon} />
         <h3 className={card.cardTitle}>다음 단계</h3>
         <p className={styles.emptyText}>
-          아직 만든 루틴이 없어요. 루틴을 만들면 다음에 할 일을 알려드려요.
+          아직 만든 루틴이 없어요.
+          <br />
+          루틴을 만들면 다음에 할 일을 알려드려요.
         </p>
         <Link className={styles.emptyCta} href="/routine/new">
           <Icon name="add_circle" filled size="sm" />

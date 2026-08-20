@@ -211,8 +211,10 @@ export function ReportSection() {
           </p>
           {elapsed >= LONG_WAIT_SECONDS && (
             <p className={styles.generatingHint}>
-              제품 조합을 하나씩 따져 보는 중이에요. 처음 한 번만 1~2분 걸리고,
-              선반이 그대로면 다음부터는 바로 열립니다.
+              제품 조합을 하나씩 따져 보는 중이에요.
+              <br />
+              처음 한 번만 1~2분 걸리고, 선반이 그대로면 다음부터는 바로
+              열립니다.
             </p>
           )}
         </div>
@@ -232,8 +234,10 @@ export function ReportSection() {
       /* 분석 전(또는 선반이 바뀌어 캐시가 어긋남) — AI 는 버튼으로만 시작한다. */
       return (
         <p className={styles.groupEmpty}>
-          아직 분석 전이에요. 위의 <strong>분석하기</strong> 버튼을 누르면 선반
-          전체의 성분 조합을 살펴봐 드려요.
+          아직 분석 전이에요.
+          <br />
+          위의 <strong>분석하기</strong> 버튼을 누르면 선반 전체의 성분 조합을
+          살펴봐 드려요.
         </p>
       );
     }
@@ -446,8 +450,9 @@ export function ReportSection() {
                     })
                   )}
                   <p className={styles.disclaimer}>
-                    일반적인 정보이며 의학적 조언이 아닙니다. 피부 질환이
-                    의심되면 전문의와 상담하세요.
+                    일반적인 정보이며 의학적 조언이 아닙니다.
+                    <br />
+                    피부 질환이 의심되면 전문의와 상담하세요.
                   </p>
                 </>
               );
@@ -529,8 +534,8 @@ export function ReportSection() {
                   )}
 
                   <p className={styles.disclaimer}>
-                    일반적인 정보이며 의학적 조언이 아닙니다. 새 성분은 소량으로
-                    먼저 테스트해 보세요.
+                    일반적인 정보이며 의학적 조언이 아닙니다.
+                    <br />새 성분은 소량으로 먼저 테스트해 보세요.
                   </p>
                 </>
               );

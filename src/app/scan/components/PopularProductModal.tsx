@@ -137,7 +137,9 @@ export function PopularProductModal({
           {/* 빈 배열은 "아직 성분을 못 찾은 제품"이다. 지어내지 않았다는 뜻이라 그대로 알린다. */}
           {product.ingredients.length === 0 ? (
             <p className={styles.empty}>
-              아직 성분 정보가 없어요. 담은 뒤 성분표 사진을 올리면 채워집니다.
+              아직 성분 정보가 없어요.
+              <br />
+              담은 뒤 성분표 사진을 올리면 채워집니다.
             </p>
           ) : (
             <ul className={styles.ingredients}>
