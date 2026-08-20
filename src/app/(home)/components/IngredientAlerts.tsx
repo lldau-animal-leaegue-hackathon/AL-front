@@ -24,11 +24,11 @@ export function IngredientAlerts() {
         </span>
       </div>
 
+      {/* 제품 목록을 불러오는 짧은 순간뿐이다 — 이제 홈에서 AI 생성을 하지 않는다. */}
       {state.kind === "checking" && (
         <p className={styles.status} role="status">
           <Icon name="progress_activity" className={styles.spinner} />
-          성분 주의사항을 확인하고 있어요. 제품마다 최대 1분 정도 걸릴 수
-          있어요.
+          성분 주의사항을 불러오고 있어요.
         </p>
       )}
 
@@ -52,24 +52,34 @@ export function IngredientAlerts() {
       {state.kind === "no-warnings" && (
         <p className={styles.status}>
           <Icon name="check_circle" filled />
-          등록한 제품에 특별한 주의사항이 없어요.
+          {state.pendingCount > 0
+            ? `${state.pendingCount}개 제품을 분석하고 있어요. 끝나면 여기에 표시됩니다.`
+            : "등록한 제품에 특별한 주의사항이 없어요."}
         </p>
       )}
 
       {state.kind === "ready" && (
-        <ul className={styles.list}>
-          {state.alerts.map((alert) => (
-            <li key={alert.id} className={styles.item}>
-              <Icon name="warning" className={styles.itemIcon} />
-              <div>
-                <h4 className={`${card.label} ${styles.itemTitle}`}>
-                  {alert.productName}
-                </h4>
-                <p className={styles.itemDetail}>{alert.warning}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className={styles.list}>
+            {state.alerts.map((alert) => (
+              <li key={alert.id} className={styles.item}>
+                <Icon name="warning" className={styles.itemIcon} />
+                <div>
+                  <h4 className={`${card.label} ${styles.itemTitle}`}>
+                    {alert.productName}
+                  </h4>
+                  <p className={styles.itemDetail}>{alert.warning}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {/* 분석은 등록 시점에 서버가 백그라운드로 한다 — 아직 안 끝난 제품만 알린다. */}
+          {state.pendingCount > 0 && (
+            <p className={styles.status}>
+              {state.pendingCount}개 제품은 아직 분석 중이에요.
+            </p>
+          )}
+        </>
       )}
     </section>
   );

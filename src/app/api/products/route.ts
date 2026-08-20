@@ -6,6 +6,10 @@
  *    사용자가 직접 찍은 사진(`thumbnail`)만 개인 것이라 `shelf_items` 에 둔다.
  */
 
+import {
+  enqueueWarningsGeneration,
+  NO_INGREDIENTS_WARNING,
+} from "@/lib/ai/warningsQueue";
 import { currentUserId } from "@/lib/auth/anonUser";
 import {
   dbErrorResponse,
@@ -230,6 +234,28 @@ export async function POST(request: Request) {
       [userId, productId],
     );
     const created = rows.map(toProduct).find((p) => p !== null);
+
+    /*
+     * 주의사항 지연 생성(2026-08-20) — 예전에는 홈 화면이 클라이언트에서 생성했는데,
+     * 그 호출들이 사용자 가드를 독점해 다른 AI 기능이 전부 429 로 튕겼다.
+     * 등록 시점에 서버 백그라운드 큐로 옮긴다. 응답을 기다리지 않는다(등록 UX 불변).
+     * 성분이 없으면 결과가 정해져 있으므로(규칙 6) 호출 없이 고정 문구를 바로 저장한다.
+     */
+    if (created && created.warnings === undefined) {
+      if (created.ingredients.length === 0) {
+        await execute(
+          `UPDATE products SET warnings = ? WHERE id = ? AND warnings IS NULL`,
+          [JSON.stringify([NO_INGREDIENTS_WARNING]), productId],
+        );
+      } else {
+        enqueueWarningsGeneration({
+          id: productId,
+          name: created.productName,
+          category: created.category,
+          ingredients: created.ingredients,
+        });
+      }
+    }
 
     return Response.json(created ?? { id: productId }, { status: 201 });
   } catch (error) {
