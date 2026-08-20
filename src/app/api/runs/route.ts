@@ -76,9 +76,18 @@ export async function POST(request: Request) {
     const userId = await currentUserId();
     await ensureUser(userId);
 
+    /*
+     * **멱등하게 저장한다**(m1). INSERT 가 커밋된 뒤 응답만 유실되면(모바일 연결 끊김)
+     * 클라이언트는 실패로 보고 재시도하는데, 예전에는 요청마다 새 PK 를 만들어
+     * 같은 수행이 2행이 됐다 — 주간 달성률이 completedStepIds 합산이라 50% 가 100% 로 보였다.
+     *
+     * 자연키는 `(user_id, routine_id, started_at)`(006 마이그레이션). finished_at 은
+     * 재시도마다 새로 만들어져 키가 못 된다. started_at 은 수행 시작 표시에서 오므로
+     * 재시도·새로고침에도 같다.
+     */
     const id = crypto.randomUUID();
-    await execute(
-      `INSERT INTO routine_runs
+    const inserted = await execute(
+      `INSERT IGNORE INTO routine_runs
          (id, user_id, routine_id, started_at, finished_at, completed_step_ids)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -90,6 +99,23 @@ export async function POST(request: Request) {
         JSON.stringify(completedStepIds),
       ],
     );
+
+    /*
+     * 0행 = 이미 같은 수행이 있다. 이건 **실패가 아니라 재시도가 수렴한 것**이므로
+     * 기존 행을 그대로 돌려준다 — 클라이언트가 성공으로 받아 시작 표시를 소비해야
+     * 다음 진입 때 또 재시도하지 않는다. 여기서 에러를 내면 영원히 재시도한다.
+     */
+    if (inserted === 0) {
+      const rows = await selectRows(
+        `SELECT id, routine_id, started_at, finished_at, completed_step_ids
+           FROM routine_runs
+          WHERE user_id = ? AND routine_id = ? AND started_at = ?
+          LIMIT 1`,
+        [userId, routineId, startedAt],
+      );
+      const existing = rows.map(toRoutineRun).find((run) => run !== null);
+      if (existing) return Response.json(existing, { status: 200 });
+    }
 
     return Response.json(
       {

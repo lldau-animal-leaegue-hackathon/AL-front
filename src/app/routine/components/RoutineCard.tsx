@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { Icon } from "@/components/Icon";
@@ -43,6 +43,8 @@ export function RoutineCard({
   done: boolean;
 }) {
   const [marking, setMarking] = useState(false);
+  /** 완료 기록의 시각. 재시도가 같은 값을 재사용해 서버 멱등 키에 수렴한다(m1). */
+  const markedAtRef = useRef<string | null>(null);
   const [markError, setMarkError] = useState(false);
 
   /**
@@ -68,7 +70,14 @@ export function RoutineCard({
     setMarking(true);
     setMarkError(false);
     try {
-      const now = new Date().toISOString();
+      /*
+       * 실패 후 재시도할 때 **같은 시각을 다시 쓴다**(m1). 서버의 멱등 키가
+       * `(user, routine, started_at)` 이라, 재시도마다 `new Date()` 를 새로 만들면
+       * 커밋됐는데 응답만 유실된 경우 같은 수행이 2행이 되어 달성률이 부풀려진다.
+       * 성공하면 버튼이 사라지므로 여기서 비울 필요는 없다.
+       */
+      markedAtRef.current ??= new Date().toISOString();
+      const now = markedAtRef.current;
       await appendRun({
         routineId: routine.id,
         startedAt: now,
