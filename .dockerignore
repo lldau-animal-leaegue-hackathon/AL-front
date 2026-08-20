@@ -1,0 +1,12 @@
+# 빌드 컨텍스트에서 뺀다 — 이미지 재현성과 속도, 그리고 비밀이 새는 경로 차단.
+node_modules
+.next
+.git
+.githooks
+.claude
+docs
+presentation
+
+# ⛔ env 파일은 절대 컨텍스트에 넣지 않는다(값 없는 예시만 허용).
+.env*
+!.env.example

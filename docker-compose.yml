@@ -1,4 +1,5 @@
-# AL-front 서버 스택. 지금은 DB 하나뿐이고, 앱 서비스는 CI/CD 를 붙일 때 여기에 추가한다.
+# AL-front(youtine) 서버 스택 — 앱 + DB. main 푸시마다 GitHub Actions 가
+# 서버에서 `docker compose up -d --build app` 을 실행한다(.github/workflows/deploy.yml).
 #
 # 접속 정보는 같은 폴더의 .env 에서 읽는다. .env 는 커밋하지 않는다.
 #
@@ -6,9 +7,33 @@
 #    로컬 개발은 SSH 터널로 붙는다(사용자 결정 2026-08-18):
 #      ssh -L 3308:127.0.0.1:3308 <서버alias>
 #
-# ⛔ 이 저장소는 퍼블릭이다. 서버 주소·배포 경로·다른 서비스가 쓰는 포트를 여기 적지 마라.
+# ⛔ 서버 주소·배포 경로·다른 서비스가 쓰는 포트를 여기 적지 마라
+#    (2026-08-20 현재 저장소는 비공개지만, 공개 전환 가능성이 있어 규칙은 동일하게 지킨다).
 
 services:
+  # 서버 전용 — 로컬 개발은 `npm run dev` 를 쓰고 이 서비스를 띄우지 않는다.
+  app:
+    build: .
+    container_name: youtine-app
+    restart: unless-stopped
+    ports:
+      # 루프백 전용 — 외부 노출은 호스트 nginx(TLS)가 담당한다.
+      - "127.0.0.1:3004:3000"
+    environment:
+      # 같은 compose 네트워크 안이라 서비스 이름으로 붙는다(호스트 3308 터널과 무관).
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # 헤드리스 Claude 구독 인증 — 호스트에 1회 심은 ~/.claude 를 공유한다.
+      # 이미지에 자격 증명을 굽지 않기 위한 구조다(Dockerfile 주석 참조).
+      - ~/.claude:/home/node/.claude
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     # 서버에 이미 있는 이미지(11.3.2)를 그대로 쓴다.
     # ponytail: 디스크가 91% 라 pull 을 막아 둔다. 버전 태그 고정은 CI/CD 붙일 때.
