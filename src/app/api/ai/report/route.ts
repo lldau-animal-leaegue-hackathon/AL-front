@@ -61,6 +61,11 @@ function str(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/** 제품명 대조용. LLM 이 공백·대소문자를 미묘하게 바꿔 쓰므로 지우고 본다. */
+function normalizeName(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, "");
+}
+
 function strArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((v): v is string => typeof v === "string" && v.trim() !== "")
@@ -79,7 +84,16 @@ function isSkinType(value: string): value is SkinType {
 function narrowReport(
   parsed: Record<string, unknown>,
   owned: ReadonlySet<string>,
+  ownedNames: ReadonlySet<string>,
 ): ShelfReport {
+  /**
+   * 규칙 1 은 `products` 에도 걸린다("입력에 실제로 존재하는 … 제품명만").
+   * 예전에는 `strArray` 로 통과만 시켜, 지어낸 제품명이 리포트에 그대로 표시됐다(m12).
+   * 표기가 흔들릴 수 있어 공백·대소문자를 지우고 비교한다.
+   */
+  const ownedProducts = (names: string[]) =>
+    names.filter((name) => ownedNames.has(normalizeName(name)));
+
   const cautions = (
     Array.isArray(parsed.skin_type_cautions) ? parsed.skin_type_cautions : []
   )
@@ -90,10 +104,24 @@ function narrowReport(
       const ingredient = str(item.ingredient);
       const caution = str(item.caution);
       if (!isSkinType(skinType) || !ingredient || !caution) return null;
+      /*
+       * 규칙 4 위반 — "보유 성분 중 그 타입이 주의할 것"만 와야 한다(m12).
+       * 규칙 1·5 는 `owned` 로 강제하면서 여기만 빠져 있었다. 이 항목은 '내 선반 분석'으로
+       * 표시될 뿐 아니라 `harvestKnowledge` 가 **공유 테이블**로 수확하므로,
+       * 보유하지도 않은 성분의 주의가 전 사용자에게 사실처럼 퍼진다.
+       */
+      if (!owned.has(ingredient)) {
+        console.warn(
+          "[api/ai/report] 규칙 4 위반 — 보유하지 않은 성분의 주의 버림:",
+          ingredient,
+        );
+        return null;
+      }
       return {
         skin_type: skinType,
         ingredient,
-        products: strArray(item.products),
+        // 규칙 1 대상이다 — 입력에 없는 제품명은 지어낸 것이라 뺀다.
+        products: ownedProducts(strArray(item.products)),
         caution,
       };
     })
@@ -117,7 +145,11 @@ function narrowReport(
       );
       return null;
     }
-    return { ingredients, products: strArray(item.products), description };
+    return {
+      ingredients,
+      products: ownedProducts(strArray(item.products)),
+      description,
+    };
   };
 
   const conflicts = (Array.isArray(parsed.conflicts) ? parsed.conflicts : [])
@@ -269,6 +301,7 @@ export async function POST(request: Request) {
 
   const fingerprint = shelfFingerprint(shelf);
   const owned = new Set(shelf.flatMap((item) => item.ingredients));
+  const ownedNames = new Set(shelf.map((item) => normalizeName(item.name)));
 
   // 캐시는 가드보다 먼저 — AI 를 태우지 않는 요청을 429 로 막을 이유가 없다(concern 과 동일).
   try {
@@ -285,7 +318,7 @@ export async function POST(request: Request) {
       const parsed: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (typeof parsed === "object" && parsed !== null) {
         return Response.json(
-          narrowReport(parsed as Record<string, unknown>, owned),
+          narrowReport(parsed as Record<string, unknown>, owned, ownedNames),
         );
       }
     }
@@ -340,7 +373,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const report = narrowReport(parsed, owned);
+    const report = narrowReport(parsed, owned, ownedNames);
 
     /*
      * 캐시 저장 — 좁힌 결과를 저장하므로 읽기는 한 번 더 좁히기만 하면 된다.

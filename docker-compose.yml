@@ -1,5 +1,10 @@
-# AL-front(youtine) 서버 스택 — 앱 + DB. main 푸시마다 GitHub Actions 가
-# 서버에서 `docker compose up -d --build app` 을 실행한다(.github/workflows/deploy.yml).
+# AL-front(youtine) 서버 스택 — 앱 + DB. main 의 CI 가 성공하면 GitHub Actions 가
+# **Actions 러너에서** 이미지를 빌드해 Docker Hub 로 push 하고, 서버는 forced-command
+# SSH 로 그 이미지를 pull 해 재기동만 한다(.github/workflows/deploy.yml, 2026-08-20 전환).
+#
+# ⛔ 서버에서 `docker compose up -d --build app` 을 돌리지 마라 — 로컬 빌드 결과가
+#    Hub 에서 받은 같은 태그를 덮어써(태그 섀도잉) 배포된 것과 다른 이미지가 뜬다.
+#    서버에서는 pull + up 만 한다.
 #
 # 접속 정보는 같은 폴더의 .env 에서 읽는다. .env 는 커밋하지 않는다.
 #

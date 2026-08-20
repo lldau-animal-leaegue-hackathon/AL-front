@@ -229,6 +229,13 @@ export async function POST(request: Request) {
           }
           routines += 1;
         }
+      } else {
+        /*
+         * 서버에 이미 루틴이 있어 루프를 건너뛰었다. 예전에는 이때 routines 가 0 이라
+         * 클라이언트가 이관 미완료로 보고 로컬을 영영 유지했다(m2).
+         * 서버가 갖고 있다는 것 자체가 수용이므로 보낸 만큼을 센다.
+         */
+        routines = asArray(body.routines).slice(0, LIMITS.routines).length;
       }
 
       // ── 피부 프로필 ─────────────────────────────────────────
@@ -239,7 +246,7 @@ export async function POST(request: Request) {
         const usable = asRecord(profileInput.usableTime) ?? {};
         if (wonder) {
           // 이미 있으면 덮지 않는다 — 서버 쪽이 더 최신일 수 있다.
-          const [changed] = await conn.execute(
+          await conn.execute(
             `INSERT IGNORE INTO skin_profiles
                (user_id, wonder, usable_morning, usable_evening)
              VALUES (?, ?, ?, ?)`,
@@ -250,10 +257,8 @@ export async function POST(request: Request) {
               text(usable.evening, LIMITS.usableTime) ?? "",
             ],
           );
-          profile =
-            !Array.isArray(changed) && "affectedRows" in changed
-              ? changed.affectedRows
-              : 0;
+          // 이미 있으면 IGNORE 되어 0 이지만, 그것도 "서버가 갖고 있다" = 수용이다(m2).
+          profile = 1;
         }
       }
 
@@ -276,7 +281,7 @@ export async function POST(request: Request) {
          *    routine_runs 에는 FK 가 없고(의도적), 화면은 못 찾은 루틴을 "삭제된 루틴"으로
          *    표시한다. 기록 자체가 사라지는 것보다 낫다(달성률의 유일한 근거다).
          */
-        const [inserted] = await conn.execute(
+        await conn.execute(
           `INSERT IGNORE INTO routine_runs
              (id, user_id, routine_id, started_at, finished_at, completed_step_ids)
            VALUES (?, ?, ?, ?, ?, ?)`,
@@ -294,10 +299,13 @@ export async function POST(request: Request) {
             ),
           ],
         );
-        runs +=
-          !Array.isArray(inserted) && "affectedRows" in inserted
-            ? inserted.affectedRows
-            : 0;
+        /*
+         * ⚠️ **affectedRows 를 세지 않는다**(m2). 재이관에서는 전부 IGNORE 되어 0 이 나오는데,
+         *    클라이언트는 `migrated < 로컬 건수` 면 로컬을 안 지우고 다음 진입 때 또 보낸다 —
+         *    한 번이라도 "커밋됐는데 응답만 유실"되면 **영원히 재이관 루프**에 갇힌다.
+         *    카운트의 뜻은 "새로 쓴 행 수"가 아니라 **"서버가 받아들인 항목 수"** 다.
+         */
+        runs += 1;
       }
 
       return { products, routines, profile, runs };

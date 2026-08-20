@@ -10,9 +10,9 @@ VALUES ('8593da4c-c948-492f-9242-2d25181d0a0e', '아스코빅애씨드', '토코
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('6325160b-63fa-43c6-a5dc-7a81948f3a3f', '아스코빅애씨드', '페룰릭애씨드', 'synergy', '페룰릭애씨드가 비타민씨의 안정성을 높여 항산화력이 오래 유지되도록 돕습니다. 낮 시간대에 사용하고 개봉 후에는 갈변 여부를 확인하며 쓰는 것이 좋습니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
-VALUES ('c92a1593-3490-47e8-99c2-7235119fd1c5', '나이아신아마이드', '히알루론산', 'synergy', '히알루론산이 수분을 끌어오고 나이아신아마이드가 장벽 기능을 도와 보습이 더 오래갑니다. 히알루론산을 먼저, 나이아신아마이드를 그다음에 얹으면 무난합니다.', 'seed');
+VALUES ('c92a1593-3490-47e8-99c2-7235119fd1c5', '나이아신아마이드', '히알루론산(소듐하이알루로네이트)', 'synergy', '히알루론산이 수분을 끌어오고 나이아신아마이드가 장벽 기능을 도와 보습이 더 오래갑니다. 히알루론산을 먼저, 나이아신아마이드를 그다음에 얹으면 무난합니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
-VALUES ('a140a1c4-cc2c-4d6e-ae37-82d3cc9856a6', '레티놀', '히알루론산', 'synergy', '레티놀 사용 초기에 나타나는 건조함과 각질을 히알루론산이 완화해 줄 수 있습니다. 밤에 레티놀을 바른 뒤 보습층으로 겹쳐 올리는 순서를 권합니다.', 'seed');
+VALUES ('a140a1c4-cc2c-4d6e-ae37-82d3cc9856a6', '레티놀', '히알루론산(소듐하이알루로네이트)', 'synergy', '레티놀 사용 초기에 나타나는 건조함과 각질을 히알루론산이 완화해 줄 수 있습니다. 밤에 레티놀을 바른 뒤 보습층으로 겹쳐 올리는 순서를 권합니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('7109ca57-e03d-4e89-a091-89bb04d2f8cc', '레티놀', '세라마이드', 'synergy', '세라마이드가 피부 장벽 지질을 채워 레티놀 적응 기간의 자극감을 줄이는 데 도움이 될 수 있습니다. 저녁에 레티놀 후 세라마이드 크림으로 덮어 마무리합니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
@@ -20,11 +20,11 @@ VALUES ('4f3fc446-f807-46a0-b811-b41fc28ead39', '나이아신아마이드', '레
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('8e1ec970-75a4-486d-927b-ecda92050a2f', '나이아신아마이드', '살리실릭애씨드', 'synergy', '살리실릭애씨드가 모공 속 각질과 피지를 정리하고 나이아신아마이드가 번들거림과 붉은기를 다독여 줄 수 있습니다. 저녁에 살리실릭애씨드를 먼저 쓰고 나이아신아마이드로 마무리합니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
-VALUES ('ecba917b-0ab5-4a23-a2ec-4af74bca5aee', '글라이콜릭애씨드', '히알루론산', 'synergy', '각질 정돈 뒤 비어 있는 수분을 히알루론산이 채워 당김을 줄여 줍니다. 밤에 글라이콜릭애씨드를 쓰고 히알루론산으로 이어 바르되 다음 날 자외선차단은 꼭 챙깁니다.', 'seed');
+VALUES ('ecba917b-0ab5-4a23-a2ec-4af74bca5aee', '글라이콜릭애씨드', '히알루론산(소듐하이알루로네이트)', 'synergy', '각질 정돈 뒤 비어 있는 수분을 히알루론산이 채워 당김을 줄여 줍니다. 밤에 글라이콜릭애씨드를 쓰고 히알루론산으로 이어 바르되 다음 날 자외선차단은 꼭 챙깁니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('890703bf-0eb3-420a-90ca-040ecdd98413', '세라마이드', '콜레스테롤', 'synergy', '피부 장벽을 이루는 지질끼리의 조합이라 함께 있을 때 장벽 회복에 더 유리합니다. 세안 후 마지막 단계 크림으로 사용하는 것이 일반적입니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
-VALUES ('ca80f562-75f0-428a-8f3c-28591abc2f5c', '스쿠알란', '히알루론산', 'synergy', '히알루론산이 끌어온 수분을 스쿠알란이 덮어 증발을 늦춰 줍니다. 히알루론산을 촉촉한 피부에 먼저 바르고 스쿠알란을 위에 얇게 올립니다.', 'seed');
+VALUES ('ca80f562-75f0-428a-8f3c-28591abc2f5c', '스쿠알란', '히알루론산(소듐하이알루로네이트)', 'synergy', '히알루론산이 끌어온 수분을 스쿠알란이 덮어 증발을 늦춰 줍니다. 히알루론산을 촉촉한 피부에 먼저 바르고 스쿠알란을 위에 얇게 올립니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('8c0b1751-0984-4475-bfc1-2c463a1281a9', '마데카소사이드', '판테놀', 'synergy', '둘 다 진정과 보습에 쓰이는 성분이라 예민해진 피부의 편안함을 함께 도울 수 있습니다. 아침·저녁 어느 때나 자극이 느껴지는 시기에 사용하기 좋습니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
@@ -34,9 +34,9 @@ VALUES ('db0cb53a-8168-4d74-a2b1-45e31797728f', '나이아신아마이드', '트
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('2c8563e0-e07e-4220-8c2c-652d2fd855e6', '나이아신아마이드', '아젤라익애씨드', 'synergy', '붉은기와 얼룩덜룩한 톤이 고민인 피부에서 함께 쓰이며 서로의 사용감을 보완합니다. 저녁에 얇게 바르고 보습으로 마무리하는 순서를 권합니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
-VALUES ('2ad367b3-9f4f-42cc-86dd-6e6f12346d61', '나이아신아마이드', '알파-아부틴', 'synergy', '멜라닌 생성 단계와 전달 단계에 각각 작용해 톤 케어를 함께 거들 수 있습니다. 아침·저녁 모두 사용 가능하지만 낮에는 자외선차단이 필수입니다.', 'seed');
+VALUES ('2ad367b3-9f4f-42cc-86dd-6e6f12346d61', '나이아신아마이드', '알파-알부틴', 'synergy', '멜라닌 생성 단계와 전달 단계에 각각 작용해 톤 케어를 함께 거들 수 있습니다. 아침·저녁 모두 사용 가능하지만 낮에는 자외선차단이 필수입니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
-VALUES ('2b453fb1-a9c2-4da1-baa5-4f6187a8d191', '펩타이드', '히알루론산', 'synergy', '히알루론산이 채운 수분 위에서 펩타이드가 탄력 케어를 거들어 매끈한 결을 만드는 데 도움이 될 수 있습니다. 묽은 히알루론산을 먼저, 펩타이드 세럼을 나중에 바릅니다.', 'seed');
+VALUES ('2b453fb1-a9c2-4da1-baa5-4f6187a8d191', '펩타이드', '히알루론산(소듐하이알루로네이트)', 'synergy', '히알루론산이 채운 수분 위에서 펩타이드가 탄력 케어를 거들어 매끈한 결을 만드는 데 도움이 될 수 있습니다. 묽은 히알루론산을 먼저, 펩타이드 세럼을 나중에 바릅니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('1e8fd1e8-f065-4a21-8bd3-c8f4aec22e42', '세라마이드', '우레아', 'synergy', '우레아가 두꺼운 각질을 부드럽게 하고 세라마이드가 장벽을 채워 거칠어진 피부에 함께 쓰기 좋습니다. 팔꿈치·발뒤꿈치처럼 각질이 두꺼운 부위에 저녁에 사용하면 좋습니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
@@ -58,7 +58,7 @@ VALUES ('5bae9c3e-a644-438e-844c-cad677441421', '레티놀', '아스코빅애씨
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('6dc4278b-7951-4841-b7eb-999967f202f0', '레티놀', '아젤라익애씨드', 'conflict', '두 성분 모두 초기 적응기에 따가움과 붉어짐이 나타날 수 있어 동시에 시작하면 원인을 구분하기 어렵습니다. 한 가지에 먼저 적응한 뒤 다른 하나를 다른 날에 추가하는 방식이 좋습니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
-VALUES ('0abd8949-5dc7-4f80-8c38-c9fb5babfbf0', '레티놀', '티트리오일', 'conflict', '티트리오일은 그 자체로 자극이 될 수 있어 레티놀과 겹치면 건조함과 홍조가 함께 심해질 수 있습니다. 부분 사용으로 제한하거나 레티놀을 바르지 않는 날에만 사용하세요.', 'seed');
+VALUES ('0abd8949-5dc7-4f80-8c38-c9fb5babfbf0', '레티놀', '티트리오일(티트리잎오일)', 'conflict', '티트리오일은 그 자체로 자극이 될 수 있어 레티놀과 겹치면 건조함과 홍조가 함께 심해질 수 있습니다. 부분 사용으로 제한하거나 레티놀을 바르지 않는 날에만 사용하세요.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
 VALUES ('16664012-054b-408f-8f8d-b2f2d9f45640', '레티놀', '유황', 'conflict', '유황은 피지와 각질을 강하게 건조시켜 레티놀과 같이 쓰면 피부가 지나치게 마를 수 있습니다. 유황 제품은 국소 부위에만, 레티놀과 다른 날에 사용하는 편이 낫습니다.', 'seed');
 INSERT IGNORE INTO ingredient_pairs (id, ingredient_a, ingredient_b, kind, description, source)
@@ -95,9 +95,9 @@ VALUES ('44f48c18-f39e-4b1b-be6e-95b2a73e657b', 'concern', '여드름·트러블
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)
 VALUES ('a6fe6f94-fca4-47d0-b49e-a263c5382432', 'concern', '여드름·트러블', '아젤라익애씨드', 'helps', '각질 정돈과 진정에 도움을 주며 트러블 자국이 함께 고민인 피부의 경우 선택할 수 있습니다.', '초기에 따끔거림이나 건조함이 나타날 수 있습니다.', 'seed');
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)
-VALUES ('6f98d1ab-6181-474c-937c-c77265af8b14', 'concern', '여드름·트러블', '티트리오일', 'helps', '국소 진정 목적으로 오래 쓰여온 정유로, 부분적인 트러블 부위 관리에 사용할 수 있습니다.', '원액은 자극이 강하므로 희석해 쓰고, 정유에 알레르기 반응이 있을 수 있어 패치 테스트를 권합니다.', 'seed');
+VALUES ('6f98d1ab-6181-474c-937c-c77265af8b14', 'concern', '여드름·트러블', '티트리오일(티트리잎오일)', 'helps', '국소 진정 목적으로 오래 쓰여온 정유로, 부분적인 트러블 부위 관리에 사용할 수 있습니다.', '원액은 자극이 강하므로 희석해 쓰고, 정유에 알레르기 반응이 있을 수 있어 패치 테스트를 권합니다.', 'seed');
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)
-VALUES ('76f33577-9da9-4d19-a185-a1e272acc839', 'concern', '건조함', '히알루론산', 'helps', '수분을 끌어당겨 붙잡는 보습 성분으로, 속당김이 있는 피부의 경우 즉각적인 수분감을 더하는 데 도움이 될 수 있습니다.', '건조한 환경에서는 단독 사용 시 수분이 증발할 수 있어 위에 유분 제형을 덧발라 잠가주는 것이 좋습니다.', 'seed');
+VALUES ('76f33577-9da9-4d19-a185-a1e272acc839', 'concern', '건조함', '히알루론산(소듐하이알루로네이트)', 'helps', '수분을 끌어당겨 붙잡는 보습 성분으로, 속당김이 있는 피부의 경우 즉각적인 수분감을 더하는 데 도움이 될 수 있습니다.', '건조한 환경에서는 단독 사용 시 수분이 증발할 수 있어 위에 유분 제형을 덧발라 잠가주는 것이 좋습니다.', 'seed');
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)
 VALUES ('ab92d645-6efa-481e-8984-f0c2169f59d2', 'concern', '건조함', '세라마이드', 'helps', '피부 장벽을 이루는 지질 성분으로, 장벽이 약해져 수분을 잃기 쉬운 피부의 경우 보완에 도움을 줄 수 있습니다.', NULL, 'seed');
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)
@@ -115,7 +115,7 @@ VALUES ('001cd169-8d8e-452f-b55b-506296b0f932', 'concern', '유분·번들거림
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)
 VALUES ('15f473fa-a9fe-4170-ab4a-acb082e47249', 'concern', '유분·번들거림', '클레이(카올린·벤토나이트)', 'helps', '피지와 노폐물을 흡착하는 성질이 있어 번들거림이 고민인 피부의 경우 워시오프 팩 형태로 활용할 수 있습니다.', '자주 사용하면 필요한 유분까지 뺏겨 당김이 생길 수 있습니다.', 'seed');
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)
-VALUES ('9665c500-d90f-4e10-a7f2-85c4a9ff6f8a', 'concern', '유분·번들거림', '히알루론산', 'helps', '유분 없이 수분만 채워주어 수분·유분 균형이 무너진 피부의 경우 가벼운 보습 수단이 됩니다.', NULL, 'seed');
+VALUES ('9665c500-d90f-4e10-a7f2-85c4a9ff6f8a', 'concern', '유분·번들거림', '히알루론산(소듐하이알루로네이트)', 'helps', '유분 없이 수분만 채워주어 수분·유분 균형이 무너진 피부의 경우 가벼운 보습 수단이 됩니다.', NULL, 'seed');
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)
 VALUES ('47a72729-f53e-44ee-ac51-46e7674f865e', 'concern', '넓은 모공', '나이아신아마이드', 'helps', '피지 조절과 피부결 개선에 도움을 주어 모공이 도드라져 보이는 피부의 경우 완화된 인상을 줄 수 있습니다.', '고농도에서 자극감이 나타날 수 있습니다.', 'seed');
 INSERT IGNORE INTO ingredient_effects (id, scenario_kind, scenario, ingredient, relation, description, caution, source)

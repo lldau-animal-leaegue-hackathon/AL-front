@@ -9,6 +9,7 @@ import { stepIcon } from "@/lib/stepIcon";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import type { Product } from "@/types/skincare";
 
+import { toMessage } from "../hooks/useProductRegister";
 // 검색 결과 모달(`ProductSearchModal`)과 같은 껍데기를 쓴다 — 한 파일을 함께 import 한다.
 import styles from "./productModal.module.css";
 
@@ -68,11 +69,12 @@ export function PopularProductModal({
       });
       setSaved(true);
     } catch (cause: unknown) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "선반에 담지 못했어요. 잠시 후 다시 시도해 주세요.",
-      );
+      /*
+       * `cause.message` 를 그대로 쓰면 ApiError 가 만든 `API 503 Service Unavailable`
+       * 이 노출된다 — 서버가 body 에 담아 준 한글 안내가 버려진다(m11).
+       * 문구 생성은 등록 경로와 같은 toMessage 한 곳에서만 한다.
+       */
+      setError(toMessage(cause, "선반에 담지 못했어요"));
     } finally {
       setSaving(false);
     }

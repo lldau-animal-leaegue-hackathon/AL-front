@@ -102,11 +102,18 @@ export function ProductForm({
     phase === "saving" ||
     phase === "done";
   const busy = searching || modalOpen;
+  /*
+   * 부모 가드용 신호는 폼 disabled 용 `busy` 와 **다르다**(m6).
+   * `done` 은 이미 끝난 상태라 리마운트로 잃을 게 없는데, 여기에 포함하면
+   * ScanWorkspace 의 `if (!formBusy)` 가드가 인기 탭 카드 선택을 아무 표시 없이 버린다
+   * (탭만 옮겨지고 폼은 이전 입력 그대로 남는다).
+   */
+  const inProgress = searching || (modalOpen && phase !== "done");
 
   // 진행 여부를 부모(ScanWorkspace)에 알린다 — 진행 중 인기 카드 선택이 폼을 리마운트하지 않게(m11).
   useEffect(() => {
-    onBusyChange(busy);
-  }, [busy, onBusyChange]);
+    onBusyChange(inProgress);
+  }, [inProgress, onBusyChange]);
 
   /*
    * 탭이 숨겨지면 카메라 상태도 닫는다(M5). 스트림 자체는 아래 렌더 게이트

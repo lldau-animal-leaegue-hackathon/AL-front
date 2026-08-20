@@ -5,7 +5,11 @@
 # - 자격 증명을 스크립트에 넣지 않는다. 배포 디렉토리의 .env(=compose 가 쓰는 그 파일)를
 #   읽는다. 경로는 인자로 받고 기본값은 이 스크립트 기준 상대 경로다 —
 #   서버 경로를 하드코딩하면 레포 규칙(식별자 금지) 위반이고 이식성도 잃는다.
-# - 비밀번호를 커맨드라인에 두지 않는다(`ps` 에 보인다). docker exec -e 로 넘긴다.
+# - 비밀번호를 **어느 프로세스의 argv 에도** 두지 않는다(호스트 `ps` 에 보인다 —
+#   다른 서비스와 공유하는 단일 서버다). `-e NAME=값` 은 docker 클라이언트 argv 에
+#   평문이 그대로 들어가므로 쓰지 않는다. 값 없는 `-e NAME` 만 주면 docker 가
+#   **클라이언트 환경변수에서 값을 복사**하므로 argv 에는 이름만 남는다.
+#   되돌려서 `-e MYSQL_PWD="$DB_PASSWORD"` 로 쓰면 DB 비밀번호가 ps 에 노출된다.
 # - **조용한 실패가 백업의 전형적 사망 원인**이라 검증 없이는 성공으로 치지 않는다:
 #   빈 파일 / gzip 깨짐 / 덤프 중단(마지막 줄 "Dump completed" 없음)이면 exit 1.
 # - 보관은 최근 3개뿐이다. 서버 디스크가 91% 라 더 쌓으면 디스크가 먼저 죽는다.
@@ -56,7 +60,8 @@ trap 'rm -f "$OUT"' EXIT
 #    지우면 "0바이트 백업을 매일 성공으로 보고하는" 상태가 된다.
 # --single-transaction: InnoDB 를 락 없이 일관 스냅샷으로 뜬다(서비스 중단 없음).
 # --default-character-set=utf8mb4: 한글 제품명·성분명이 ??? 로 깨지는 것을 막는다.
-docker exec -e MYSQL_PWD="$DB_PASSWORD" -e MARIADB_PWD="$DB_PASSWORD" "$DB_CONTAINER" \
+MYSQL_PWD="$DB_PASSWORD" MARIADB_PWD="$DB_PASSWORD" \
+  docker exec -e MYSQL_PWD -e MARIADB_PWD "$DB_CONTAINER" \
   mariadb-dump --single-transaction --default-character-set=utf8mb4 \
   -u "$DB_USER" "$DB_NAME" | gzip -c >"$OUT" ||
   die "덤프 실패 (컨테이너=$DB_CONTAINER)"
