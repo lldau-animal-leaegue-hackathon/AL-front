@@ -1,0 +1,137 @@
+/* 성분 상세 모달.
+   DESIGN.md Modals 스펙을 따른다: 중앙 정렬 · 32px 패딩 · radius-xl(24px).
+   (기존 productModal 은 스펙 미달로 design-debt 에 있다 — 새 모달은 스펙대로 간다.) */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100; /* 하단 탭바(50) 위 — productModal 과 같은 층 */
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  /* DESIGN.md Glass Layers: 반투명 + blur. 스크림 토큰은 모드와 무관하게 검다 —
+     inverse-surface 는 다크에서 밝게 뒤집혀 흰 오버레이가 된다(productModal 과 동일 규칙). */
+  background: color-mix(in srgb, var(--scrim) 72%, transparent);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: min(85dvh, 720px);
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card-hover);
+  overflow: hidden;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 32px 0;
+}
+
+.title {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+  overflow-wrap: anywhere;
+}
+
+.close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--surface-container);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px 32px 32px;
+  overflow-y: auto;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.groupTitle {
+  font: var(--text-body-lg);
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.warnTitle {
+  color: var(--error);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.itemHead {
+  font: var(--text-body-md);
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.desc {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.caution {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  line-height: 1.5;
+}
+
+.empty {
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--surface-container-low);
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  line-height: 1.5;
+}
+
+.disclaimer {
+  color: var(--outline);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  line-height: 1.6;
+}

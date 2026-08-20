@@ -1,0 +1,82 @@
+/* lg(1024px) 미만에서는 BottomNav 가 담당한다. 여기서는 아예 렌더 영역을 없앤다. */
+.nav {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 60; /* 고정 헤더(z-index 50)보다 위 — 사이드바가 헤더를 가로지른다 */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: var(--sidebar-w);
+    height: 100dvh;
+    padding: 24px 16px;
+    /* 가로모드 노치 대응 — viewport-fit=cover 를 켰으므로 실제 값이 들어온다 */
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    border-right: 1px solid var(--outline-variant);
+    background: var(--surface-container-lowest);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    padding: 0 12px;
+  }
+
+  .brandIcon {
+    color: var(--primary);
+  }
+
+  .brandName {
+    font: var(--text-headline-md);
+    color: var(--on-surface);
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    /* 최소 44px 히트 영역 — 12+20+12 = 44 */
+    padding: 12px;
+    border-radius: var(--radius-md);
+    color: var(--on-surface-variant);
+    font: var(--text-body-md);
+    font-weight: 500;
+    transition:
+      background 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .item:hover {
+    background: var(--surface-container);
+    color: var(--on-surface);
+  }
+
+  .active {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    font-weight: 600;
+  }
+
+  .active:hover {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+  }
+
+  .label {
+    line-height: 20px;
+  }
+}

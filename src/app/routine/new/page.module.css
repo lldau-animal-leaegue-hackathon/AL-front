@@ -1,0 +1,8 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--page-pt) var(--page-inline) var(--page-pb);
+}

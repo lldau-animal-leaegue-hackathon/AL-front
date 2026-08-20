@@ -4,7 +4,10 @@
   left: 0;
   z-index: 50;
   width: 100%;
-  padding: 16px var(--margin-mobile) calc(16px + env(safe-area-inset-bottom));
+  /* env() 폴백 0px 필수 — 없으면 미지원 브라우저에서 calc() 전체가 무효가 되어
+     하단 여백이 통째로 사라진다(globals.css 셸 치수 절과 같은 규칙). */
+  padding: 16px var(--margin-mobile)
+    calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--surface-container);
   background: color-mix(
     in srgb,
@@ -62,6 +65,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  /* 터치 타깃 44px 확보(R7). 패딩이 없어 줄높이 24px 이 곧 클릭 영역이었다 —
+     부모 .secondary 는 padding 이 수평뿐이고 아이콘도 16px 이라 높이를 늘려 줄
+     요소가 없었다. 루틴 수행 중 젖은 손으로 누르는 버튼이라 특히 중요하다. */
+  min-height: 44px;
   font: var(--text-body-md);
   font-weight: 500;
   color: var(--on-surface-variant);

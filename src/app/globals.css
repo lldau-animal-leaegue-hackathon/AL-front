@@ -8,7 +8,11 @@
 
 :root {
   /* ── 색 (DESIGN.md frontmatter 그대로) ───────────────────────────
-     라이트 전용 팔레트다. 다크 팔레트는 DESIGN.md에 정의돼 있지 않다. */
+     이 :root 블록은 라이트 팔레트다. 다크 팔레트는 DESIGN.md에 별도로 정의돼 있지
+     않지만, Material 3 톤 체계상 -fixed 계열 토큰(톤 10/30/80/90)이 다크에 필요한
+     값을 대부분 이미 담고 있어 새로 지어내지 않고 도출했다(R-Step 6, 파일 하단
+     `@media (prefers-color-scheme: dark)` 참고, 근거는
+     docs/plans/2026-08-18-skincare-core/responsive.md "다크 팔레트 도출(Q-R2)" 절). */
 
   /* surface / 배경 계층 */
   --surface: #f8f9fa;
@@ -25,6 +29,9 @@
   --on-surface-variant: #424844;
   --inverse-surface: #2e3132;
   --inverse-on-surface: #f0f1f2;
+  /* 모달 스크림 — **모드와 무관하게 검은 계통**이어야 한다. inverse-surface 를 쓰면
+     다크에서 밝은 색으로 뒤집혀 흰 오버레이가 된다(사용자 보고 2026-08-20). */
+  --scrim: #191c1d;
   --outline: #727973;
   --outline-variant: #c2c8c2;
 
@@ -80,13 +87,21 @@
     "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --text-display-lg: 700 48px/56px var(--font-sans);
-  --text-headline-lg: 600 32px/40px var(--font-sans);
-  --text-headline-lg-mobile: 600 24px/32px var(--font-sans);
-  --text-headline-md: 600 24px/32px var(--font-sans);
-  --text-body-lg: 400 18px/28px var(--font-sans);
+  /* 제목 계열은 clamp()로 유동화한다 — 뷰포트가 좁아지면 자동으로 줄어든다.
+     예전에는 -mobile 접미사 토큰을 미디어 쿼리로 갈아끼웠는데, 빠뜨리면
+     320px 화면에 48px 제목이 그대로 나왔다. */
+  --text-display-lg: 700 clamp(32px, 6vw, 48px) / 1.15 var(--font-sans);
+  --text-headline-lg: 600 clamp(24px, 4vw, 32px) / 1.25 var(--font-sans);
+  --text-headline-md: 600 clamp(20px, 3vw, 24px) / 1.33 var(--font-sans);
+  --text-body-lg: 400 clamp(16px, 1.5vw, 18px) / 1.55 var(--font-sans);
+
+  /* 본문·라벨은 고정한다. 유동시키면 가독성 기준선이 흔들린다. */
   --text-body-md: 400 16px/24px var(--font-sans);
   --text-label-sm: 600 12px/16px var(--font-sans);
+
+  /* @deprecated — --text-headline-lg 가 이제 유동이라 필요 없다.
+     기존 소비처(profile .sectionTitle)가 남아 있어 당장 지우지 않는다. */
+  --text-headline-lg-mobile: 600 24px/32px var(--font-sans);
 
   /* font 단축 속성에는 letter-spacing이 들어가지 않아 따로 둔다 */
   --tracking-display-lg: -0.02em;
@@ -104,15 +119,137 @@
   /* ── 간격 ────────────────────────────────────────────────────── */
   --space-base: 8px; /* 8px 베이스라인. 나머지 간격은 이 배수로 */
   --space-gutter: 16px;
-  --margin-mobile: 20px;
-  --margin-desktop: 40px;
+  --margin-mobile: 20px; /* @deprecated — --page-inline 을 쓸 것 */
+  --margin-desktop: 40px; /* @deprecated — --page-inline 을 쓸 것 */
   --container-max: 1200px;
+
+  /* ── 브레이크포인트 (단일 출처) ────────────────────────────────
+     CSS 변수는 미디어 쿼리 조건에 못 쓴다(`@media (min-width: var(--x))` 는 무효).
+     값을 직접 적되, 어떤 값이 무엇을 뜻하는지는 여기만 보면 되게 한다.
+
+       sm   480px   큰 폰 / 폴더블 펼침
+       md   768px   태블릿 세로 — 벤토 그리드 시작
+       lg  1024px   태블릿 가로·노트북 — 좌측 사이드바 등장, 하단 탭바 사라짐
+       xl  1280px   데스크톱 — 여백 최대, --container-max 도달                */
+
+  /* ── 셸 치수 ──────────────────────────────────────────────────
+     페이지마다 88px·96px·120px·180px 같은 매직 넘버로 고정 헤더/탭바를 피하고 있었다.
+     헤더 높이가 바뀌면 4곳을 손으로 고쳐야 했고, 하나 놓치면 내용이 헤더에 가렸다. */
+  --header-h: 72px; /* TopAppBar / PageHeader / RunHeader 공통 */
+  --nav-h: 76px; /* BottomNav (safe-area 제외) */
+  --sidebar-w: 240px; /* lg 이상 좌측 사이드바 */
+
+  /* 루틴 수행 화면의 고정 액션바(StepActions) 높이.
+     --nav-h 와 따로 두는 이유: 이 화면은 몰입 화면이라 BottomNav 가 숨고
+     대신 StepActions 가 뜬다. 회피 대상이 다르므로 --page-pb 를 재사용하면 안 된다
+     (--page-pb 는 lg 이상에서 40px 로 줄지만 액션바는 그 구간에도 계속 떠 있다).
+     실측(2026-08-18): 390·768px 에서 149.8px, 1440px 에서 152.89px.
+     --text-body-lg 가 clamp 라 넓은 화면에서 .primary 가 커지는 만큼 바도 커진다.
+     156px 는 실측 최대치 + 폰트 폴백(Pretendard CDN 실패 시) 여유 3px 이다. */
+  --step-actions-h: 156px;
+
+  /* 본문이 고정 요소를 피하는 여백 — 각 페이지는 이 셋만 쓴다.
+     env() 폴백 0px 을 반드시 넣는다. 없으면 미지원 브라우저에서 calc() 전체가
+     무효가 되어 여백이 통째로 사라진다. */
+  --page-pt: calc(var(--header-h) + 16px);
+  --page-pb: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 24px);
+  --page-inline: clamp(16px, 4vw, 40px);
 
   /* ── 그림자 ──────────────────────────────────────────────────── */
   --shadow-card: 0 4px 20px rgb(26 43 68 / 4%);
   --shadow-card-hover: 0 8px 32px rgb(26 43 68 / 8%);
   --glass-blur: 12px;
   --glass-fill: rgb(255 255 255 / 85%);
+
+  /* 라이트·다크 둘 다 지원한다고 브라우저에 알린다 — OS 설정에 맞춰 스크롤바·
+     <input type="date"> 같은 네이티브 위젯 색도 함께 전환된다.
+     다크 값 자체는 아래 `@media (prefers-color-scheme: dark)` 블록에서 재정의한다(R-Step 6). */
+  color-scheme: light dark;
+}
+
+/* lg 이상에서는 하단 탭바 대신 좌측 사이드바를 쓴다 → 아래 여백이 필요 없다. */
+@media (min-width: 1024px) {
+  :root {
+    --page-pb: 40px;
+  }
+}
+
+/* ---------------------------------------------------------------
+ * 다크 팔레트 (R-Step 6, Q-R2)
+ *
+ * 색을 새로 창작하지 않았다 — 라이트 팔레트의 -fixed 계열 토큰(톤 10/30/80/90)이
+ * 다크에 필요한 값을 대부분 다른 이름으로 이미 담고 있어서, 그 값을 그대로 옮겨왔다.
+ * -fixed 계열 토큰 자체(--primary-fixed 등)는 M3 설계상 라이트/다크에서 값이 바뀌지
+ * 않는 상수라 여기서 재정의하지 않는다. 톤 대응표·도출 근거는
+ * docs/plans/2026-08-18-skincare-core/responsive.md의 "다크 팔레트 도출(Q-R2)" 절 참고.
+ *
+ * :root 토큰만 재정의한다 — 컴포넌트가 전부 var(--x)를 쓰므로 이것만으로 전 화면이
+ * 전환된다. 컴포넌트 CSS에 hex 하드코딩이 남아 있으면 거기만 다크에서 깨진다.
+ * --------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* surface / 배경 계층 — 대응표 값 + 새로 계산한 중성 표면 단계 */
+    --surface: #101415; /* 신규 계산 (t6) */
+    --surface-dim: #101415; /* 신규 계산 — 다크 스킴에서는 dim이 base와 같다 (M3) */
+    --surface-bright: #363a3b; /* 신규 계산 (t24) */
+    --surface-container-lowest: #0b0f10; /* 신규 계산 (t4) */
+    --surface-container-low: #191c1d; /* 대응표 = 라이트 --on-surface(10) */
+    --surface-container: #1d2021; /* 신규 계산 (t12) */
+    --surface-container-high: #272b2c; /* 신규 계산 (t17) */
+    --surface-container-highest: #323637; /* 신규 계산 (t22) */
+    --surface-variant: #424844; /* 신규 계산 */
+    --on-surface: #e1e3e4; /* 대응표 = 라이트 --surface-container-highest(90) */
+    --on-surface-variant: #c2c8c2; /* 대응표 = 라이트 --outline-variant(80) */
+    --inverse-surface: #e1e3e4; /* 대응표 = 라이트 --surface-container-highest(90) */
+    --inverse-on-surface: #2e3132; /* 대응표 = 라이트 --inverse-surface(20) */
+    --scrim: #000000; /* 다크에서는 더 깊은 검정 — 뒤 화면과 확실히 분리된다 */
+    --outline: #8c928c; /* 신규 계산 (t60) */
+    --outline-variant: #424844; /* 대응표 = 라이트 --on-surface-variant(30) */
+
+    /* primary */
+    --primary: #afcebb; /* 대응표 = 라이트 --inverse-primary(80) */
+    --on-primary: #1b3527; /* 신규 계산 — 톤10~30 사이 보간 */
+    --primary-container: #314c3e; /* 대응표 = 라이트 --on-primary-fixed-variant(30) */
+    --on-primary-container: #cbead6; /* 대응표 = 라이트 --primary-fixed(90) */
+    --inverse-primary: #466253; /* 대응표 = 라이트 --primary(40) */
+
+    /* secondary */
+    --secondary: #ddc2a5; /* 대응표 = 라이트 --secondary-fixed-dim(80) */
+    --on-secondary: #3e2d18; /* 신규 계산 — 톤10~30 사이 보간 */
+    --secondary-container: #56432e; /* 대응표 = 라이트 --on-secondary-fixed-variant(30) */
+    --on-secondary-container: #fbdec0; /* 대응표 = 라이트 --secondary-fixed(90) */
+
+    /* tertiary */
+    --tertiary: #b6c7e7; /* 대응표 = 라이트 --tertiary-fixed-dim(80) */
+    --on-tertiary: #20304a; /* 신규 계산 — 톤10~30 사이 보간 */
+    --tertiary-container: #374762; /* 대응표 = 라이트 --on-tertiary-fixed-variant(30) */
+    --on-tertiary-container: #d5e3ff; /* 대응표 = 라이트 --tertiary-fixed(90) */
+
+    /* error — 대응표에 없어 M3 표준 톤 80/20을 그대로 쓴다 */
+    --error: #ffb4ab;
+    --on-error: #690005;
+    --error-container: #93000a; /* 대응표 = 라이트 --on-error-container(30) */
+    --on-error-container: #ffdad6; /* 대응표 = 라이트 --error-container(90) */
+
+    /* 기존 화면이 쓰는 별칭 4개 — 빠뜨리면 그 화면만 라이트로 남는다 */
+    --background: #101415;
+    --foreground: #e1e3e4;
+    --muted: #c2c8c2;
+    --border: #424844;
+
+    /* BottomNav·StepActions의 backdrop-filter 배경. 라이트 값(흰 85%)을 그대로 두면
+       다크에서 "흰 판"이 뜬다. */
+    --glass-fill: rgb(29 32 33 / 85%);
+
+    /* 그림자는 어두운 배경에서 거의 안 보인다(라이트 값은 불투명도 4~8%라 다크에서는
+       사실상 무효). elevation의 주 표현은 --surface-container-* 단계 차이이고,
+       그림자는 어디까지나 보조로만 진하게 남긴다. */
+    --shadow-card: 0 4px 20px rgb(0 0 0 / 40%);
+    --shadow-card-hover: 0 8px 32px rgb(0 0 0 / 40%);
+
+    /* 스크롤바·<input type="date"> 같은 네이티브 위젯도 다크로 전환한다 */
+    color-scheme: dark;
+  }
 }
 
 /* ---------------------------------------------------------------

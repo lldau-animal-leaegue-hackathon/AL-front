@@ -77,8 +77,15 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  /* 모든 카드가 같은 크기여야 한다 — 행마다 높이가 달라지지 않게 1fr 로 맞춘다.
+     (ShelfSection.module.css .grid 와 같은 이유·같은 방식) */
+  grid-auto-rows: 1fr;
   gap: var(--space-gutter);
   list-style: none;
+}
+
+.grid > li {
+  display: flex;
 }
 
 @media (min-width: 768px) {

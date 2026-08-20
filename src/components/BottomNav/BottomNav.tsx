@@ -4,28 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Icon } from "@/components/Icon";
+import { NAV_TABS, isImmersive } from "@/components/nav/tabs";
 
 import styles from "./BottomNav.module.css";
 
-const TABS = [
-  { icon: "home", label: "홈", href: "/" },
-  { icon: "center_focus_strong", label: "스캔", href: "/scan" },
-  { icon: "event_repeat", label: "루틴", href: "/routine" },
-  { icon: "person", label: "프로필", href: "/profile" },
-] as const;
-
-// 루틴 수행 화면(/routine/am/1 …)은 한 가지 일에 집중시키는 화면이라
-// 탭바를 감춘다. 빠져나가는 길은 헤더의 닫기 버튼이다.
-const IMMERSIVE = /^\/routine\/(am|pm)\//;
-
+/** 모바일·태블릿 세로용 하단 탭바. lg 이상에서는 `SideNav` 가 대신한다(CSS 로 전환). */
 export function BottomNav() {
   const pathname = usePathname();
 
-  if (IMMERSIVE.test(pathname)) return null;
+  if (isImmersive(pathname)) return null;
 
   return (
     <nav className={styles.nav} aria-label="주요 메뉴">
-      {TABS.map((tab) => {
+      {NAV_TABS.map((tab) => {
         const active = pathname === tab.href;
 
         return (

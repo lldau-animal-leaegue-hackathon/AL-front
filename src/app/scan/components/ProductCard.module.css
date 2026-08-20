@@ -1,12 +1,17 @@
+/* 제품 카드 — 인기·검색·선반·성분별 추천이 공유한다. 표면은 card.module.css 의 .card. */
+
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+  /* 모든 카드가 같은 크기여야 한다(사용자 요청 2026-08-19).
+     height:100% 만으로는 같은 행 안에서만 맞고 행마다 달라진다. 선반의 "제품 추가"
+     카드가 220px 이라 그 값에 맞춘다. */
+  min-height: 220px;
   height: 100%;
   padding: 16px;
-  border-radius: var(--radius-md);
-  background: var(--surface-container-lowest);
-  box-shadow: var(--shadow-card);
   text-align: center;
   cursor: pointer;
   transition:
@@ -14,7 +19,12 @@
     transform 0.3s ease;
 }
 
-.card:hover {
+/* 누를 수 없는 카드(선반)는 손가락 커서를 주지 않는다 — 눌리는 줄 안다. */
+div.card {
+  cursor: default;
+}
+
+button.card:hover {
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-4px);
 }
@@ -24,39 +34,73 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  width: 64px;
-  height: 64px;
-  margin-bottom: 12px;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 16px;
   border-radius: var(--radius-full);
-  background: var(--surface-container-high);
-  color: var(--primary-container);
+  background: color-mix(in srgb, var(--surface-variant) 30%, transparent);
+  /* --primary-container 는 '컨테이너 배경' 역할이라 다크에서 같이 어두워져
+     어두운 표면 위 아이콘으로는 대비가 무너진다. 표면 위 강조색은 --primary 다. */
+  color: var(--primary);
 }
 
 .image {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.name {
-  margin-bottom: 4px;
-  font: var(--text-label-sm);
+.chip {
+  margin-bottom: 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-variant) 50%, transparent);
+  color: var(--on-surface-variant);
+  font-size: 10px;
   letter-spacing: var(--tracking-label-sm);
+}
+
+.name {
+  font: var(--text-body-md);
+  font-weight: 600;
   color: var(--on-surface);
-  /* 상품명이 길어도 카드 높이가 들쭉날쭉해지지 않게 두 줄로 자른다 */
+  /* 제품명이 길어도 카드 높이가 들쭉날쭉해지지 않게 두 줄로 자른다 */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
 
-.brand {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--outline);
+.note {
+  margin-top: 4px;
+  font: var(--text-label-sm);
+  font-weight: 400;
+  color: var(--on-surface-variant);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
-.price {
-  margin-top: 8px;
-  font: var(--text-label-sm);
-  letter-spacing: var(--tracking-label-sm);
-  color: var(--primary);
+.noteAlert {
+  color: var(--error);
+}
+
+.flagged {
+  border: 1px solid color-mix(in srgb, var(--error) 20%, transparent);
+}
+
+.flag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--error);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  button.card:hover {
+    transition: none;
+    transform: none;
+  }
 }

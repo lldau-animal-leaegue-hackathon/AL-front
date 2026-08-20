@@ -6,11 +6,22 @@
   max-width: var(--container-max);
   /* 상단 고정 앱바 + 하단 고정 탭바를 피한다 */
   margin: 0 auto;
-  padding: 88px var(--margin-mobile) 120px;
+  padding: var(--page-pt) var(--page-inline) var(--page-pb);
+}
+
+/* Step 6 에서 옮겨 온 섹션(선반·리포트·기록)의 제목. 옛 concern/page.module.css 에서 왔다. */
+.sectionTitle {
+  font: var(--text-headline-lg-mobile);
+  color: var(--on-surface);
+}
+
+.sectionBody {
+  margin-top: 24px;
 }
 
 @media (min-width: 768px) {
-  .main {
-    padding: 96px var(--margin-desktop) 40px;
+  .sectionTitle {
+    font: var(--text-headline-lg);
+    letter-spacing: var(--tracking-headline-lg);
   }
 }

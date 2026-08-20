@@ -1,0 +1,130 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  /* BottomNav(50)·SideNav(60) 위에 덮는다 */
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* 노치·홈 인디케이터를 피한다. viewport-fit=cover 를 켰으므로 실제 값이 들어온다 */
+  padding: calc(16px + env(safe-area-inset-top, 0px))
+    max(16px, env(safe-area-inset-right, 0px))
+    calc(16px + env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
+  background: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  overflow-y: auto;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  font: var(--text-headline-md);
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  /* 10 + 24 + 10 = 44px 터치 타깃 */
+  padding: 10px;
+  border-radius: var(--radius-full);
+  color: var(--inverse-on-surface);
+}
+
+.close:hover {
+  background: color-mix(in srgb, var(--inverse-on-surface) 16%, transparent);
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  /* 가로모드에서 영상이 화면을 넘지 않게 묶어 둔다 */
+  max-height: 62dvh;
+  border-radius: var(--radius-xl);
+  /* 테마 표면이 아니라 카메라 영상이 로드되기 전/비율이 안 맞을 때 보이는 레터박스라
+     라이트/다크 무관하게 항상 검정이어야 한다 — 토큰화 대상이 아니다 */
+  background: #000;
+}
+
+/* stage 가 영상 원본 비율을 그대로 쓰므로 fill 로도 왜곡되지 않는다.
+   레터박스가 없어야 가이드 박스 좌표 = 잘라내는 좌표가 된다. */
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.roi {
+  position: absolute;
+  border: 2px solid var(--primary-fixed);
+  border-radius: var(--radius);
+  /* 박스 바깥을 어둡게 — 어디를 읽는지 한눈에 보이게 한다 */
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 45%);
+  pointer-events: none;
+}
+
+/* 잘라내기 전용이라 화면에는 필요 없다 */
+.canvas {
+  display: none;
+}
+
+.hint {
+  font: var(--text-body-md);
+  color: var(--outline-variant);
+  text-align: center;
+}
+
+.error {
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font: var(--text-body-md);
+}
+
+.shutter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: auto;
+  min-height: 56px;
+  padding: 16px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed);
+  font: var(--text-body-lg);
+  font-weight: 600;
+  transition: transform 0.15s ease;
+}
+
+.shutter:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.shutter:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 넓은 화면에서는 영상이 과하게 늘어나지 않게 가운데로 모은다 */
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+  }
+
+  .bar,
+  .stage,
+  .hint,
+  .error,
+  .shutter {
+    width: 100%;
+    max-width: 720px;
+  }
+}

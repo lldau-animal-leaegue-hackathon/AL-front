@@ -17,36 +17,22 @@
   list-style: none;
 }
 
+/* 실데이터엔 "성분 충돌" 같은 별도 종류가 없다(주의사항 프롬프트는 warning 하나뿐) —
+   그래서 kind 별 변주 없이 이 모양 하나만 쓴다. */
 .item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  border: 1px solid transparent;
+  border: 1px solid var(--error-container);
   border-radius: var(--radius);
+  background: color-mix(in srgb, var(--error-container) 30%, transparent);
 }
 
 .itemIcon {
   flex-shrink: 0;
   margin-top: 2px;
-}
-
-.warning {
-  border-color: var(--error-container);
-  background: color-mix(in srgb, var(--error-container) 30%, transparent);
-}
-
-.warning .itemIcon {
   color: var(--error);
-}
-
-.conflict {
-  border-color: var(--tertiary-fixed);
-  background: color-mix(in srgb, var(--tertiary-fixed) 30%, transparent);
-}
-
-.conflict .itemIcon {
-  color: var(--tertiary);
 }
 
 .itemTitle {
@@ -59,4 +45,32 @@
   font-size: 12px;
   line-height: 16px;
   color: var(--on-surface-variant);
+}
+
+/* 로딩/빈 상태 3종 공용 — 아이콘 + 한 줄 안내문 */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--text-body-md);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+}
+
+/* ProductForm.module.css 의 스피너와 같은 패턴(공유 모듈이 없어 그대로 복제) */
+.spinner {
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
 }

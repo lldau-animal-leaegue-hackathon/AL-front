@@ -1,0 +1,66 @@
+# main 푸시/머지 → Actions 가 이미지를 빌드해 Docker Hub 로 올리고,
+# 서버는 pull 만 한다 (사용자 결정 2026-08-20 — deploy key 없이).
+#
+# 서버에서 빌드하지 않는 이유: 디스크·CPU 를 다른 서비스와 나눠 쓰는 단일 서버라
+# 빌드 부하를 CI 로 옮긴다. 부수 효과로 GitHub deploy key(서버→클론)가 통째로 불필요.
+#
+# SSH 단계의 키는 서버 authorized_keys 의 forced command 로 **배포 스크립트만
+# 실행할 수 있게 묶여 있다** — 키가 새어도 서버에서 임의 명령을 못 돌린다.
+#
+# 필요한 저장소 시크릿(Settings → Secrets and variables → Actions):
+#   DOCKERHUB_USERNAME  Docker Hub 사용자명
+#   DOCKERHUB_TOKEN     Docker Hub 액세스 토큰(Read & Write)
+#   DEPLOY_HOST         서버 주소
+#   DEPLOY_USER         SSH 사용자
+#   DEPLOY_SSH_KEY      전용 개인 키(forced command 로 제한된 키)
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# 연달아 머지돼도 배포는 한 번에 하나씩.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # latest = 배포 대상, sha = 롤백 지점. 서버는 latest 만 pull 한다.
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/youtine:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/youtine:${{ github.sha }}
+          # GitHub Actions 캐시 — 의존성이 안 바뀌면 재빌드가 분 단위로 준다.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: 서버에서 pull + 재기동
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # forced command 키라 아래 script 는 사실상 장식이다 — 서버가 항상
+          # 배포 스크립트만 실행한다. 문서화를 위해 같은 경로를 적는다.
+          script: /home/ubuntu/youtine/deploy.sh
+          command_timeout: 10m

@@ -1,0 +1,122 @@
+/* 고민별 성분 사전 — "내 고민" 탭의 0원짜리 지식 경로. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+}
+
+/* 머리 전체가 접기/펼치기 버튼이다 — 펼쳐야 데이터를 불러온다. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.headText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.heading {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+.lead {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--on-surface-variant);
+}
+
+/* 시나리오 선택 — 밑줄 탭이 아니라 토글 알약이다(선택이 하나 또는 없음이라서). */
+.scenarios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scenario {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.scenarioActive {
+  border-color: transparent;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.desc {
+  font: var(--text-body-md);
+  color: var(--on-surface-variant);
+}
+
+.caution {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  line-height: 1.5;
+}
+
+.disclaimer {
+  color: var(--outline);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scenario {
+    transition: none;
+  }
+}

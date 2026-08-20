@@ -7,7 +7,9 @@
   justify-content: space-around;
   align-items: center;
   width: 100%;
-  padding: 8px 8px calc(24px + env(safe-area-inset-bottom));
+  /* env() 폴백 0px 필수 — 없으면 미지원 브라우저에서 calc() 전체가 무효가 되어
+     하단 여백이 통째로 사라진다(globals.css 셸 치수 절과 같은 규칙). */
+  padding: 8px 8px calc(24px + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   background: color-mix(in srgb, var(--surface) 85%, transparent);
   backdrop-filter: blur(var(--glass-blur));
@@ -42,8 +44,14 @@
   letter-spacing: var(--tracking-label-sm);
 }
 
-/* 데스크톱에서는 하단 탭 대신 넓은 그리드를 쓴다 (목업의 md:hidden) */
-@media (min-width: 768px) {
+/*
+ * lg(1024px) 부터 좌측 SideNav 가 대신한다.
+ *
+ * 예전 기준은 768px 이었는데 대체 네비가 없어서 **768px 이상에서 섹션 간 이동이
+ * 아예 불가능**했다(R1). 이제 숨김 기준을 사이드바 등장 시점과 정확히 맞춰
+ * 네비게이션이 비는 구간이 없다.
+ */
+@media (min-width: 1024px) {
   .nav {
     display: none;
   }

@@ -1,0 +1,52 @@
+.bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 12px var(--margin-mobile);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-card);
+}
+
+.back {
+  display: grid;
+  place-items: center;
+  /* 10px + 아이콘 24px + 10px = 44px (R7). 8px 이면 40px 라 4px 모자랐다 */
+  padding: 10px;
+  border-radius: var(--radius-full);
+  color: var(--on-surface);
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.back:hover {
+  background: var(--surface-container);
+  opacity: 0.8;
+}
+
+.title {
+  font: var(--text-headline-md);
+  color: var(--on-surface);
+}
+
+@media (min-width: 768px) {
+  .bar {
+    padding: 16px var(--margin-desktop);
+  }
+}
+
+/* 좌측 사이드바에 가려지지 않도록 (TopAppBar 와 같은 이유) */
+@media (min-width: 1024px) {
+  .bar {
+    left: var(--sidebar-w);
+  }
+}

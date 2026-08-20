@@ -1,0 +1,76 @@
+/* 스캔 탭의 상단 하위 메뉴. */
+
+.bar {
+  display: flex;
+  gap: 4px;
+  /* 균등분할이라 넘칠 일이 없지만, 폰트 폴백(Pretendard CDN 실패 → Malgun Gothic)으로
+     라벨이 넓어졌을 때 넘친 폭이 body 로 새어 페이지가 좌우로 흔들리는 것을 막는 안전망이다. */
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.bar::-webkit-scrollbar {
+  display: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* 네 탭이 항상 같은 폭이어야 한다(사용자 요청 2026-08-19).
+     `1 1 0` 이라 내용 폭과 무관하게 남은 공간을 정확히 4등분한다
+     (`flex: 1` 의 기본 basis 는 0% 라 결과는 같지만, 의도를 드러내려고 0 을 적는다). */
+  flex: 1 1 0;
+  /* 이게 없으면 flex 아이템의 min-width 가 auto 라 내용보다 작아지지 못한다
+     — 그 순간 균등분할이 깨지고 긴 탭만 넓어진다. */
+  min-width: 0;
+  /* 44px 이 하한(반응형 계획서 R7). 48px 는 8px 베이스라인에 맞으면서
+     BottomNav 항목(약 56px)보다 낮아 두 바가 시각적으로 구분된다. */
+  min-height: 48px;
+  /* 균등분할이라 셀 폭이 고정된다(390px 에서 86.5px). 여백을 10px 로 두면
+     가장 긴 "리포트"+아이콘(71px)이 66.5px 안에 안 들어가 잘린다. */
+  padding: 0 4px;
+  color: var(--on-surface-variant);
+  font: var(--text-body-md);
+  white-space: nowrap;
+  transition:
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/*
+ * ⛔ --primary-container 채움 알약을 쓰지 않는다. 그건 BottomNav·SideNav 의
+ *    "현재 위치" 시그널이고, 1024px 미만에서는 하단바가 항상 떠 있어서 같이 쓰면
+ *    한 화면에 활성 표시가 둘 생긴다. 상단은 투명 배경 + 밑줄로 간다.
+ *
+ * font-weight 를 바꾸지 않는 이유: 활성 탭만 굵어지면 폭이 변해 320px 여유를 먹는다.
+ * inset box-shadow 라 레이아웃 시프트도 0이다.
+ */
+.active {
+  color: var(--primary);
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+
+.item:hover {
+  color: var(--primary);
+}
+
+/*
+ * 아주 좁은 화면(320px 계열)에서는 아이콘을 뺀다.
+ * 실측: 아이콘을 두면 가용폭 288px 에 336px 이 들어가 47px 넘친다. 바 안에서 스크롤되긴
+ * 하지만 활성 탭이 화면 밖에 있을 수 있어 "지금 어디인지"를 못 본다. 라벨은 남으므로
+ * 뜻은 유지된다.
+ */
+@media (max-width: 360px) {
+  .item > :global(.material-symbols-outlined) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

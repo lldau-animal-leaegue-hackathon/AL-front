@@ -32,12 +32,16 @@
 .mark {
   flex-shrink: 0;
   margin-top: 2px;
-  color: var(--surface-container-highest);
+  /* --surface-container-highest 는 '표면 단계' 토큰이라 다크에서 배경(#0b0f10)과
+     거의 붙어 대비가 1.58 이었다. 체크 표시는 조작 가능한 UI 요소라
+     WCAG 1.4.11 기준 3:1 을 넘어야 한다. 테두리·비활성 표식용 토큰은 --outline 이다. */
+  color: var(--outline);
   transition: color 0.3s ease;
 }
 
 .item:hover .mark {
-  color: color-mix(in srgb, var(--primary) 50%, transparent);
+  /* 반투명(50%)이면 실효색이 뒤 배경에 끌려간다 — 완료 상태와 같은 --primary 를 쓴다 */
+  color: var(--primary);
 }
 
 .text {

@@ -1,0 +1,46 @@
+/* 주의사항 콜아웃. 배경이 --error-container 면 전경은 짝인 --on-error-container 를 쓴다
+   (고정 -fixed 계열을 섞으면 다크에서 대비가 무너진다). */
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, var(--error) 24%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+}
+
+.item {
+  position: relative;
+  padding-left: 14px;
+  font: var(--text-body-md);
+}
+
+.item::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: currentcolor;
+}

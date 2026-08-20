@@ -34,12 +34,37 @@ export const serverEnv = {
   get backendOrigin(): string {
     return required(process.env.BACKEND_ORIGIN, "BACKEND_ORIGIN");
   },
-  /** 네이버 검색 API 자격 증명. 라우트 핸들러에서만 읽는다. */
-  get naverClientId(): string {
-    return required(process.env.NAVER_CLIENT_ID, "NAVER_CLIENT_ID");
+  /**
+   * 헤드리스 Claude 실행 파일 경로. PATH 에 `claude` 가 있으면 기본값으로 충분하다.
+   * Windows 실측: 사용자 홈의 `.local\bin\claude.exe` (진짜 .exe 라 셸 없이 실행된다).
+   */
+  get claudeBin(): string {
+    return process.env.CLAUDE_BIN ?? "claude";
   },
-  get naverClientSecret(): string {
-    return required(process.env.NAVER_CLIENT_SECRET, "NAVER_CLIENT_SECRET");
+  /**
+   * 서버 MariaDB 접속 정보.
+   *
+   * ⚠️ **`NEXT_PUBLIC_` 을 붙이면 비밀번호가 브라우저 번들에 평문으로 들어간다.**
+   * 이 getter 는 Route Handler 에서만 호출한다 — 클라이언트 컴포넌트에서 읽으면 값이 비어 있다.
+   *
+   * DB 는 인터넷에 열려 있지 않다. 로컬 개발은 SSH 터널을 먼저 열고 `DB_HOST=127.0.0.1`
+   * 로 붙는다(자세한 건 `docs/ONBOARDING.md`).
+   */
+  get db(): {
+    host: string;
+    port: number;
+    database: string;
+    user: string;
+    password: string;
+  } {
+    return {
+      host: required(process.env.DB_HOST, "DB_HOST"),
+      // 기본값을 두면 터널 포트를 안 적었을 때 조용히 3306(다른 DB)으로 붙는다. 명시를 요구한다.
+      port: Number(required(process.env.DB_PORT, "DB_PORT")),
+      database: required(process.env.DB_NAME, "DB_NAME"),
+      user: required(process.env.DB_USER, "DB_USER"),
+      password: required(process.env.DB_PASSWORD, "DB_PASSWORD"),
+    };
   },
 } as const;
 

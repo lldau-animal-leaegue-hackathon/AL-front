@@ -1,0 +1,718 @@
+# 스킨케어 코어 플로우 구현 — 제품 등록 · 루틴 생성 · 루틴 수행 · 기록
+
+> 📌 **설계 문서(2026-08-18)** — 노션 기획서를 코드에 반영하기 위한 전체 설계.
+> **Q1–Q10 전부 확정됐다(2026-08-18). 미결 없음 — Step 0부터 끝까지 착수 가능하다.**
+> 확정 내용은 [결정 확정](#결정-확정-2026-08-18) 참조.
+>
+> 📐 **반응형 설계는 [responsive.md](./responsive.md)로 분리했다.**
+> 실측 결과 **데스크톱에 4방향 네비게이션이 없다(R1).** Step 3에 들어가기 전에 먼저 고쳐야
+> 신규 화면이 같은 결함을 복제하지 않는다.
+>
+> ~~🚧 작업 경계(2026-08-18) — 루틴 도메인은 다른 팀원이 담당한다.~~
+> **해제(2026-08-18): 사용자가 루틴을 위임받았다.** `feature/routine`(`db9eaed`)을 main·taeyeop에
+> 머지 완료. 루틴 포함 전 범위 작업 가능. **Step 5·6·7 보류 해제.**
+> 재검토 결과는 [머지 재검토](#머지-재검토-db9eaed-2026-08-18) 절 참조 — **라우트·데이터 모델이 바뀌었다.**
+
+## Context
+
+노션 기획서(스킨케어 루틴 앱)를 코드에 반영해야 한다. 현재 레포는 **UI 껍데기는 상당히 완성돼 있으나
+AI 호출이 단 한 줄도 없고, 모든 데이터가 하드코딩 시드 상수**다. 기획의 본질인
+"AI가 성분을 추출하고 → 루틴을 생성하고 → 단계별로 안내한다"가 통째로 비어 있다.
+
+### 현재 코드 실측 (2026-08-18, `e8568a9` 기준)
+
+| 라우트                                         | 상태                                                                                     | 데이터 출처                                       |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `/` (home)                                     | TopAppBar + RoutineStarter + SkinHealthCard + ScanCard + NextStepCard + IngredientAlerts | 전부 `page.tsx` 내 하드코딩 상수                  |
+| `/scan`                                        | PageHeader + ProductSearch + ScannerCta                                                  | `scan/products.ts` 시드 24종                      |
+| `/routine`                                     | WeekStrip + RoutineCard 목록 _(db9eaed: AM/PM 토글 → 조건별 루틴 카드)_                  | `routine/routines.ts` 시드 — 루틴 5개 × 단계      |
+| `/routine/[routineId]/[step]` _(db9eaed 개명)_ | RunHeader + StepTimer + 전문가팁 + HowToList + StepActions                               | 동일 시드, `generateStaticParams`로 정적 프리렌더 |
+| `/profile`                                     | 피부 프로필 + AI 분석 리포트 + 내 선반                                                   | 전부 하드코딩 상수                                |
+| `/testCamera`                                  | tesseract.js OCR                                                                         | —                                                 |
+
+인프라는 이미 있다: [`src/api/client.ts`](../../../src/api/client.ts)(fetch 래퍼 + `ApiError`),
+[`src/lib/env.ts`](../../../src/lib/env.ts)(`publicEnv`/`serverEnv` 분리),
+[`src/components/BottomNav`](../../../src/components/BottomNav/BottomNav.tsx)(몰입 화면에서 탭바 숨김).
+
+### ⚠️ 백엔드 도메인 불일치
+
+`AGENTS.md`가 가리키는 백엔드 `animal-league-04-back`은
+**계정/인증 · 점수(학교별 집계) · 상점 · 채팅 · 확성기 · SSE** 도메인이다.
+스킨케어 제품·루틴·기록을 담을 테이블이 **없다.**
+
+AGENTS.md의 해당 줄에 이미 `_이 목록은 백엔드 구조에서 유추한 것이다. 실제 기획과 다르면 이 줄을 고칠 것._`
+이라고 적혀 있다. → **Step 0에서 AGENTS.md를 갱신한다.**
+
+**스킬 대응 완료(2026-08-18)**: `backend-dto-check` → **`ai-contract-check`로 교체**했다.
+이 프로젝트의 계약 원본은 백엔드 Java 클래스가 아니라 **프롬프트 출력 스키마**이고,
+LLM은 계약을 보장하지 않으므로 런타임 검증까지 요구한다. 백엔드 실측 지식은 그 스킬의 부록에 보존했다.
+
+### 기획서 ↔ 현재 데이터 모델 갭
+
+`routines.ts`의 `RoutineStep`과 "스킨케어 루틴 작성" 프롬프트 출력이 **구조적으로 다르다.**
+필드명만 바꾸면 되는 수준이 아니라 카디널리티(단수↔복수)가 어긋난다.
+
+| 현재 `RoutineStep`         | 프롬프트 출력             | 갭                                                 |
+| -------------------------- | ------------------------- | -------------------------------------------------- |
+| `productName: string`      | `using_product: string[]` | **단수 → 복수.** 이중 세안 등 한 단계 2제품 대응   |
+| `category: string`         | (없음)                    | `routine_name`이 단계명 역할을 겸함                |
+| `ingredient: string`       | (없음)                    | 등록 제품에서 파생해야 함                          |
+| `tip: string`              | `tips: string[]`          | 단수 → 복수                                        |
+| `description: string`      | (없음)                    | 대응 필드 없음 — 제거                              |
+| `expertTip: string`        | `tips: string[]`          | `tip`과 중복. 하나로 합침                          |
+| `howTo: readonly string[]` | `how_to_use`              | Q5에서 프롬프트를 `string[]`로 수정 확정 → 갭 해소 |
+| `minutes` + `timerSeconds` | `estimated_time: int`(초) | **이원화 → 단일.** 초로 통일, 분은 파생            |
+| `icon: string`             | (없음)                    | 단계명 → 아이콘 매핑 테이블 필요                   |
+| (없음)                     | `warning: string[]`       | **신규 UI 필요**                                   |
+
+관련 문서: [clova-ocr plan](../2026-08-13-clova-ocr/README.md) — Q3 결정으로 **폐기 대상**.
+
+---
+
+## ~~작업 경계 (2026-08-18)~~ → 해제됨 + 머지 재검토
+
+~~루틴 도메인은 다른 팀원이 담당한다. `src/app/routine/**` 를 건드리지 않는다.~~
+**해제(2026-08-18): 사용자가 루틴을 위임받았고, 팀원의 `feature/routine` 브랜치를
+main·taeyeop에 fast-forward 머지했다(`e8568a9` → `db9eaed`).** 전 범위 작업 가능.
+(경계 절의 원문은 git 이력 `db9eaed` 이전 문서 참조 — 재논의 방지를 위해 취소선으로만 남긴다.)
+
+## 머지 재검토 (db9eaed, 2026-08-18)
+
+팀원 커밋 1개(`db9eaed feat: 여러 루틴 가능하게 수정`, 15파일 +864/−605)를 정독한 결과.
+**이 절이 이하 본문의 낡은 서술을 덮어쓴다** — 본문과 어긋나면 이 절이 맞다.
+
+### 무엇이 바뀌었나
+
+| 변경                                                                                                 | 계획서 영향                                                                                             |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 라우트 `[slot]` → **`[routineId]`**                                                                  | "라우트는 am/pm 유지" 전제 **무효.** 수행 URL은 `/routine/daily-am/1` 형태                              |
+| **`Routine` 래퍼 모델 신설** — `{ id, name, condition, time: "am"\|"pm", summary, steps }`           | 아래 "새 갭" 참조. `Slot` 단독 타입 대신 `Routine.time`이 am/pm을 담는다                                |
+| `RoutineStep`은 **기존 모양 그대로** (productName 단수, tip+expertTip, minutes+timerSeconds)         | 기획서↔모델 갭 테이블 **여전히 유효**                                                                   |
+| `IMMERSIVE` → `/^\/routine\/[^/]+\//` 로 일반화                                                      | 팀원이 이미 고쳤다. SideNav는 **이 새 정규식을** 공유하면 된다                                          |
+| `RoutinePlanner`·`RoutineStepCard` 삭제 → **`RoutineCard`** 신설 (`<details>` 펼침, AM/PM 토글 제거) | 변경 대상 파일 표의 RoutinePlanner 행 무효                                                              |
+| **생리 기간·주말 루틴이 시드로 등장** (`condition: "평소"/"생리 기간"/"주 1~2회"`)                   | 비범위였던 "생리 주기 루틴"이 **모델 차원에서 이미 존재**                                               |
+| 홈 `RoutineStarter` 링크 → `/routine/daily-am/1` 하드코딩                                            | Step 9에서 저장된 루틴 기반으로 교체할 때 함께 처리                                                     |
+| `presentation/SERVICE.md`·IR 덱 초안 추가                                                            | **서비스 정의 문서.** 네이버 API 폐기 근거를 독립적으로 재확인("신규 발급 막힘") — Q-ponytail 결정 강화 |
+
+### ⭐ 새 갭 — 프롬프트는 1벌, 모델은 여러 벌
+
+"스킨케어 루틴 작성" 프롬프트는 **아침/저녁 1벌**(`{ morning, evening }`)을 만들지만,
+팀원 모델은 **조건별 여러 `Routine`**이다. Step 5 구현 시 매핑 규칙:
+
+- 프롬프트 출력 1회 = `Routine` 2개 생성 — `{ time: "am" }` + `{ time: "pm" }`, `condition: "평소"`.
+- `name`·`summary`는 LLM 출력에 없다 → 생성 입력(`wonder`)에서 파생하거나 고정 문구
+  ("아침 루틴" 등). **LLM에 새 필드를 요구하지 않는다**(프롬프트 무수정).
+- 생리 기간 등 조건 루틴은 **같은 프롬프트를 `wonder`에 조건을 붙여 재호출**하면 자연 확장된다.
+  이번 범위에서는 구현하지 않고 모델만 호환되게 둔다.
+
+### 검증 메모
+
+- 머지 직후 기준 커밋: **`db9eaed`** (이하 본문의 `e8568a9` 라인 번호는 루틴 파일에 한해 밀렸을 수 있다).
+- `generateStaticParams`는 여전히 시드 기반 정적 프리렌더 — Step 6에서 제거하는 계획 그대로 유효.
+- `RoutineCard`의 완료 상태는 로컬 state(새로고침하면 풀림, 주석으로 명시됨) — Step 7에서
+  `RoutineRun` 기록으로 교체하는 계획과 정확히 맞물린다.
+
+---
+
+## 결정 확정 (2026-08-18)
+
+사용자 답변으로 확정된 사항. 재논의하지 않는다.
+
+### Q1. 저장소 → **브라우저 localStorage**
+
+`src/lib/storage/`를 인터페이스로 두고 localStorage 구현체를 넣는다. 백엔드가 생기면 구현체만 교체.
+
+- 백엔드 담당자 블로킹 없이 전체 플로우가 즉시 돈다.
+- ⚠️ localStorage는 **브라우저 전용**이다. 서버 컴포넌트에서 못 읽는다 → "서버/클라이언트 경계" 참조.
+
+### Q2. AI 호출 → **서버의 헤드리스 Claude** (Claude API 직접 호출 안 함)
+
+프론트는 **항상 같은 오리진 `/api/ai/*`(Next Route Handler)만 호출**한다.
+
+```
+클라이언트 컴포넌트
+  → src/api/ai.ts (api.post 래퍼)
+    → POST /api/ai/{ingredients,routine,warnings}   ← Next Route Handler (서버 전용)
+      → src/lib/claude/runner.ts                     ← claude -p 프로세스 spawn
+```
+
+파일 기반 라우트가 `next.config.ts`의 `rewrites`보다 **먼저** 평가되므로
+`BACKEND_ORIGIN`과 충돌하지 않는다([next.config.ts:56](../../../next.config.ts) 주석 참조).
+
+### Q3. 이미지 처리 → **멀티모달 Claude** (별도 OCR 엔진 없음)
+
+`tesseract.js` 제거, [clova-ocr plan](../2026-08-13-clova-ocr/README.md) 폐기.
+CLOVA/GCP 콘솔 셋업 불필요. 곡면 용기 왜곡은 멀티모달 모델이 tesseract보다 훨씬 잘 견딘다
+(clova-ocr plan이 지적한 실패 원인이 사라진다).
+
+> ⚠️ **정정** — 초기 설계에서 "base64를 JSON body로 직결"로 적었으나, Q8에서 확정된
+> WatchList 방식은 **base64를 넘기지 않는다.** 이미지를 **서버 임시 파일로 저장하고
+> 프롬프트에 그 경로를 넣어 `--allowedTools Read`로 읽게** 한다. 아래 Q8 참조.
+
+### Q4. 기존 검색 → **등록 폼 + 검색 병행**
+
+`/scan`에 등록 폼을 추가하되 `ProductSearch`·`products.ts`를 유지한다.
+검색으로 고른 제품도 **결국 등록 폼을 거쳐** AI 성분 추출을 태운다(검색 결과에 성분 정보가 없으므로).
+
+### Q5. `how_to_use` → **프롬프트를 `string[]`로 수정**
+
+노션 기획서의 "스킨케어 루틴 작성" 프롬프트 출력 스키마를 다음과 같이 고친다:
+
+```diff
+-  "how_to_use": string,   // 화장품 사용 방법
++  "how_to_use": string[], // 화장품 사용 방법 — 순서대로 수행할 단계별 문장
+```
+
+규칙 절에도 한 줄 추가한다: `how_to_use는 사용자가 순서대로 따라 할 수 있는 동작 단위로 나눠 배열로 작성하세요.`
+
+- 기존 [`HowToList`](../../../src/app/routine/components/HowToList.tsx)(순서대로 체크하는 체크리스트)를 그대로 재사용.
+- **노션 기획서도 함께 갱신해야 한다** — 코드와 기획서가 갈라지면 다음 세션이 혼란스럽다.
+
+### Q6. 루틴 이미지 → **제품 썸네일 우선, 없으면 아이콘 폴백**
+
+Q7에서 썸네일을 저장하기로 했으므로 실제 제품 사진을 쓸 수 있다.
+`using_product[0]`에 해당하는 `Product.thumbnail`이 있으면 사진, 없으면 단계명 → 아이콘 매핑
+(`src/lib/stepIcon.ts`). 현재 `/routine/[routineId]/[step]`이 이미 아이콘 방식이다.
+
+### Q7. 제품 사진 → **썸네일만 localStorage에 저장**
+
+- AI에는 **원본**을 보낸다(성분표 글씨를 읽어야 하므로 해상도가 곧 정확도).
+- 저장은 **긴 변 256px, JPEG q=0.7 (~15KB)**. 100개 넣어도 1.5MB로 5MB 한계에 여유가 있다.
+- 축소 로직은 [`/testCamera`의 canvas 코드](../../../src/app/testCamera/page.tsx)를 재사용해
+  `src/lib/imageResize.ts`로 분리한다.
+
+### Q8. 헤드리스 Claude 연동 → **`C:\Work\WatchList`의 `backend/claude_runner.py` 패턴을 이식**
+
+WatchList 코드를 직접 읽어 확인한 실측 패턴이다. Python → TypeScript로 옮긴다.
+
+**호출 형태** ([claude_runner.py:30](file:///C:/Work/WatchList/backend/claude_runner.py))
+
+```
+claude -p <프롬프트> --output-format json [--allowedTools Read] [--append-system-prompt <시스템>]
+```
+
+**핵심 규칙 5가지 — 전부 이유가 있으니 하나도 빠뜨리지 말 것:**
+
+1. **구독 인증 강제** — 자식 프로세스 env에서 `ANTHROPIC_API_KEY` · `ANTHROPIC_AUTH_TOKEN`을
+   **제거**한다. 키가 있으면 Claude가 구독보다 API 키를 우선해 **별도 종량 과금**된다.
+   "Claude API는 쓰지 않는다"는 결정을 코드 차원에서 강제하는 장치다.
+2. **이미지는 파일 경로 + `Read` 도구** — base64가 아니다.
+   프롬프트에 `Read 도구로 다음 이미지 파일을 읽으세요: {path}`를 넣고 `--allowedTools Read`를 준다
+   ([vision.py:8](file:///C:/Work/WatchList/backend/vision.py)).
+3. **세션 트랜스크립트 삭제** — 호출 후 `~/.claude/projects/*/{session_id}.jsonl`을 지운다.
+   `Read`로 읽힌 **이미지 사본이 트랜스크립트에 남기 때문**이다. 제품 사진에도 그대로 적용된다.
+4. **응답 봉투(envelope) 처리** — `--output-format json`의 stdout은
+   `{ session_id, is_error, result }`. `is_error`면 throw, `result`가 빈 문자열이어도 throw.
+   실제 모델 응답은 `result` **문자열 안에** 들어 있다.
+5. **JSON 추출은 방어적으로** — `result`에서 첫 `{`부터 마지막 `}`까지 잘라 파싱한다.
+   프롬프트가 "코드블록 금지"라고 해도 모델은 종종 펜스를 붙인다
+   (참고 구현: WatchList 레포의 `backend/claude_runner.py:65`).
+
+**환경** — `CLAUDE_BIN` env로 실행 파일 경로를 덮어쓸 수 있게 한다(WatchList와 동일).
+Windows 에서는 사용자 홈의 `.local\bin\claude.exe`로 확인됐다 — **진짜 `.exe`라
+Node `execFile`을 `shell: false`로 안전하게 쓸 수 있다**(`.cmd` shim이었다면 Windows에서
+셸이 필요해 인젝션 위험이 생겼을 것이다).
+
+**TypeScript 이식 시 추가로 필요한 것 (Python엔 없던 문제):**
+
+- Route Handler에 **`export const runtime = "nodejs"` 명시.** 자식 프로세스를 띄우므로 Edge 런타임 불가.
+- **프롬프트는 argv 대신 stdin으로 넘긴다.** WatchList는 argv를 쓰지만(`-p <prompt>`),
+  루틴 생성 프롬프트는 등록 제품 전체 목록을 포함해 훨씬 길다. Windows `CreateProcess`
+  커맨드라인 상한이 32,767자라 제품이 늘면 터진다. `claude -p`는 stdin 입력을 받으므로
+  프롬프트를 stdin에 쓰는 편이 안전하다. **Step 2에서 실측 확인할 것.**
+- **임시 파일 정리** — `os.tmpdir()`에 이미지를 쓰고 `finally`에서 반드시 `unlink`.
+- **동시 호출** — 요청마다 프로세스가 하나씩 뜬다. 해커톤 규모에선 문제없지만
+  루틴 생성은 수십 초가 걸리므로 UI에 진행 표시가 필요하다.
+- **타임아웃** — WatchList 기준: 이미지 인식 300초, 일반 600초. 성분 추출 300초, 루틴 생성 600초로 시작.
+
+### Q9. 기존 목업 카드 → **전부 유지**
+
+`SkinHealthCard` · `NextStepCard` · `IngredientAlerts` · 프로필 "AI 분석 리포트" · "피부 프로필"을
+모두 남긴다. 다만 **유지 = 실데이터로 채운다**는 뜻이므로 각각의 데이터 출처를 정해야 한다:
+
+| 컴포넌트                | 실데이터 출처                                                                |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `RoutineStarter`        | 현재 시각(이미 동작) + 저장된 루틴의 시간대별 슬롯                           |
+| `ScanCard`              | 링크만 — 변경 없음                                                           |
+| `NextStepCard`          | 진행 중 루틴의 다음 단계 — `src/lib/storage/history.ts`의 진행 상태에서 파생 |
+| `IngredientAlerts`      | 등록 제품의 `warnings[]`(주의사항 프롬프트) + 루틴 step의 `warning[]`        |
+| 프로필 "피부 프로필"    | 루틴 생성 입력(피부 고민 `wonder`, 투자 시간)을 여기 저장·표시               |
+| 프로필 "AI 분석 리포트" | 등록 제품 전체의 `ingredients` + `warnings`를 모아 요약                      |
+| `SkinHealthCard`        | ⚠️ **산출 근거 없음 → Q10**                                                  |
+
+---
+
+### Q10. 피부 건강 점수 → **루틴 수행률 기반 + 카드 문구 변경**
+
+`SkinHealthCard`는 유지하되(Q9), 점수를 **`RoutineRun` 기록에서 계산**한다.
+
+```
+점수 = 이번 주 완료 단계 수 ÷ 이번 주 예정 단계 수 × 100
+주간 변화 = 이번 주 점수 − 지난주 점수
+```
+
+- **카드 문구를 바꾼다**: "피부 건강 점수" → **"이번 주 루틴 달성률"**.
+  수행률을 "피부 건강"이라 부르면 이름과 내용이 어긋난다. 숫자의 의미를 정직하게 표시한다.
+- `summary` 문구도 수행률 기준으로 다시 쓴다(현재 "수분 상태가 아주 좋아요"는 근거가 없다).
+- 기록이 없는 첫 주에는 점수 대신 **빈 상태**("첫 루틴을 시작해 보세요")를 보여준다.
+  0%로 표시하면 실패한 것처럼 보인다.
+- 진짜 피부 점수는 측정 수단이 생겼을 때 별도로 도입한다.
+
+### Q-ponytail. ponytail 리뷰 반영 범위 → **네이버 검색 삭제만**
+
+`/ponytail-review` 결과 중 **확실한 죽은 코드만 반영**하고, 설계의 파일 구성은 원안을 유지한다.
+
+- **삭제 확정**: `src/api/search.ts`(51줄) + `src/app/api/search/shop/route.ts`(70줄) = **121줄**.
+  실측 결과 **호출처 0건**이고, `scan/products.ts:L5`가 이 API를 "신규로 등록할 수 없는 API로
+  막혀 있다"고 스스로 기록해 두었다. 되살릴 경로가 없다.
+  → `products.ts`의 해당 주석에서 "`src/api/search.ts`에 네이버 연동 코드가 남아 있으니 되살릴 수
+  있다"는 문장도 함께 지운다(파일이 사라지므로 거짓 안내가 된다).
+- **꼬리 정리(2026-08-18 추가 실측)** — 파일 2개만 지우면 **네이버 잔재가 두 군데 더 남는다**:
+  - `src/lib/env.ts:37-43`의 `naverClientId`·`naverClientSecret` getter — 유일한 소비처가
+    `route.ts:49-50`이므로 route와 함께 죽는다. 남겨두면 "어디서 쓰지?" 하고 뒤지게 만든다.
+  - `.env.example`의 `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET` 키 2줄 + 설명 주석 — 남겨두면
+    다음 사람이 채워야 하는 값인 줄 안다.
+  - 근거: 네이버 개발자센터에서 쇼핑 검색이 **신규 등록 불가 API**라 Client ID를 새로 딸 수
+    없다(`.env.example` 자체에 errorCode 024 사례가 기록돼 있었다). 시간이 지나면 풀리는
+    문제가 아니므로 키 자리만 남겨둘 이유가 없다.
+- **미반영(원안 유지)**: `storage/` 4파일, `parseJson.ts` 분리, Route Handler 3개,
+  프롬프트 3파일, `routine/new` 하위 컴포넌트, `StepWarnings`, `stepIcon.ts`, `AppShell`.
+  → 사용자 결정(2026-08-18). 재논의하지 않는다.
+- ponytail 지적 자체는 타당했으므로 **기록만 남긴다** — 나중에 파일이 실제로 부담이 되면
+  이 목록이 1순위 정리 대상이다. 특히 `storage/` 4파일은 "백엔드 생기면 구현체 교체"라는
+  **speculative abstraction**이라는 지적이 정확했다.
+
+---
+
+## 아키텍처
+
+### 데이터 모델 (`src/types/skincare.ts` 신규)
+
+프롬프트 출력은 snake_case, 프론트 모델은 camelCase다.
+AGENTS.md 컨벤션대로 **`src/api/`는 raw 응답을 그대로 반환**하고, 변환은 훅에서 한다.
+
+```ts
+/** 등록된 제품 — "제품 성분 추출" 프롬프트의 입력 + 출력을 합친 것 */
+export type Product = {
+  id: string;
+  /** 사용자 입력 (필수) */
+  productName: string;
+  /** 사용자 입력 (선택) — mL 단위 */
+  capacity?: string;
+  /** 사용자 입력 (선택) */
+  productCompany?: string;
+  /** 긴 변 256px JPEG data URL — 원본은 저장하지 않는다 (Q7) */
+  thumbnail?: string;
+  /** AI 추출 결과 */
+  category: string;
+  ingredients: string[];
+  /** "제품 사용 주의 사항" 프롬프트 결과 — 지연 생성이라 optional */
+  warnings?: string[];
+  createdAt: string; // ISO
+};
+
+/** 생성된 루틴의 한 단계 — "스킨케어 루틴 작성" 프롬프트 출력 1개 원소 */
+export type RoutineStep = {
+  id: string;
+  routineName: string;
+  /** 초 단위 (프롬프트의 estimated_time) */
+  estimatedTime: number;
+  /** 제품 이름 배열 — 이중 세안 등 한 단계 2제품 대응 */
+  usingProduct: string[];
+  /** Q5로 프롬프트를 배열로 고쳤다 — HowToList가 그대로 쓴다 */
+  howToUse: string[];
+  tips: string[];
+  warning: string[];
+};
+
+export type Slot = "am" | "pm";
+
+/** 저장된 루틴 1벌 */
+export type Routine = {
+  id: string;
+  createdAt: string;
+  /** 생성 입력 — 재생성 시 프리필 + 프로필 "피부 프로필" 표시용 */
+  wonder: string;
+  usableTime: { morning: string; evening: string };
+  am: RoutineStep[]; // 프롬프트의 morning
+  pm: RoutineStep[]; // 프롬프트의 evening
+};
+
+/** 루틴 수행 기록 */
+export type RoutineRun = {
+  id: string;
+  routineId: string;
+  slot: Slot;
+  startedAt: string;
+  finishedAt: string;
+  completedStepIds: string[];
+};
+```
+
+**슬롯 명명** _(db9eaed 머지로 갱신)_: 라우트는 이제 **`/routine/[routineId]/[step]`**이다
+(`/routine/daily-am/1`). am/pm은 라우트가 아니라 **`Routine.time` 필드**가 담는다 —
+프롬프트의 `morning`/`evening`을 `time: "am" | "pm"`으로 매핑한다.
+`IMMERSIVE` 정규식은 팀원이 이미 `/^\/routine\/[^/]+\//`로 일반화해 뒀으므로
+routineId가 무엇이든 수행 화면에서 탭바가 숨는다. `SLOT_LABEL`·`isSlot`은 사라졌고
+`TIME_LABEL`·`TIME_ICON`이 그 역할을 한다.
+
+### 저장소 계층 (`src/lib/storage/` 신규)
+
+```
+src/lib/storage/
+  local.ts       공통 — JSON 직렬화, 스키마 버전 키, QuotaExceededError·사파리 프라이빗 방어
+  products.ts    list / get / add / update / remove
+  routines.ts    getCurrent / save / clear
+  history.ts     list / append / 진행 중 상태
+```
+
+- **SSR 안전**: 모듈 최상단에서 `localStorage`를 만지면 서버 렌더 중 `ReferenceError`.
+  반드시 함수 내부에서 접근하고, 호출부는 `useEffect`/이벤트 핸들러여야 한다.
+- 스키마 버전 키(`al:v1:products`)를 둬서 모델이 바뀌어도 폭발하지 않게 한다.
+
+### AI 계층
+
+| 위치                                  | 역할                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/lib/claude/runner.ts`            | **WatchList `claude_runner.py` 이식** — spawn, env 정리, 봉투 파싱, 트랜스크립트 삭제 |
+| `src/lib/claude/parseJson.ts`         | `result` 문자열에서 JSON 객체 추출(펜스·잡텍스트 무시)                                |
+| `src/lib/prompts/ingredients.ts`      | "제품 성분 추출" 프롬프트 (서버 전용)                                                 |
+| `src/lib/prompts/routine.ts`          | "스킨케어 루틴 작성" 프롬프트 — **Q5 반영본** (서버 전용)                             |
+| `src/lib/prompts/warnings.ts`         | "제품 사용 주의 사항" 프롬프트 (서버 전용)                                            |
+| `src/app/api/ai/ingredients/route.ts` | 이미지 임시 저장 → 프롬프트에 경로 삽입 → `allowedTools: ["Read"]`                    |
+| `src/app/api/ai/routine/route.ts`     | 루틴 생성 (도구 불필요)                                                               |
+| `src/app/api/ai/warnings/route.ts`    | 주의사항 (도구 불필요)                                                                |
+| `src/api/ai.ts`                       | 클라이언트 래퍼. `api.post` 사용, **raw 응답 그대로 반환**                            |
+
+### 서버/클라이언트 경계 — 이번 작업 최대 리스크
+
+localStorage는 브라우저 전용이므로 **루틴 데이터를 읽는 모든 화면이 클라이언트가 된다.**
+현재 `/routine/[routineId]/[step]`은 **서버 컴포넌트 + `generateStaticParams` 정적 프리렌더**다
+(db9eaed에서도 시드 기반 정적 생성 유지 — [routineId]/[step]/page.tsx:14).
+루틴이 사용자별 동적 데이터가 되는 순간 **정적 생성이 성립하지 않는다.**
+
+대응:
+
+1. `generateStaticParams` **제거**. 단계 수가 루틴마다 달라 미리 알 수 없다.
+2. 페이지(`page.tsx`)는 서버 컴포넌트로 남기고 **껍데기만** 렌더한다.
+   `RunHeader`(총 단계 수)·`StepActions`(다음 단계 이름)도 클라이언트 데이터가 필요하므로,
+   수행 화면 본문을 감싸는 클라이언트 컴포넌트 `RoutineRunner`를 만들고 `page.tsx`는 `params`만 넘긴다.
+   → `"use client"`를 페이지가 아니라 **한 단계 아래 leaf**에 둔다.
+3. 404 처리 위치가 바뀐다. 서버에서 `notFound()`로 잡던 범위 초과 단계를 이제 클라이언트가 판정한다
+   (서버는 루틴을 모른다). 잘못된 URL은 `/routine`으로 리다이렉트.
+4. `/routine/page.tsx`의 `export const dynamic = "force-dynamic"`은 `WeekStrip`이 "오늘"을 그리기
+   때문이라 **유지**한다.
+
+---
+
+## 변경 대상 파일
+
+### 신규
+
+| 파일 경로                                                                        | 작업 요약                                                                                   |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `src/types/skincare.ts`                                                          | `Product` · `RoutineStep` · `Routine` · `RoutineRun` · `Slot`                               |
+| `src/lib/storage/local.ts`                                                       | localStorage 공통 — 직렬화, 버전 키, quota 예외 처리                                        |
+| `src/lib/storage/products.ts`                                                    | 등록 제품 CRUD                                                                              |
+| `src/lib/storage/routines.ts`                                                    | 생성된 루틴 저장/조회                                                                       |
+| `src/lib/storage/history.ts`                                                     | 수행 기록 append/list + 진행 중 상태                                                        |
+| `src/lib/claude/runner.ts`                                                       | **WatchList 패턴 이식** — Q8의 규칙 5가지 전부                                              |
+| `src/lib/claude/parseJson.ts`                                                    | 펜스·잡텍스트 무시 JSON 추출                                                                |
+| `src/lib/prompts/{ingredients,routine,warnings}.ts`                              | 프롬프트 3종 (서버 전용 — 클라이언트 import 금지)                                           |
+| `src/app/api/ai/{ingredients,routine,warnings}/route.ts`                         | 엔드포인트 3종. `runtime = "nodejs"` 명시                                                   |
+| `src/api/ai.ts`                                                                  | 클라이언트 래퍼 (raw 반환)                                                                  |
+| `src/app/scan/components/ProductForm.tsx`                                        | 제품명/용량/회사/사진 등록 폼 (+ `.module.css`)                                             |
+| `src/app/scan/hooks/useProductRegister.ts`                                       | 폼 검증 + 성분 추출 호출 + 저장                                                             |
+| ~~`src/app/scan/camera/page.tsx`~~ → `src/app/scan/components/CameraCapture.tsx` | **Step 4에서 라우트 대신 오버레이로 변경.** 촬영 → `onCapture(file)` 콜백 (+ `.module.css`) |
+| `src/app/scan/components/ScanWorkspace.tsx`                                      | **초안에 없던 신규(Step 3).** 검색 → 폼 프리필을 잇는 클라이언트 경계                       |
+| `src/app/routine/new/page.tsx`                                                   | 루틴 생성 화면 (+ `.module.css`)                                                            |
+| `src/app/routine/new/components/*`                                               | 고민 입력 · 시간 입력 · 생성 결과 미리보기                                                  |
+| `src/app/routine/hooks/useRoutineGenerate.ts`                                    | 루틴 생성 호출 + 저장                                                                       |
+| `src/app/routine/components/RoutineRunner.tsx`                                   | 수행 화면 클라이언트 경계 (+ `.module.css`)                                                 |
+| `src/app/routine/components/StepWarnings.tsx`                                    | `warning[]` 표시 UI (+ `.module.css`)                                                       |
+| `src/app/routine/[routineId]/done/page.tsx`                                      | 루틴 종료 · 기록 저장 (+ `.module.css`)                                                     |
+| `src/lib/imageResize.ts`                                                         | canvas 축소·JPEG 인코딩 (Q7 — `/testCamera` 코드 재사용)                                    |
+| `src/lib/stepIcon.ts`                                                            | 단계명 → Material Symbols 아이콘 매핑 (Q6 폴백)                                             |
+
+### 수정
+
+| 파일 경로                                        | 작업 요약                                                                                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `AGENTS.md`                                      | **도메인 설명 교체** — 점수/상점/채팅 → 스킨케어. 저장소·AI 경로 명시                                                                |
+| `src/app/routine/routines.ts`                    | 시드 상수 제거. `SLOT_LABEL`·`isSlot`만 남기고 타입은 `src/types`로                                                                  |
+| `src/app/routine/components/RoutineCard.tsx`     | _(db9eaed로 RoutinePlanner 대체)_ 저장된 루틴을 읽도록. 루틴 없으면 `/routine/new` 유도. 로컬 done state → `RoutineRun` 기록         |
+| `src/app/routine/page.tsx`                       | `ROUTINES` 시드 직접 참조 제거 — 저장소에서 읽는 클라이언트 조각으로                                                                 |
+| `src/app/routine/[routineId]/[step]/page.tsx`    | `generateStaticParams` 제거, `RoutineRunner`로 위임                                                                                  |
+| `src/app/routine/components/StepActions.tsx`     | 마지막 단계 → `/routine/[routineId]/done`으로                                                                                        |
+| `src/app/scan/page.tsx`                          | 등록 폼 + 검색 병행 배치 (Q4)                                                                                                        |
+| ~~`src/app/scan/components/ScannerCta.tsx`~~     | **삭제됨** — 촬영이 오버레이가 되면서 진입점이 `ProductForm` 안으로 흡수됐다 (아래 삭제 표)                                          |
+| `src/app/(home)/components/ScanCard.tsx`         | Step 4에서 링크 `/testCamera` → `/scan`으로 갱신                                                                                     |
+| `src/app/scan/components/ProductCard.tsx`        | 검색 결과 선택 → 등록 폼 프리필                                                                                                      |
+| `src/app/profile/page.tsx`                       | 목업 → 실데이터 (Q9 표 참조). 기록 섹션 추가                                                                                         |
+| `src/app/(home)/page.tsx`                        | 하드코딩 상수 → 실데이터 (Q9 표 참조)                                                                                                |
+| `src/app/(home)/components/SkinHealthCard.tsx`   | Q10 결정 반영. 문구 변경 가능성                                                                                                      |
+| `src/app/(home)/components/NextStepCard.tsx`     | 진행 중 루틴에서 파생                                                                                                                |
+| `src/app/(home)/components/IngredientAlerts.tsx` | 제품 `warnings[]` + step `warning[]`에서 파생                                                                                        |
+| `src/lib/env.ts`                                 | `serverEnv`에 `claudeBin` 추가 (**`NEXT_PUBLIC_` 금지**) + **`naverClientId`/`naverClientSecret` getter 삭제**(Q-ponytail 꼬리 정리) |
+| `.env.example`                                   | `CLAUDE_BIN` + "ANTHROPIC_API_KEY 두지 말 것" 경고 (WatchList 문구 참고) + **`NAVER_CLIENT_ID`/`SECRET` 키·주석 삭제**               |
+| `package.json`                                   | `tesseract.js` 제거 (Q3)                                                                                                             |
+| `docs/plans/2026-08-13-clova-ocr/README.md`      | 상단에 폐기 배너 추가 (삭제하지 않음 — 재논의 방지)                                                                                  |
+
+### 삭제
+
+| 파일 경로                                   | 사유                                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| ✅ `src/app/testCamera/`                    | `CameraCapture` 오버레이로 이관 (Step 4, `12f6b89`)                        |
+| ✅ `src/app/scan/components/ScannerCta.tsx` | **초안에 없던 삭제.** 촬영 진입점이 `ProductForm` 안으로 들어가 불필요해짐 |
+| ✅ `src/api/search.ts`                      | **죽은 코드 51줄.** 호출처 0건, 네이버 API 신규 등록 불가 (Step 0)         |
+| ✅ `src/app/api/search/shop/route.ts`       | **죽은 코드 70줄.** 위와 같은 이유 (Q-ponytail 결정)                       |
+
+> Q9에서 "전부 유지"로 확정됐으므로 홈·프로필 컴포넌트 **삭제는 없다.**
+
+---
+
+## 구현 순서
+
+각 Step은 독립 커밋 가능하고, 앞 Step만으로도 앱이 깨지지 않는다.
+
+- **Step 0** — `AGENTS.md` 도메인 설명 교체 + 이 plan 링크. clova-ocr plan에 폐기 배너.
+  노션 기획서의 `how_to_use` 스키마 갱신(Q5).
+  **네이버 검색 죽은 코드 121줄 삭제**(Q-ponytail) + 꼬리 정리 — `env.ts`의 naver getter 2개,
+  `.env.example`의 NAVER 키 2줄, `products.ts` 주석의 거짓 안내까지 **한 커밋으로** 지운다.
+  _유일한 코드 변경은 삭제뿐이라 회귀 위험이 없다. 삭제 후 `npm run check`로 참조 0건 확인._
+- **Step 1** — `src/types/skincare.ts` + `src/lib/storage/*`. **순수 추가, UI 변경 0.**
+- **Step 2** — `src/lib/claude/*` + 프롬프트 3종 + Route Handler 3종 + `src/api/ai.ts`.
+  _UI 없이 `curl`로 프롬프트 3종을 단독 검증할 수 있다._
+  **먼저 확인할 것**: ① stdin 프롬프트 전달이 되는지 ② `--output-format json` 봉투 구조
+  ③ `--allowedTools Read`로 이미지가 실제로 읽히는지 ④ 세션 트랜스크립트 삭제가 동작하는지.
+- **Step 3** — `/scan` 등록 폼 → 성분 추출 → 저장. 카메라는 아직 기존 `/testCamera` 사용.
+  _여기서 처음으로 "제품 등록" 플로우가 끝까지 돈다._
+  _(실제로는 `imageResize.ts`도 여기서 함께 나왔다 — 파일 선택 등록에 이미 썸네일이 필요했다.)_
+- **Step 4** — 촬영을 **오버레이 `CameraCapture`로 이관**(계획의 `/scan/camera` 라우트 대신),
+  `tesseract.js` 제거, 촬영 이미지 → 폼 연결(원본은 AI로, 썸네일은 저장).
+- **Step 5** — `/routine/new` 루틴 생성 → 저장.
+- **Step 6** — `/routine` + `/routine/[routineId]/[step]`를 저장된 루틴으로 구동.
+  `ROUTINES` 시드 제거, `generateStaticParams` 제거, `RoutineRunner` 도입, `warning[]` UI 추가.
+  _가장 위험한 단계 — 서버/클라이언트 경계가 바뀐다._
+- **Step 7** — `/routine/[routineId]/done` 기록 저장 + `/profile` 기록·선반·피부 프로필 실데이터화.
+- **Step 8** — 주의사항 프롬프트 연결 → 제품 `warnings[]` 채우기 → `IngredientAlerts` 실데이터화.
+- **Step 9** — 홈 실데이터화 (`NextStepCard`, `SkinHealthCard`) + 프로필 AI 리포트. ⚠️ **Q10 선행 필요.**
+
+---
+
+## 검증
+
+- `npm run check` 통과 (타입 + 린트 + 포맷)
+  - ⚠️ **신규 라우트가 5개 이상 추가된다.** `typedRoutes`가 켜져 있어 `next typegen`이 먼저 돌아야
+    `<Link href>`가 검증된다. 반드시 `npm run check` 경로로 (`tsc --noEmit` 단독 금지).
+  - 기존 코드가 `as Route` 캐스팅으로 우회한 곳이 있다
+    ([`RoutineCard.tsx:57`](../../../src/app/routine/components/RoutineCard.tsx),
+    [`[step]/page.tsx:81`](../../../src/app/routine/[routineId]/[step]/page.tsx)) — 동적 경로라 불가피하나,
+    신규 코드에서 캐스팅을 남발해 오타를 숨기지 않도록 주의.
+- `npm run build` 통과
+- **서버/클라이언트 경계**
+  - `src/lib/prompts/*` · `src/lib/claude/*` · `serverEnv`가 클라이언트 컴포넌트로 import되지 않았는지 grep.
+  - `npm run build` 후 `.next/static`에서 프롬프트 문자열·`CLAUDE_BIN` 경로가 **검색되지 않아야** 한다.
+  - localStorage 접근이 모듈 최상단에 없는지 확인 (SSR `ReferenceError` 방지).
+- **헤드리스 Claude 전용 검증**
+  - 자식 프로세스에서 `ANTHROPIC_API_KEY`가 실제로 제거되는지 (제거 로그 확인).
+  - 이미지 임시 파일이 요청 후 남지 않는지 (`os.tmpdir()` 확인).
+  - `~/.claude/projects/*/{session_id}.jsonl`이 삭제되는지 — **제품 사진 사본이 남으면 안 된다.**
+- **CSS Modules** — `refactor-equivalence-check` 스킬 2단계 기준.
+  `styles.없는클래스`는 `tsc`를 통과하고 런타임에 조용히 사라진다. 공용 `card.module.css` 소비처 전수 확인.
+- `ai-contract-check` — **Step 2·3·5·8에서 필수.** 프롬프트 출력 스키마 대조 + 런타임 검증 확인.
+  (구 `backend-dto-check`는 대상 없음 — 저장소가 localStorage, 백엔드 호출 없음.)
+- **수동 확인 (dev 서버)**
+  1. `/scan` → 제품명만 입력하고 등록 → 성분이 채워지는지. Network에서 `POST /api/ai/ingredients` 확인.
+  2. `/scan` → 폼의 촬영 버튼 → **오버레이**에서 성분표 촬영 → 폼으로 돌아오는지.
+     카메라 권한 프롬프트가 뜨는지
+     (`next.config.ts`의 `Permissions-Policy: camera=(self)` — `camera=()`면 허용해도 `NotAllowedError`).
+     오버레이를 닫은 뒤 **카메라 표시등이 꺼지는지**(트랙 정리) — 라우트 이탈이 없어 cleanup이 유일한 해제 경로다.
+  3. `/routine/new` → 고민·시간 입력 → 아침/저녁 루틴 생성.
+     `estimated_time` 합이 입력한 시간을 넘지 않는지 (프롬프트 규칙 2 검증).
+     `how_to_use`가 **배열**로 오는지 (Q5 검증).
+  4. `/routine` → 생성된 루틴이 AM/PM 토글로 보이는지. **루틴이 없을 때 빈 상태**가 정상인지.
+  5. `/routine/am/1` → 마지막 단계 → `/routine/am/done` → `/profile`에 기록이 남는지.
+  6. 잘못된 URL(`/routine/am/99`, `/routine/xx/1`) 진입 시 처리.
+  7. **localStorage 비운 상태**로 전 화면 진입 — 빈 배열에서 크래시하지 않는지.
+
+- **✅ 빈 저장소 스모크 실측(2026-08-18, browser-prober)** — 첫 사용자는 전부 빈 상태로
+  진입하므로 여기서 깨지면 앱을 통째로 못 쓴다. 저장소를 비우고 390px 에서 7개 경로 확인:
+
+  | 경로                       | 콘솔 에러 | 결과                                       |
+  | -------------------------- | --------- | ------------------------------------------ |
+  | `/`                        | 없음      | 빈 상태 안내 정상                          |
+  | `/routine`                 | 없음      | "아직 루틴이 없어요" + `/routine/new` 유도 |
+  | `/routine/new`             | 없음      | "먼저 제품을 등록해 주세요" + `/scan` 유도 |
+  | `/profile`                 | 없음      | 4개 섹션 각각 빈 상태 안내                 |
+  | `/scan`                    | 없음      | 등록 폼 정상                               |
+  | `/routine/없는아이디/1`    | 없음      | "이 단계를 찾을 수 없어요" + 목록 링크     |
+  | `/routine/없는아이디/done` | 없음      | "이 루틴을 찾을 수 없어요" + 목록 링크     |
+
+  **크래시 0건.** `NaN`·`undefined`·`Invalid Date`·`0%` 노출도 0건.
+  `/routine/new`·`/profile` 은 320/768/1440 에서 가로 스크롤 0, 탭바 겹침 0.
+
+  > 📌 측정 함정 — 겹침을 볼 때 컨테이너 `div`(`AppShell`)를 쓰면 `min-height: 100vh` 때문에
+  > 항상 겹침으로 오판된다. **리프 요소 기준**으로 재야 한다.
+
+- **알려진 동작(결함 아님)** — `useIngredientAlerts` 가 주의사항을 만드는 중(제품당 약 34초)에
+  사용자가 화면을 떠나면 브라우저가 요청을 취소해 콘솔에 `TypeError: Failed to fetch` 가 남는다.
+  다음 방문 때 자동으로 재시도되므로 데이터는 결국 채워진다.
+
+---
+
+## 비범위 (Out of Scope)
+
+- **회원가입·로그인** — 원본 기획에서 명시적으로 `X`.
+- **생리 주기별 루틴의 AI 생성** — 단, db9eaed로 **모델·시드에는 이미 존재**한다
+  (`Routine.condition: "생리 기간"`). 이번 범위에서 AI 생성은 "평소" 1벌만 만들고,
+  조건 루틴은 시드/수동으로 남긴다. AI 확장 경로는 [머지 재검토](#머지-재검토-db9eaed-2026-08-18)의
+  "새 갭" 참조.
+- **루틴 수정 기능** — 원본 기획에 "(추후 → 수정 기능 추가)"로 명시. 이번엔 생성/재생성만.
+- **네이버 쇼핑 API 되살리기** — `src/api/search.ts` · `/api/search/shop`는 현행 유지.
+  개발자센터에서 신규 등록이 막힌 상태라 우리가 풀 수 없다([products.ts 주석](../../../src/app/scan/products.ts)).
+- **원기둥 용기 파노라마 스캔** — clova-ocr plan에서 이미 후순위로 지정됨.
+- **성분 DB 매칭·성분별 상세 해설** — LLM 출력 텍스트를 그대로 쓴다.
+- **기기 간 동기화** — localStorage 결정(Q1)의 필연적 결과.
+- **헤드리스 Claude 호출 큐·동시성 제어** — 해커톤 규모에선 불필요. 부하가 문제되면 그때.
+
+---
+
+## 진행 상태
+
+- [x] Step 0 — 완료 2026-08-18. 네이버 죽은 코드 삭제(`search.ts`+`route.ts` −121줄,
+      `env.ts` getter 2개, `.env.example` 키 2줄, `products.ts` 거짓 주석), AGENTS.md 도메인
+      스킨케어로 교체 + SSE 줄 정정, clova-ocr plan 폐기 배너, 팀원 `presentation/*.md` 포맷.
+      검증: `npm run check` + `npm run build` 통과 — 빌드 라우트 표에서 `/api/search/shop` 소멸,
+      `[routineId]` 25경로 정상. 커밋: `5dca62a`.
+      **잔여**: 노션 기획서의 `how_to_use: string[]` 갱신(Q5)은 **사용자 작업** — 코드 쪽 정본은
+      Step 2에서 `src/lib/prompts/routine.ts`로 들어간다.
+- [x] Step 1 — 완료 2026-08-18. 신규 5파일(`src/types/skincare.ts` + `src/lib/storage/{local,products,routines,history}.ts`).
+      **소비처 0건 = 순수 추가**(grep 확인). 검증: `npm run check` + `npm run build` 통과,
+      `localStorage` 접근이 전부 함수 내부라 SSR `ReferenceError` 없음(모듈 스코프 0건 grep 확인).
+      ⚠️ ~~**런타임은 미검증**~~ → **Step 3에서 검증됨**(등록 폼이 `addProduct`·`listProducts`를 실제로 쓴다).
+      커밋: `abf48c0`.
+
+  **머지(db9eaed) 반영으로 초안에서 바뀐 설계 3가지:**
+  - `Routine`은 **time 당 1벌**이다(팀원 모델). 초안의 `{ am: [], pm: [] }` 한 덩어리 구조는 폐기.
+    프롬프트 1회 출력 → `Routine` 2개로 펼쳐 저장한다.
+  - **`SkinProfile` 타입 신설**(초안에 없던 것) — `wonder`·`usableTime`은 여러 루틴이 공유하는
+    생성 입력이라 `Routine`마다 중복 저장하지 않고 분리했다. 프로필 화면의 "피부 프로필"도 이걸 쓴다.
+  - **`save()`가 `boolean`을 반환**한다. 썸네일 누적으로 `QuotaExceededError`가 실제로 나는데,
+    조용히 실패하면 사용자는 저장된 줄 안다. `addProduct`·`appendRun`은 실패 시 `null`.
+
+- [x] Step 2 — 완료 2026-08-18. 신규 9파일(`src/lib/claude/{runner,parseJson}.ts` +
+      `src/lib/prompts/{ingredients,routine,warnings}.ts` + `src/app/api/ai/*/route.ts` 3종 + `src/api/ai.ts`),
+      `env.ts`에 `claudeBin`·`.env.example`에 경고 추가. 커밋: `2e28468`.
+
+  **착수 전 CLI 실측 4가지 — 전부 확인됨:**
+  - ① stdin 프롬프트 전달 **가능** → argv 상한(32,767자) 회피. runner가 stdin을 쓴다.
+  - ② 봉투 구조 `{ is_error, session_id, result, ... }` 확인. `result`는 **문자열**이고 그 안에 JSON.
+  - ③ `--allowedTools Read`로 이미지 인식 **성공** — 테스트 성분표에서 9개를 순서까지 정확히 추출.
+  - ④ 트랜스크립트에 **이미지 base64 사본이 실제로 남음**(9.5KB 이미지 → 59KB jsonl). 삭제 필수 확인.
+
+  **추가 발견 2건:**
+  - **`--bare` 는 쓸 수 없다.** `ANTHROPIC_API_KEY` 또는 apiKeyHelper를 강제하므로
+    구독 인증 결정(Q2·Q8)과 정면 충돌한다. 토큰 오버헤드 절감 수단으로 고려했다가 폐기.
+  - 호출당 캐시 생성 토큰이 **1만~3만**이다(기본 시스템 프롬프트·도구 정의). 호출이 잦아지면
+    구독 한도를 체감할 수 있다 — 성분 추출은 등록 시 1회, 주의사항은 지연 생성으로 분산해 뒀다.
+
+  **엔드투엔드 실호출 검증(dev 서버, 실제 AI 응답):**
+
+  | 엔드포인트                                    | 결과                                         | 소요   |
+  | --------------------------------------------- | -------------------------------------------- | ------ |
+  | `POST /api/ai/ingredients` (productName 누락) | 400 + 한글 메시지                            | 0.3초  |
+  | `POST /api/ai/ingredients` (이미지 포함)      | 200, 성분 9개 + `category: "토너"` 자동 분류 | 13.6초 |
+  | `POST /api/ai/warnings` (성분 있음)           | 200, 주의사항 6개(규칙 7 상한 정확히 준수)   | 34.5초 |
+  | `POST /api/ai/warnings` (**빈 배열**)         | 200, 규칙 6의 고정 문구만 반환               | 8.0초  |
+  | `POST /api/ai/routine`                        | 200, 아침 4단계 + 저녁                       | 91초   |
+  - **규칙 위반 경고 0건** — 서버 로그에 `warnOnRuleViolations` 출력이 없다. LLM이 계약을 지켰다.
+  - **Q5 검증됨**: `how_to_use`가 실제로 **배열**로 온다.
+  - **규칙 2(시간 예산) 준수**: 아침 60+40+60+60 = 220초 ≤ 입력 "5분".
+  - **규칙 5(순서) 준수**: 클렌징 → 토너 → 크림 → 선케어.
+  - **정리 확인**: 임시 이미지 파일 누수 0건, 세션 트랜스크립트 삭제됨.
+  - ⚠️ 루틴 생성이 **91초** 걸린다. Step 5 화면에는 **진행 표시가 반드시 필요**하다.
+
+- [x] Step 3 — 완료 2026-08-18. 커밋 `720c9d8`. 등록 폼 → AI 성분 추출 → localStorage 저장이
+      **끝까지 도는 첫 플로우.** 신규 `ProductForm`·`useProductRegister`·`ScanWorkspace`·`imageResize.ts`.
+
+  **초안에서 바뀐 것 1가지:**
+  - **`ScanWorkspace` 신설**(계획에 없던 파일). 검색 카드를 고르면 폼을 프리필해야 하는데(Q4),
+    `page.tsx`를 통째로 클라이언트로 만들면 `PageHeader`까지 딸려 온다. 두 컴포넌트를 잇는
+    조각만 `"use client"`로 떼어 **경계를 leaf에 유지**했다.
+  - 프리필은 `key` 증가로 `ProductForm`을 리마운트해 넣는다 — prop→state 동기화 effect를 피했고,
+    **같은 카드를 다시 눌러도 폼이 초기화**된다.
+
+- [x] Step 4 — 완료 2026-08-18. 커밋 `12f6b89`. 촬영 이관 + `tesseract.js` 제거(−470줄).
+      `/testCamera/`와 `ScannerCta` 삭제, `ScanCard` 링크 갱신.
+
+  **⚠️ 설계 변경 — 별도 라우트가 아니라 오버레이다:**
+  - 계획서는 `src/app/scan/camera/page.tsx`(신규 라우트)였으나 실제 구현은
+    **`/scan` 안의 오버레이 컴포넌트 `CameraCapture.tsx`**다.
+  - 이유: 라우트로 두면 촬영 이미지를 폼으로 되돌릴 경로(`sessionStorage` 등)가 따로 필요하다.
+    오버레이는 `onCapture(file)` 콜백으로 바로 넘긴다. **라우트가 늘지 않아 `typedRoutes` 부담도 없다.**
+  - 따라서 `ScannerCta.tsx`(−114줄 CSS 포함)는 **삭제**됐다 — 계획서 삭제 표에 없던 항목이다.
+  - Esc 키 닫기를 직접 붙였다. 오버레이라 브라우저 뒤로가기가 닫아 주지 않는다.
+  - tesseract 전처리(워커·PSM·그레이스케일·3배 업스케일)는 **전부 제거**했다.
+    업스케일은 tesseract 전용 최적화였고 멀티모달은 원본 해상도를 선호한다(Q3).
+
+- [x] Step 5 — 완료 2026-08-18. `/routine/new` + `useRoutineGenerate`.
+      프롬프트 1벌(`{morning, evening}`) → `Routine` **2벌**로 펼쳐 저장.
+      LLM 출력에 없는 `name`·`summary`·`condition`·`RoutineStep.id` 는 생성 시점에 만든다
+      (프롬프트 무수정 원칙). `summary` 는 단계 수·소요 시간에서 **파생**이라 지어낸 문구가 아니다.
+      진행 표시는 경과 초 카운터 — 가짜 퍼센트 바를 쓰지 않았다(실측 90초).
+
+- [x] Step 6 — 완료 2026-08-18. **가장 위험했던 단계.** `RoutineRunner`·`RoutineList`·
+      `StepWarnings`·`stepIcon.ts` 신규, 시드 `routines.ts` **−347줄 삭제**.
+      빌드 라우트 표로 확인: `[routineId]/[step]` 이 `●`(SSG 25경로) → **`ƒ`(동적)**,
+      정적 페이지 33 → 9개. `generateStaticParams` 제거가 실제로 반영됐다.
+      404 판정을 서버 `notFound()` → 클라이언트로 옮겼고, **조용한 리다이렉트 대신
+      이유를 보여 준다**(주소를 고쳤는지 루틴을 다시 만들었는지 사용자가 알아야 한다).
+
+- [x] Step 7 — 완료 2026-08-18. `/routine/[routineId]/done` + `RoutineDone`, 프로필 4개 섹션.
+      **이중 기록 방지**: 플래그·ref 가드 대신 "시작 표시"(`markRunStart`)를 **소비**하며 기록한다.
+      새로고침해도 표시가 이미 없어 두 번 기록되지 않고 StrictMode 이중 실행에도 안전하다.
+      `RoutineCard` 의 **손으로 켜는 "완료" 버튼을 삭제**했다 — 새로고침하면 풀리는 가짜 상태였고
+      손으로 켜면 주간 달성률과 어긋났다. 완료는 실제 수행 기록에서 파생된다.
+
+- [x] Step 8 — 완료 2026-08-18. 주의사항 **지연 생성** + `IngredientAlerts` 실데이터화.
+      등록 시점에 만들지 않는 이유는 호출이 약 34초라 등록 UX 를 망치기 때문이다.
+      제품마다 **순차** 호출한다(동시에 쏘면 `claude -p` 프로세스가 그만큼 뜬다).
+      `ingredients` 가 빈 제품은 호출하지 않고 프롬프트 규칙 6 의 고정 문구를 로컬에서 채운다.
+
+- [x] Step 9 — 완료 2026-08-18. 홈 실데이터화. `SkinHealthCard` 를 **"이번 주 루틴 달성률"**로
+      개명(Q10) — 계산은 `src/lib/achievement.ts` 의 `weeklyAchievement()` 하나를 홈·프로필이 공유한다
+      (각자 계산하면 두 화면이 다른 값을 보여 주는 사고가 난다).
+      `NextStepCard` 의 **숫자 진행률 바를 삭제**했다 — `RunStart` 에 현재 단계 번호가 없어
+      (단계는 URL 에만 존재) 몇 %인지 알 수 없는데, 지어내면 Q10 에서 고치려던
+      "근거 없는 숫자" 문제를 그대로 반복하게 된다.
+
+### Step 5~9 에서 구조를 고쳐야 했던 지점
+
+**① React 19 린터가 `useEffect` 안의 `setState` 를 막는다**(`react-hooks/set-state-in-effect`).
+localStorage 를 effect 로 끌어오는 기존 패턴이 전부 막혔다.
+→ `useSyncExternalStore` 로 갔더니 **두 번째 함정**: `listRoutines()` 가 매번 새 배열을 반환해
+`Object.is` 비교가 항상 실패, **무한 렌더**가 난다.
+→ `loadRaw()` 로 **원시 문자열을 스냅샷**으로 삼고 파싱은 `useMemo` 로 옮긴
+공용 훅 `src/lib/storage/useStored.ts` 를 만들었다. `ready` 플래그로 "서버라 아직 모름"과
+"저장된 게 없음"을 구분한다 — 안 하면 빈 상태가 깜빡였다 사라진다.
+
+**② 저장 후 화면이 갱신되지 않았다.** 구독이 no-op 이라 완료 화면이 결과를 로컬 state 로
+미러링하려 했고, 그게 바로 ①이 막는 패턴이었다. **증상이 아니라 원인**이 저장소가 변경을
+알리지 않는 것이었다 → `local.ts` 에 pub/sub 을 넣어 `save`/`remove` 가 알린다.
+화면은 저장소를 단일 출처로 두고 파생만 한다.
+
+**③ 저장 키를 화면이 알아야 했다.** `ROUTINES_KEY`·`RUNS_KEY`·`PRODUCTS_KEY`·`RUN_START_KEY`
+를 export 했다. 문자열을 두 곳에 적으면 반드시 갈라진다(위임 에이전트가 실제로
+`"products"` 를 하드코딩하고 "바뀌면 같이 고칠 것" 주석을 남겼다 — 범위 제약의 부작용이라
+세션이 export 로 정리했다).
+
+### 하지 않은 것 — 근거
+
+- **단계별 건너뛰기 추적**: `completedStepIds` 에 루틴의 **모든 단계**를 넣는다. 건너뛴 단계를
+  구분하려면 단계마다 진행 상태를 저장해야 한다. 달성률은 "루틴을 했는가" 단위로는 정확하고,
+  루틴 안에서 몇 단계를 건너뛰었는지는 반영하지 못한다. (`RoutineDone.tsx` 주석에 명시)
+- **완료 화면의 저장 실패 UI**: `save()` 가 콘솔에 남긴다. 제품 등록과 달리 **사용자가 입력한
+  내용이 날아가는 게 아니라서** 화면을 막을 이유가 없다. 실패하면 시작 표시가 남아 다음 진입 때
+  자동 재시도된다.
+- **기록 목록 페이지네이션**: 상한 없이 전부 렌더한다. 상한이 필요하다는 근거가 아직 없다.

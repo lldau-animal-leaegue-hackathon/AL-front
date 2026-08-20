@@ -1,0 +1,21 @@
+.content,
+.contentFull {
+  min-height: 100dvh;
+}
+
+/*
+ * lg 이상에서 좌측 사이드바가 등장한다. 사이드바는 position:fixed 라 문서 흐름에서
+ * 빠져 있으므로, 본문을 그 폭만큼 직접 밀어 준다.
+ *
+ * `.contentFull` 은 몰입 화면(루틴 수행)용이다 — 거기서는 사이드바가 렌더되지 않으므로
+ * 밀면 왼쪽이 빈 채로 남는다.
+ *
+ * ⚠️ 고정 헤더(TopAppBar·PageHeader)는 이 래퍼 안에 있어도 position:fixed 라
+ *    부모 padding 의 영향을 받지 않는다. 그래서 각 헤더 모듈에서 `left: var(--sidebar-w)`
+ *    를 따로 지정한다. 여기만 고치면 헤더가 사이드바에 가려진다.
+ */
+@media (min-width: 1024px) {
+  .content {
+    padding-left: var(--sidebar-w);
+  }
+}

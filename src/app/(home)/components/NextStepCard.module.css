@@ -28,7 +28,9 @@
   height: 96px;
   border-radius: var(--radius);
   background: var(--surface-container);
-  color: var(--primary-container);
+  /* --primary-container 는 '컨테이너 배경' 역할이라 다크에서 같이 어두워져
+     어두운 표면 위 아이콘으로는 대비가 1.74 였다. 표면 위 강조색은 --primary 다. */
+  color: var(--primary);
 }
 
 .detail {
@@ -63,28 +65,78 @@
   color: var(--on-secondary-container);
 }
 
-.progress {
+/* 진행 중이어도 실제 몇 단계째인지 저장하지 않아(NextStepCard.tsx 주석 참고)
+   숫자 진행률바 대신 CTA 하나로 단순화했다. RoutineCard.module.css 의 .start 와
+   같은 모양(터치 타깃 44px, primary/on-primary 짝) — 공용 버튼 모듈은 없어 복제한다. */
+.cta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
   margin-top: 24px;
-}
-
-.track {
-  flex: 1;
-  overflow: hidden;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: var(--surface-variant);
-}
-
-.bar {
-  height: 100%;
-  border-radius: var(--radius-full);
+  padding: 12px;
+  border-radius: var(--radius-lg);
   background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+  transition: background 0.2s ease;
 }
 
-.percent {
+.cta:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta {
+    transition: none;
+  }
+}
+
+/* ── 빈 상태 (루틴 없음) ────────────────────────────────────────── */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 40px;
+  color: var(--primary);
+}
+
+.emptyText {
+  font: var(--text-body-md);
   color: var(--on-surface-variant);
-  white-space: nowrap;
+}
+
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.emptyCta:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emptyCta {
+    transition: none;
+  }
 }

@@ -1,9 +1,8 @@
+/* 시계 하나뿐이라 gap 이 필요 없다(예전엔 아래에 시작 버튼이 있었다). */
 .section {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
 }
 
 .clock {
@@ -22,32 +21,4 @@
 .caption {
   color: var(--on-surface-variant);
   text-transform: uppercase;
-}
-
-.cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  padding: 16px 32px;
-  border-radius: var(--radius-md);
-  background: var(--primary);
-  color: var(--on-primary);
-  font: var(--text-body-lg);
-  font-weight: 600;
-}
-
-.cta:hover {
-  opacity: 0.9;
-}
-
-.cta:active {
-  transform: scale(0.98);
-}
-
-@media (min-width: 768px) {
-  .cta {
-    width: auto;
-  }
 }

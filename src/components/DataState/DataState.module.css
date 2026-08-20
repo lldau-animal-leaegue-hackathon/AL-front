@@ -1,0 +1,84 @@
+/* 로딩·실패 표시. 화면마다 빈 상태 문구는 다르지만 이 둘은 같아도 된다. */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--on-surface-variant);
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+/* 글자 opacity 만 깜빡이는 것으로는 부족했다 — AI 성분 추천은 10~30초가 걸리는데
+   숫자도 아이콘도 안 움직이면 멈춘 화면과 구분되지 않는다. */
+.spinner {
+  flex-shrink: 0;
+  color: var(--primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 움직임을 줄이도록 설정한 사용자에게는 애니메이션을 걸지 않는다. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+
+  .loading {
+    opacity: 0.75;
+  }
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 16px;
+  background: var(--surface-container-low);
+  text-align: center;
+}
+
+.icon {
+  color: var(--on-surface-variant);
+}
+
+.text {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.retry:hover {
+  background: var(--primary-container);
+  /* 배경만 바꾸면 다크에서 on-primary(#1b3527) 글자가 primary-container(#314c3e) 위에
+     놓여 대비 약 1.4:1 — 라벨이 사실상 사라진다. 배경/전경 토큰은 짝으로 바꾼다. */
+  color: var(--on-primary-container);
+}

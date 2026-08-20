@@ -41,13 +41,48 @@ const nextConfig: NextConfig = {
     // next/image 로 불러올 외부 이미지 도메인을 여기에 화이트리스트로 등록합니다.
     // 예시이므로 실제 사용하는 도메인으로 교체하세요.
     remotePatterns: [
-      // 네이버 쇼핑 검색 결과의 상품 썸네일
+      /*
+       * 화해 CDN — 후보 검색이 주는 제품 썸네일(`/api/ai/search`).
+       * **후보를 고르는 동안만** 이 주소를 직접 띄운다. 선반에 담을 때는 서버가 한 번 받아
+       * data URL 로 바꿔 저장하므로(`src/lib/images.ts`), 담긴 뒤에는 외부 요청이 없다.
+       */
+      { protocol: "https", hostname: "img.hwahae.co.kr" },
+      // 네이버 쇼핑 검색 결과의 상품 썸네일 (현재 미사용 — 검색 API 가 막혀 제거됐다)
       { protocol: "https", hostname: "**.pstatic.net" },
     ],
   },
 
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      /*
+       * ⛔ `/api/*` 는 **전부 사용자별 데이터**다(쿠키 익명 ID 로 가른다).
+       *
+       * Next 16 의 Route Handler 는 dynamic 이라 Next 자체 캐시는 안 타지만,
+       * **응답에 `Cache-Control` 을 아무것도 붙이지 않는다.** 앞단에 리버스 프록시나 CDN 이
+       * 붙는 순간(서브도메인 작업이 예정돼 있다) 기본 TTL·heuristic freshness 로
+       * `/api/products` 응답 하나가 URL 만으로 캐시되고, 쿠키가 다른 사람에게 그대로 나간다.
+       *
+       * `private` 로 공유 캐시 저장을 막고 `no-store` 로 저장 자체를 금지한다.
+       * `Vary: Cookie` 는 캐시가 굳이 저장할 때 사용자별로 갈리게 하는 마지막 보루다.
+       */
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "Vary", value: "Cookie" },
+        ],
+      },
+    ];
+  },
+
+  /*
+   * 프로필 → 내 고민 재배치(2026-08-19). 옛 주소를 북마크했거나 열어 둔 사용자가
+   * 404 를 보지 않게 넘겨 준다. **permanent 로 하지 않는다** — 구조가 또 바뀔 수 있는데
+   * 301 은 브라우저가 캐시해 되돌리기 어렵다.
+   */
+  async redirects() {
+    return [{ source: "/profile", destination: "/concern", permanent: false }];
   },
 
   async rewrites() {

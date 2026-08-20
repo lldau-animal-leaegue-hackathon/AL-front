@@ -1,0 +1,187 @@
+.card {
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-card);
+}
+
+.cardDone .badge {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  /* 브라우저 기본 삼각형 대신 오른쪽 chevron을 쓴다 */
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.badge {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--surface-container-low);
+  color: var(--primary);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.name {
+  font: var(--text-body-md);
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.chip {
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--secondary-container) 40%, transparent);
+  /* 배경이 --secondary-container 라 전경도 짝인 --on-secondary-container 를 쓴다.
+     -fixed-variant 는 스킴이 바뀌어도 고정이라 다크에서 배경과 같은 색이 됐다(대비 1.64). */
+  color: var(--on-secondary-container);
+  font: var(--text-label-sm);
+  font-size: 10px;
+  letter-spacing: var(--tracking-label-sm);
+}
+
+.meta {
+  display: block;
+  margin-top: 2px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--on-surface-variant);
+  transition: transform 0.2s ease;
+}
+
+.card[open] .chevron {
+  transform: rotate(180deg);
+}
+
+/* ── 펼친 내용 ───────────────────────────────────────────────── */
+
+.desc {
+  margin-top: 16px;
+  font: var(--text-body-md);
+  font-size: 14px;
+  color: var(--on-surface-variant);
+}
+
+.steps {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-container-low);
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.step + .step {
+  border-top: 1px solid
+    color-mix(in srgb, var(--outline-variant) 40%, transparent);
+}
+
+.order {
+  flex-shrink: 0;
+  width: 18px;
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+}
+
+.stepIcon {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.stepName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font: var(--text-body-md);
+  font-size: 14px;
+  color: var(--on-surface);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepCategory {
+  flex-shrink: 0;
+  font: var(--text-label-sm);
+  font-size: 10px;
+  letter-spacing: var(--tracking-label-sm);
+  color: var(--on-surface-variant);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* 손으로 켜는 "완료" 버튼(.complete/.completeDone)은 Step 7 에서 없앴다 —
+   새로고침하면 풀리는 가짜 상태였고 주간 달성률과도 어긋났다.
+   완료 여부는 이제 수행 기록에서 파생된다. 그래서 CSS 도 함께 지운다. */
+.start {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* 터치 타깃 44px (R7 과 같은 기준) */
+  min-height: 44px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-md);
+  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.start:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.start:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start {
+    transition: none;
+  }
+}
