@@ -33,6 +33,90 @@
   color: var(--primary-fixed);
 }
 
+/* 매칭된 제품 사진 — 히어로 배경을 가득 채운다. */
+.photoImg {
+  object-fit: cover;
+}
+
+/*
+ * 사진 위 글자(타이머)와 버튼이 사진 톤과 무관하게 읽히도록 위·아래를 살짝 어둡게.
+ * 사진은 테마를 따르지 않으므로 고정 색 그라디언트다(카메라 오버레이와 같은 예외 근거).
+ */
+.photoWithImg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 35%),
+    transparent 35%,
+    transparent 55%,
+    rgb(0 0 0 / 45%)
+  );
+  pointer-events: none;
+}
+
+/* 히어로 하단 — 이전(작게) + 다음(크게). 스크롤로 히어로가 사라지면 고정 바가 이어받는다. */
+.heroActions {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.heroPrev {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 56px;
+  min-height: 56px;
+  border-radius: var(--radius-lg);
+  background: color-mix(
+    in srgb,
+    var(--surface-container-lowest) 88%,
+    transparent
+  );
+  color: var(--on-surface);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-card);
+}
+
+.heroNext {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 14px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-body-lg);
+  font-weight: 600;
+  box-shadow: var(--shadow-card-hover);
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.heroNext:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.heroNext:active {
+  transform: scale(0.99);
+}
+
+.heroNext span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .details {
   display: flex;
   flex-direction: column;
