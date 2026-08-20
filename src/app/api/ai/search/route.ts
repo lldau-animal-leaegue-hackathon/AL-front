@@ -96,11 +96,25 @@ function hwahaeItemToCandidate(value: unknown): Candidate | null {
 }
 
 /**
- * 직파싱 본체. **빈 배열은 정상 결과다**(화해에 없음) — AI 폴백 대상이 아니다.
- * `null` 을 돌려줄 때만(구조 실패) 호출부가 AI 로 폴백한다.
+ * 직파싱 결과.
+ *  - `ok`         : 파싱 성공. **빈 배열도 정상 결과다**(화해에 그 제품이 없음).
+ *  - `unavailable`: 화해가 5xx/네트워크 오류. **일시적**이라 AI 폴백도 같은 주소·같은
+ *                   IP 로 나가 똑같이 실패한다 → 폴백하지 않고 사용자에게 알린다.
+ *  - `changed`    : 200 인데 우리가 아는 구조가 아님(화해 개편 의심) → AI 폴백이 의미 있다.
  */
-async function searchHwahaeDirect(query: string): Promise<Candidate[] | null> {
-  const response = await fetch(
+type DirectResult =
+  | { status: "ok"; candidates: Candidate[] }
+  | { status: "unavailable" }
+  | { status: "changed" };
+
+/** 성공 결과 캐시 — 같은 검색어로 외부를 반복해서 치지 않는다(레이트 리밋 회피). */
+const SEARCH_CACHE_MS = 10 * 60_000;
+const globalForSearch = globalThis as typeof globalThis & {
+  __alSearchCache?: Map<string, { at: number; candidates: Candidate[] }>;
+};
+
+async function fetchHwahae(query: string): Promise<Response> {
+  return fetch(
     `https://www.hwahae.co.kr/search?q=${encodeURIComponent(query)}`,
     {
       headers: { "user-agent": HWAHAE_UA },
@@ -108,9 +122,29 @@ async function searchHwahaeDirect(query: string): Promise<Candidate[] | null> {
       cache: "no-store",
     },
   );
+}
+
+/**
+ * 직파싱 본체.
+ *
+ * ⚠️ 화해는 **요청이 몰리면 5xx 를 돌려준다**(2026-08-20 실측: 같은 검색어가 한 번은
+ * 200, 연달아 치면 500). 일시적이므로 짧게 **1회만 재시도**하고, 그래도 안 되면
+ * `unavailable` 로 끝낸다 — 여기서 AI 폴백을 태우면 같은 주소를 한 번 더 치는 셈이라
+ * 레이트 리밋을 악화시키고 결과도 같다(프롬프트 규칙 3 → 빈 배열).
+ */
+async function searchHwahaeDirect(query: string): Promise<DirectResult> {
+  let response = await fetchHwahae(query);
+
+  if (response.status >= 500) {
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    response = await fetchHwahae(query);
+  }
+
   if (!response.ok) {
-    console.warn(`[api/ai/search] 직파싱 HTTP ${response.status} — AI 폴백`);
-    return null;
+    console.warn(
+      `[api/ai/search] 화해 응답 HTTP ${response.status} — 일시 실패로 처리(폴백 안 함)`,
+    );
+    return { status: "unavailable" };
   }
 
   const html = await response.text();
@@ -121,7 +155,7 @@ async function searchHwahaeDirect(query: string): Promise<Candidate[] | null> {
     console.warn(
       "[api/ai/search] __NEXT_DATA__ 없음 — AI 폴백(화해 구조 변경?)",
     );
-    return null;
+    return { status: "changed" };
   }
 
   let data: unknown;
@@ -129,20 +163,23 @@ async function searchHwahaeDirect(query: string): Promise<Candidate[] | null> {
     data = JSON.parse(match[1]);
   } catch {
     console.warn("[api/ai/search] __NEXT_DATA__ 파싱 실패 — AI 폴백");
-    return null;
+    return { status: "changed" };
   }
 
   // 키 경로 실측(2026-08-20): props.pageProps.products.products[]
   const list = dig(data, "props", "pageProps", "products", "products");
   if (!Array.isArray(list)) {
     console.warn("[api/ai/search] products 키 경로 부재 — AI 폴백");
-    return null;
+    return { status: "changed" };
   }
 
-  return list
-    .map(hwahaeItemToCandidate)
-    .filter((item): item is Candidate => item !== null)
-    .slice(0, MAX_CANDIDATES);
+  return {
+    status: "ok",
+    candidates: list
+      .map(hwahaeItemToCandidate)
+      .filter((item): item is Candidate => item !== null)
+      .slice(0, MAX_CANDIDATES),
+  };
 }
 
 /**
@@ -226,15 +263,43 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1차: 직파싱(0.5~2초). 빈 배열도 정상 결과라 그대로 반환한다 — null(구조 실패)만 폴백.
+    // 0차: 캐시. 같은 검색어를 외부로 반복해 치지 않는다(화해 레이트 리밋 회피).
+    globalForSearch.__alSearchCache ??= new Map();
+    const cache = globalForSearch.__alSearchCache;
+    const hit = cache.get(query);
+    if (hit && Date.now() - hit.at < SEARCH_CACHE_MS) {
+      return Response.json({ candidates: hit.candidates });
+    }
+
+    // 1차: 직파싱(0.5~2초). 빈 배열도 정상 결과라 그대로 반환한다.
+    let unavailable = false;
     try {
       const direct = await searchHwahaeDirect(query);
-      if (direct !== null) {
-        return Response.json({ candidates: direct });
+      if (direct.status === "ok") {
+        cache.set(query, { at: Date.now(), candidates: direct.candidates });
+        return Response.json({ candidates: direct.candidates });
       }
+      unavailable = direct.status === "unavailable";
     } catch (error: unknown) {
-      // 타임아웃·네트워크 오류 — AI 경로가 그대로 받는다.
-      console.warn("[api/ai/search] 직파싱 실패 — AI 폴백:", error);
+      // 타임아웃·네트워크 오류도 일시 실패다 — AI 로 같은 주소를 또 치지 않는다.
+      console.warn("[api/ai/search] 직파싱 예외 — 일시 실패로 처리:", error);
+      unavailable = true;
+    }
+
+    /*
+     * 화해가 일시적으로 응답하지 않는 상태. AI 폴백은 **같은 주소를 같은 IP 로** 치므로
+     * 결과가 같고(빈 배열) 레이트 리밋만 악화시킨다 — 90초를 쓰는 대신 바로 알린다.
+     * ⚠️ "검색 결과가 없어요"로 뭉개면 사용자는 **제품이 없는 줄 알고 포기한다.**
+     *    지금 실패한 것과 카탈로그에 없는 것은 다른 상황이라 다르게 말해야 한다.
+     */
+    if (unavailable) {
+      return Response.json(
+        {
+          message:
+            "제품 검색이 일시적으로 원활하지 않아요. 잠시 후 다시 시도하거나, 성분표 사진을 올려 바로 등록할 수 있어요.",
+        },
+        { status: 503 },
+      );
     }
 
     // 2차(폴백): 기존 헤드리스 Claude 경로. 프롬프트·검증 규율은 그대로다.
@@ -278,7 +343,13 @@ export async function POST(request: Request) {
        * ⭐ 빈 배열은 실패가 아니라 정상 응답이다(프롬프트 규칙 3: 화해에 없으면 빈 배열).
        *    화면은 "찾지 못했어요 — 직접 입력하기"로 이어 간다.
        */
-      return Response.json({ candidates: candidates.slice(0, MAX_CANDIDATES) });
+      const narrowed = candidates.slice(0, MAX_CANDIDATES);
+      // 폴백 결과도 캐시한다 — 90초짜리 호출을 같은 검색어로 반복하지 않는다.
+      globalForSearch.__alSearchCache?.set(query, {
+        at: Date.now(),
+        candidates: narrowed,
+      });
+      return Response.json({ candidates: narrowed });
     } catch (error: unknown) {
       // claude CLI 의 stderr·서버 절대 경로가 섞여 나올 수 있어 상세는 로그로만 남긴다.
       console.error("[api/ai/search]", error);
