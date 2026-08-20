@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { ApiError } from "@/api/client";
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 import { saveProfile, useConcernIngredients, useSkinProfile } from "@/lib/data";
@@ -52,11 +53,19 @@ export function ConcernSection() {
       });
       setEditing(false);
     } catch (cause: unknown) {
-      setSaveError(
-        cause instanceof Error
-          ? cause.message
-          : "고민을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
-      );
+      // 서버가 준 한글 안내(`{ message }`)를 우선 보여 준다 — "API 400" 원문은 사용자용이 아니다.
+      if (cause instanceof ApiError) {
+        const body = cause.body as { message?: string } | null;
+        setSaveError(
+          body?.message ?? `고민을 저장하지 못했어요 (${cause.status})`,
+        );
+      } else {
+        setSaveError(
+          cause instanceof Error
+            ? cause.message
+            : "고민을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
+      }
     } finally {
       setSaving(false);
     }

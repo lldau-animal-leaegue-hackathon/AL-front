@@ -12,7 +12,7 @@ import {
   execute,
   selectRows,
 } from "@/lib/db/pool";
-import { LIMITS, text } from "@/lib/db/input";
+import { LIMITS, optionalText, text } from "@/lib/db/input";
 import { toSkinProfile } from "@/lib/db/rows";
 
 export const runtime = "nodejs";
@@ -52,9 +52,21 @@ export async function PUT(request: Request) {
     typeof body.usableTime === "object" && body.usableTime !== null
       ? { ...body.usableTime }
       : {};
-  // 컬럼이 VARCHAR(30) 이라 넘치면 DB 에러 → 503 으로 나간다. 여기서 400 으로 막는다.
-  const morning = text(usableTime.morning, LIMITS.usableTime) ?? "";
-  const evening = text(usableTime.evening, LIMITS.usableTime) ?? "";
+  /*
+   * 컬럼이 VARCHAR(30) 이라 넘치면 DB 에러 → 503 으로 나간다. 여기서 400 으로 막는다.
+   * ⚠️ 넘친 값을 "" 로 뭉개면 안 된다 — 기존 가용 시간을 빈 값으로 **덮어써서** 지운다.
+   *    없는 것(undefined)만 "" 를 쓰고, 있는데 잘못된 값은 요청을 거부한다.
+   */
+  const morning = optionalText(usableTime.morning, LIMITS.usableTime);
+  const evening = optionalText(usableTime.evening, LIMITS.usableTime);
+  if (morning === null || evening === null) {
+    return Response.json(
+      {
+        message: `usableTime 의 morning·evening 은 ${LIMITS.usableTime}자 이하의 문자열이어야 합니다.`,
+      },
+      { status: 400 },
+    );
+  }
 
   try {
     const userId = await currentUserId();
@@ -78,7 +90,7 @@ export async function PUT(request: Request) {
          wonder         = VALUES(wonder),
          usable_morning = VALUES(usable_morning),
          usable_evening = VALUES(usable_evening)`,
-      [userId, wonder, morning, evening, wonder],
+      [userId, wonder, morning ?? "", evening ?? "", wonder],
     );
 
     return Response.json({ ok: true });

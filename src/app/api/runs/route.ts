@@ -14,7 +14,7 @@ import {
   execute,
   selectRows,
 } from "@/lib/db/pool";
-import { isoDate, LIMITS, textArray } from "@/lib/db/input";
+import { isoDate, LIMITS, text, textArray } from "@/lib/db/input";
 import { toRoutineRun } from "@/lib/db/rows";
 
 export const runtime = "nodejs";
@@ -45,7 +45,8 @@ export async function POST(request: Request) {
     return Response.json({ message: "JSON 본문이 아닙니다." }, { status: 400 });
   }
 
-  const routineId = typeof body.routineId === "string" ? body.routineId : "";
+  // 컬럼이 CHAR(36)(UUID)라 넘치면 DB 에러 → 503. migrate 라우트와 같은 상한으로 400 처리.
+  const routineId = text(body.routineId, 36);
   /*
    * `new Date()` 는 "March 5" 나 서기 5만년도 받아 준다. 시각이 터무니없으면
    * 주간 달성률이 조용히 틀어지므로 `isoDate` 가 범위까지 확인한다.

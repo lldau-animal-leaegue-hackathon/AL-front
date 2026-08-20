@@ -88,14 +88,15 @@ type RoutineInput = {
   steps: StepInput[];
 };
 
-/** 단계 안의 문자열 배열(사용법·팁·주의). 상한을 넘으면 빈 배열로 떨어뜨린다. */
-function stepTexts(value: unknown): string[] {
-  return (
-    textArray(value ?? [], {
-      maxItems: LIMITS.stepTextItems,
-      maxLength: LIMITS.stepTextLength,
-    }) ?? []
-  );
+/**
+ * 단계 안의 문자열 배열(사용법·팁·주의). 상한을 넘으면 `null`(= 거부).
+ * ⚠️ 빈 배열로 뭉개면 안 된다 — 사용법·주의가 조용히 사라진 채 저장된다.
+ */
+function stepTexts(value: unknown): string[] | null {
+  return textArray(value ?? [], {
+    maxItems: LIMITS.stepTextItems,
+    maxLength: LIMITS.stepTextLength,
+  });
 }
 
 function narrowStep(value: unknown): StepInput | null {
@@ -105,6 +106,12 @@ function narrowStep(value: unknown): StepInput | null {
   const routineName = text(step.routineName, LIMITS.routineName);
   if (!routineName) return null;
 
+  const usingProduct = stepTexts(step.usingProduct);
+  const howToUse = stepTexts(step.howToUse);
+  const tips = stepTexts(step.tips);
+  const warning = stepTexts(step.warning);
+  if (!usingProduct || !howToUse || !tips || !warning) return null;
+
   return {
     routineName,
     /*
@@ -113,26 +120,35 @@ function narrowStep(value: unknown): StepInput | null {
      * **트랜잭션 전체가 롤백돼 루틴이 한 벌도 저장되지 않는다.**
      */
     estimatedTime: intInRange(step.estimatedTime, 0, LIMITS.estimatedTime) ?? 0,
-    usingProduct: stepTexts(step.usingProduct),
-    howToUse: stepTexts(step.howToUse),
-    tips: stepTexts(step.tips),
-    warning: stepTexts(step.warning),
+    usingProduct,
+    howToUse,
+    tips,
+    warning,
   };
 }
 
-function narrowRoutine(value: unknown): RoutineInput | null {
-  if (typeof value !== "object" || value === null) return null;
+/**
+ * 루틴 하나를 좁힌다. 실패하면 **어디가 문제인지 담은 한글 메시지**를 돌려준다 —
+ * 걸러진 루틴을 조용히 버리면, 저장이 조건 단위 교체라 2벌 중 1벌만 남는 사고가 난다.
+ * `index` 는 사용자 안내용 0-기반 위치다.
+ */
+function narrowRoutine(value: unknown, index: number): RoutineInput | string {
+  const nth = `${index + 1}번째 루틴`;
+  if (typeof value !== "object" || value === null)
+    return `${nth}이 객체가 아닙니다.`;
   const routine: Record<string, unknown> = { ...value };
 
   const name = text(routine.name, LIMITS.routineName);
-  if (!name) return null;
+  if (!name)
+    return `${nth}의 name 은 필수이고 ${LIMITS.routineName}자 이하여야 합니다.`;
 
   /*
    * 단계 수 상한. 없으면 steps 를 수만 개 보내 트랜잭션이 사용자 행을 잡은 채
    * 수십 초를 왕복하고, `seq` 가 SMALLINT 라 32,767 을 넘는 순간 전체가 롤백된다.
    */
   const rawSteps = Array.isArray(routine.steps) ? routine.steps : [];
-  if (rawSteps.length > LIMITS.steps) return null;
+  if (rawSteps.length > LIMITS.steps)
+    return `${nth}의 단계는 ${LIMITS.steps}개 이하여야 합니다.`;
 
   /*
    * ⚠️ 길이를 넘긴 `condition` 을 "평소"로 떨어뜨리면 안 된다.
@@ -140,14 +156,27 @@ function narrowRoutine(value: unknown): RoutineInput | null {
    *    없는 것(undefined)만 기본값을 쓰고, 잘못된 값은 그 루틴을 통째로 거부한다.
    */
   const condition = optionalText(routine.condition, LIMITS.condition);
-  if (condition === null) return null;
+  if (condition === null)
+    return `${nth}의 condition 은 ${LIMITS.condition}자 이하여야 합니다.`;
+
+  /*
+   * ⚠️ 불량 단계를 filter 로 조용히 떨어뜨리면 안 된다 — 루틴 레벨과 같은 원칙이다.
+   *    단계가 빠진 채 저장되면 화면은 성공을 띄우고 사용자는 단계가 사라진 걸 나중에 안다.
+   */
+  const steps: StepInput[] = [];
+  for (const [stepIndex, raw] of rawSteps.entries()) {
+    const step = narrowStep(raw);
+    if (step === null)
+      return `${nth}의 ${stepIndex + 1}번째 단계 형식이 올바르지 않습니다.`;
+    steps.push(step);
+  }
 
   return {
     name,
     condition: condition ?? "평소",
     time: routine.time === "pm" ? "pm" : "am",
     summary: text(routine.summary, LIMITS.summary) ?? "",
-    steps: rawSteps.map(narrowStep).filter((s) => s !== null),
+    steps,
   };
 }
 
@@ -173,18 +202,14 @@ export async function PUT(request: Request) {
       { status: 400 },
     );
   }
-  const routines = body.routines.map(narrowRoutine).filter((r) => r !== null);
-
-  /*
-   * ⚠️ 걸러진 루틴을 **조용히 버리면 안 된다.** 저장이 조건 단위 교체라, 2벌 중 1벌이
-   *    걸러지면 기존 2벌을 지우고 1벌만 넣는다 — 화면은 "루틴을 만들었어요"를 띄운
-   *    채로 아침 루틴이 사라진다. 부분 저장 대신 요청 전체를 거부한다.
-   */
-  if (routines.length !== body.routines.length) {
-    return Response.json(
-      { message: "루틴 형식이 올바르지 않아 저장하지 못했습니다." },
-      { status: 400 },
-    );
+  // 하나라도 좁히기에 실패하면 부분 저장 대신 요청 전체를 거부한다(사유는 narrowRoutine 참조).
+  const routines: RoutineInput[] = [];
+  for (const [index, raw] of body.routines.entries()) {
+    const result = narrowRoutine(raw, index);
+    if (typeof result === "string") {
+      return Response.json({ message: result }, { status: 400 });
+    }
+    routines.push(result);
   }
 
   try {
