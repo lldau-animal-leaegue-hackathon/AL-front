@@ -53,14 +53,22 @@ jobs:
   deploy:
     needs: build-push
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: 서버에서 pull + 재기동
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          # forced command 키라 아래 script 는 사실상 장식이다 — 서버가 항상
-          # 배포 스크립트만 실행한다. 문서화를 위해 같은 경로를 적는다.
-          script: /home/ubuntu/youtine/deploy.sh
-          command_timeout: 10m
+      # ⛔ appleboy/ssh-action 을 쓰지 않는다(2026-08-20 실측): forced-command 키와
+      #    상성이 나빠 "서버에서 스크립트는 완주했는데 액션은 실패"(run #4) 또는
+      #    "접속 자체가 안 됨"(run #5·#6) 이 났다. 순정 ssh 는 같은 키·같은 경로로
+      #    수동 실측에서 exit 0 으로 완주했다 — 그대로 재현한다.
+      - name: 서버에서 pull + 재기동 (forced command → deploy.sh)
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          install -m 600 /dev/null key
+          printf '%s\n' "$SSH_KEY" > key
+          # 실행 명령("deploy")은 장식이다 — authorized_keys 의 forced command 가
+          # 항상 배포 스크립트를 실행한다. 키가 새어도 임의 명령은 불가능하다.
+          ssh -i key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" deploy
+          rm -f key
