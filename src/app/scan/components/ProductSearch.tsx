@@ -22,6 +22,15 @@ import styles from "./ProductSearch.module.css";
  * 시드에는 성분도 이미지도 없다. 그래서 시드 카드는 상세를 열 수 없고 **등록 폼을 채운다**
  * (거기서 검색·성분 추출을 거쳐 담기면 그 제품이 카탈로그에 들어간다).
  */
+/**
+ * 시드 검색(`searchProducts`)과 **같은 규칙** — 공백으로 나눈 토큰이 전부 들어 있어야 한다.
+ * 두 목록의 판정이 어긋나면 같은 질의에 한쪽만 걸려 결과가 들쭉날쭉해진다.
+ */
+function matchesAll(haystack: string, tokens: string[]): boolean {
+  const lower = haystack.toLowerCase();
+  return tokens.every((token) => lower.includes(token));
+}
+
 export function ProductSearch({
   active,
   onSelect,
@@ -35,10 +44,6 @@ export function ProductSearch({
   const [detail, setDetail] = useState<Product | null>(null);
   const popular = usePopularProducts();
 
-  // 로컬 시드 검색이라 입력할 때마다 즉시 거른다 (네트워크 호출이 없어 디바운스도 불필요).
-  const trimmed = query.trim();
-  const results = trimmed ? searchProducts(trimmed) : null;
-
   /**
    * 카탈로그가 비었으면 시드로 폴백한다. 둘은 카드 클릭 동작이 다르다.
    *
@@ -47,6 +52,35 @@ export function ProductSearch({
    */
   const catalog = popular.value;
   const useCatalog = catalog.length > 0;
+
+  // 둘 다 메모리에 있는 목록이라 입력할 때마다 즉시 거른다 (네트워크 호출이 없어 디바운스 불필요).
+  const trimmed = query.trim();
+  const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
+  const searching = tokens.length > 0;
+
+  /*
+   * ⭐ 검색 대상은 **둘**이다(m10). 시드만 거르면 그리드에 카드로 떠 있던
+   * 카탈로그 제품이 검색에서는 "결과가 없습니다"로 나온다 — 존재하는 제품을
+   * 없다고 안내하는 셈이다.
+   * 목록을 합치지 않고 나눠 두는 이유는 **클릭 동작이 다르기** 때문이다:
+   * 카탈로그는 성분이 있어 상세 모달, 시드는 성분이 없어 등록 폼 프리필.
+   */
+  const catalogHits = searching
+    ? catalog.filter((product) =>
+        matchesAll(
+          `${product.productName} ${product.productCompany ?? ""} ${product.category}`,
+          tokens,
+        ),
+      )
+    : [];
+  // 같은 제품이 양쪽에 있으면 카탈로그만 남긴다 — 성분·이미지를 볼 수 있는 쪽이 낫다.
+  const seedHits = searching
+    ? searchProducts(trimmed).filter(
+        (seed) =>
+          !catalogHits.some((product) => product.productName === seed.name),
+      )
+    : [];
+  const hitCount = catalogHits.length + seedHits.length;
 
   return (
     <>
@@ -70,34 +104,46 @@ export function ProductSearch({
 
       <section className={styles.results}>
         <h2 className={styles.heading}>
-          {results ? "검색 결과" : "인기 제품"}
-          {results && <span className={styles.status}>{results.length}개</span>}
+          {searching ? "검색 결과" : "인기 제품"}
+          {searching && <span className={styles.status}>{hitCount}개</span>}
         </h2>
 
         {/*
-          검색 결과는 로컬 시드라 네트워크와 무관하다 — 검색 중일 때는 카탈로그 상태를
-          따지지 않는다. 인기 제품을 그릴 때만 로딩·실패를 확인한다.
+          카탈로그가 아직 안 왔으면 검색 중에도 로딩을 보여 준다 — 안 그러면
+          아직 도착하지 않은 카탈로그 제품이 "검색 결과 없음"으로 보인다(m10).
         */}
-        {!results && !popular.ready ? (
+        {!popular.ready ? (
           <DataState loading label="인기 제품" />
-        ) : !results && popular.error ? (
+        ) : !searching && popular.error ? (
           <DataState
             error
             onRetry={popular.retry}
             label="인기 제품"
             message={popular.errorMessage}
           />
-        ) : results ? (
-          results.length === 0 ? (
+        ) : searching ? (
+          hitCount === 0 ? (
             <p className={styles.empty}>
               검색 결과가 없습니다. &lsquo;등록&rsquo; 탭에서 이름으로
               찾아보세요.
             </p>
           ) : (
             <ul className={styles.grid}>
-              {results.map((product) => (
+              {/* 카탈로그 히트 — 성분이 저장돼 있으니 그리드 카드와 같이 상세 모달을 연다. */}
+              {catalogHits.map((product) => (
                 <ProductCard
-                  key={product.id}
+                  key={`catalog-${product.id}`}
+                  name={product.productName}
+                  note={product.productCompany}
+                  image={product.image}
+                  category={product.category}
+                  onSelect={() => setDetail(product)}
+                />
+              ))}
+              {/* 시드 히트 — 성분이 없어 상세를 열 수 없다. 등록 폼을 채운다. */}
+              {seedHits.map((product) => (
+                <ProductCard
+                  key={`seed-${product.id}`}
                   name={product.name}
                   note={product.brand}
                   category={product.category}

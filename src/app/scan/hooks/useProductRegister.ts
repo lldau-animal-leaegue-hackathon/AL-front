@@ -311,8 +311,14 @@ export function useProductRegister() {
   };
 }
 
-/** AI 호출이든 저장이든 사용자에게 보일 문구는 한 곳에서 만든다. */
-function toMessage(cause: unknown, fallback: string): string {
+/**
+ * AI 호출이든 저장이든 사용자에게 보일 문구는 한 곳에서 만든다.
+ *
+ * `ApiError.message` 는 `API ${status} ${statusText}` 로 고정돼 있어 그대로 쓰면
+ * 서버가 body 에 담아 준 한글 안내가 버려진다 — body 의 `message` 를 먼저 본다.
+ * `PopularProductModal` 도 이걸 쓴다(m11). 재구현하지 말 것.
+ */
+export function toMessage(cause: unknown, fallback: string): string {
   if (cause instanceof ApiError) {
     const body = cause.body as { message?: string } | null;
     return body?.message ?? `${fallback} (${cause.status})`;

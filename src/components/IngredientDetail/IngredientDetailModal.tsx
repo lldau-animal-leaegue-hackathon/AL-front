@@ -46,6 +46,8 @@ export function IngredientDetailModal({
    * ReportSection)이라 각자에게 맡기지 않고 모달이 직접 한다.
    */
   const closeRef = useRef<HTMLButtonElement>(null);
+  /** 중첩 모달 판별용 — 이 시트 **안쪽**만 본다(바깥 형제 모달까지 세면 안 된다). */
+  const sheetRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const trigger = document.activeElement;
     closeRef.current?.focus();
@@ -57,7 +59,16 @@ export function IngredientDetailModal({
   // Esc 로 닫기 — 다른 모달 3종과 같은 규칙.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key !== "Escape") return;
+      /*
+       * 시트 안에 다른 모달(제품 상세)이 떠 있으면 이 모달은 닫지 않는다(m9).
+       * 자식 쪽에서 stopImmediatePropagation 을 해도 못 막는다 — 두 리스너가 같은
+       * window 에 붙고 **부모가 먼저 등록돼 먼저 실행**되기 때문이다. 가드가 유일한 길이다.
+       * 되돌리면 Esc 한 번에 둘 다 닫히고, 특히 자식이 "담는 중"일 때 부모가 닫히면
+       * 자식이 언마운트돼 저장 실패를 사용자가 영영 못 본다.
+       */
+      if (sheetRef.current?.querySelector('[role="dialog"]')) return;
+      onClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -81,7 +92,11 @@ export function IngredientDetailModal({
       onClick={onClose}
     >
       {/* 시트 안쪽 클릭이 overlay 로 새어 닫히지 않게 막는다 */}
-      <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={sheetRef}
+        className={styles.sheet}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.bar}>
           <h2 className={styles.title}>{current}</h2>
           <button
