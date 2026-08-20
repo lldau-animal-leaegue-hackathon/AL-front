@@ -234,8 +234,21 @@ async function readShelf(userId: string): Promise<ShelfItem[]> {
     .filter((item) => item !== null);
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   const userId = await currentUserId();
+
+  /*
+   * `generate: true` 일 때만 AI 를 태운다(사용자 결정 2026-08-20 — 분석은 명시적
+   * "분석하기" 버튼으로만). 기본은 **캐시 전용**: 지문이 맞는 캐시가 있으면 주고,
+   * 없으면 `null` 을 준다 — 화면은 그걸 보고 버튼을 띄운다.
+   */
+  let generate = false;
+  try {
+    const body = (await request.json()) as { generate?: unknown };
+    generate = body.generate === true;
+  } catch {
+    // 본문 없음 = 캐시 전용. 형식 오류로 400 을 줄 만큼 중요한 입력이 아니다.
+  }
 
   let shelf: ShelfItem[];
   try {
@@ -279,6 +292,12 @@ export async function POST() {
   } catch (error) {
     console.warn("[api/ai/report] 캐시 조회 실패, AI 로 진행:", error);
   }
+
+  /*
+   * 캐시 미스 + 캐시 전용 요청 → `null`. "아직 분석 전"이라는 정상 응답이다.
+   * (선반이 바뀌어 지문이 어긋난 경우도 여기로 온다 — 화면에 분석하기 버튼이 다시 뜬다.)
+   */
+  if (!generate) return Response.json(null);
 
   // 사용자당 동시 1건. 호출마다 claude 프로세스가 뜬다.
   if (!acquire(userId)) {

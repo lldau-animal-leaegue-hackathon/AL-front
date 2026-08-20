@@ -9,9 +9,9 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  /* DESIGN.md Glass Layers: 반투명 + blur 로 뒤 문맥을 유지한다.
-     배경 토큰은 기존 제품 모달(productModal.overlay)과 같은 값을 쓴다. */
-  background: color-mix(in srgb, var(--inverse-surface) 55%, transparent);
+  /* DESIGN.md Glass Layers: 반투명 + blur. 스크림 토큰은 모드와 무관하게 검다 —
+     inverse-surface 는 다크에서 밝게 뒤집혀 흰 오버레이가 된다(productModal 과 동일 규칙). */
+  background: color-mix(in srgb, var(--scrim) 72%, transparent);
   backdrop-filter: blur(var(--glass-blur));
 }
 

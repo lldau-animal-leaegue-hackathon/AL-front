@@ -213,31 +213,41 @@ function shelfSignature(products: readonly Product[]): string {
 }
 
 /**
- * 선반 상호작용 분석 리포트.
+ * 선반 상호작용 분석 리포트 — **캐시 전용 조회**(AI 를 절대 태우지 않는다).
  *
- * `enabled=false` 면 **호출하지 않는다** — 하위 탭을 열 때만 부른다.
- * 최초 생성은 1~2분짜리 AI 호출이라, 리포트 탭을 안 여는 사용자에게 태우면 안 된다.
+ * 지문이 맞는 서버 캐시가 있으면 그 내용, 없으면 `null`("아직 분석 전") — 화면은
+ * `null` 을 보고 **분석하기 버튼**을 띄운다(사용자 결정 2026-08-20 — 분석은 명시적
+ * 버튼으로만). 실제 생성은 `generateShelfReport()` 가 한다.
  *
- * 무효화는 **키 교체**로 한다: 키에 선반 서명이 들어 있어 제품을 담고 빼면 키가
- * 바뀌고, 새 키는 첫 마운트에서 fetch 한다(서버가 지문으로 캐시/재생성을 판정).
- * `mutate(key, undefined)` 로 비우는 방식을 쓰지 않는 이유 — AI_SWR_OPTIONS 는
- * 자동 재검증이 전부 꺼져 있어, 열려 있는 구독자가 **빈 캐시 상태로 영영 로딩**에 갇힌다.
+ * 무효화는 **키 교체**다: 키에 선반 서명이 들어 있어 제품을 담고 빼면 키가 바뀌고,
+ * 새 키의 캐시 전용 조회가 `null` 을 받아 버튼이 자연히 다시 나타난다.
  */
-export function useShelfReport(
-  enabled: boolean,
-): Resource<ShelfReportResponse | null> {
+export function useShelfReport(): Resource<ShelfReportResponse | null> {
   const products = useProducts();
   const key =
-    enabled && products.ready && !products.error && products.value.length > 0
+    products.ready && !products.error && products.value.length > 0
       ? `${KEYS.shelfReport}?s=${shelfSignature(products.value)}`
       : null;
 
+  // 캐시 전용이라 싸다(DB 1회) — AI 옵션이 아니라 기본 SWR 옵션으로 신선도를 유지한다.
   return useResource<ShelfReportResponse | null>(
     key,
-    fetchShelfReport,
+    () => fetchShelfReport(),
     null,
-    AI_SWR_OPTIONS,
   );
+}
+
+/**
+ * 분석을 실제로 생성한다(1~2분 AI). 성공하면 현재 선반 서명 키에 결과를 채워
+ * `useShelfReport` 구독자가 즉시 갱신된다. 실패는 예외로 올라간다 — 화면이 알린다.
+ */
+export async function generateShelfReport(
+  products: readonly Product[],
+): Promise<void> {
+  const report = await fetchShelfReport({ generate: true });
+  await mutate(`${KEYS.shelfReport}?s=${shelfSignature(products)}`, report, {
+    revalidate: false,
+  });
 }
 
 /**

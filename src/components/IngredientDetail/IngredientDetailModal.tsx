@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
 import { IngredientChip } from "@/components/IngredientChip/IngredientChip";
 import { IngredientProducts } from "@/components/IngredientProducts/IngredientProducts";
 import { useIngredientKnowledge } from "@/lib/data";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 import styles from "./IngredientDetailModal.module.css";
 
@@ -36,14 +37,8 @@ export function IngredientDetailModal({
   const [current, setCurrent] = useState(name);
   const knowledge = useIngredientKnowledge(current);
 
-  // 모달이 떠 있는 동안 배경 스크롤을 잠근다(기존 제품 모달과 같은 동작).
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
+  // 모달이 떠 있는 동안 배경 스크롤을 잠근다(모달 공통 규칙).
+  useBodyScrollLock();
 
   const value = knowledge.value;
   const hasAny =

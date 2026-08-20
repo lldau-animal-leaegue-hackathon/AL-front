@@ -29,6 +29,9 @@
   --on-surface-variant: #424844;
   --inverse-surface: #2e3132;
   --inverse-on-surface: #f0f1f2;
+  /* 모달 스크림 — **모드와 무관하게 검은 계통**이어야 한다. inverse-surface 를 쓰면
+     다크에서 밝은 색으로 뒤집혀 흰 오버레이가 된다(사용자 보고 2026-08-20). */
+  --scrim: #191c1d;
   --outline: #727973;
   --outline-variant: #c2c8c2;
 
@@ -199,6 +202,7 @@
     --on-surface-variant: #c2c8c2; /* 대응표 = 라이트 --outline-variant(80) */
     --inverse-surface: #e1e3e4; /* 대응표 = 라이트 --surface-container-highest(90) */
     --inverse-on-surface: #2e3132; /* 대응표 = 라이트 --inverse-surface(20) */
+    --scrim: #000000; /* 다크에서는 더 깊은 검정 — 뒤 화면과 확실히 분리된다 */
     --outline: #8c928c; /* 신규 계산 (t60) */
     --outline-variant: #424844; /* 대응표 = 라이트 --on-surface-variant(30) */
 

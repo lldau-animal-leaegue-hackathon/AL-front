@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { DataState } from "@/components/DataState/DataState";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
@@ -8,6 +9,7 @@ import { Icon } from "@/components/Icon";
 import { useProducts } from "@/lib/data";
 import type { Product } from "@/types/skincare";
 
+import { PopularProductModal } from "./PopularProductModal";
 import { ProductCard } from "./ProductCard";
 import styles from "./ShelfSection.module.css";
 
@@ -26,6 +28,8 @@ function shelfNote(product: Product, flagged: boolean): string | null {
 
 export function ShelfSection() {
   const { ready, value: products, error, errorMessage, retry } = useProducts();
+  /** 카드를 누르면 상세 모달(인기 탭과 같은 모달, 담기 버튼만 없음). */
+  const [detail, setDetail] = useState<Product | null>(null);
 
   if (!ready) return <DataState loading label="제품" />;
   if (error)
@@ -48,6 +52,15 @@ export function ShelfSection() {
 
   return (
     <ul className={styles.grid}>
+      {/* 인기 탭과 같은 상세 모달 — 내 선반이므로 담기 버튼은 뺀다. */}
+      {detail && (
+        <PopularProductModal
+          product={detail}
+          onClose={() => setDetail(null)}
+          alreadyOnShelf
+        />
+      )}
+
       {products.map((product) => {
         const flagged = (product.warnings?.length ?? 0) > 0;
 
@@ -60,6 +73,7 @@ export function ShelfSection() {
             image={product.thumbnail}
             note={shelfNote(product, flagged)}
             flagged={flagged}
+            onSelect={() => setDetail(product)}
           />
         );
       })}

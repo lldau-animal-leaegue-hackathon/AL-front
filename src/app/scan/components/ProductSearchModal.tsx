@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { ProductCandidate } from "@/api/ai";
 import { Icon } from "@/components/Icon";
 import { stepIcon } from "@/lib/stepIcon";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 import type { Product } from "@/types/skincare";
 
@@ -49,6 +50,9 @@ export function ProductSearchModal({
   onClose: () => void;
 }) {
   const busy = phase === "extracting" || phase === "saving";
+
+  // 모달 뒤 화면이 스크롤되면 안 된다(사용자 요청 2026-08-20).
+  useBodyScrollLock();
 
   // Esc 로 닫기 — 오버레이라 브라우저 뒤로가기가 닫아 주지 않는다(CameraCapture 와 같은 이유).
   useEffect(() => {

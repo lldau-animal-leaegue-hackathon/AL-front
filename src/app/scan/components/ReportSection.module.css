@@ -26,6 +26,50 @@
   letter-spacing: var(--tracking-label-sm);
 }
 
+/* 분석하기 — 헤더 오른쪽 끝(사용자 지정 위치). 분석이 최신이면 렌더되지 않는다. */
+.analyze {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+  /* 터치 타깃 44px 이상 — 반응형 계획서 R7 기준 */
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--text-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.analyze:hover:not(:disabled) {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.analyze:disabled {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: progress;
+}
+
+.generateError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font: var(--text-body-md);
+}
+
 /* ── 하위 세그먼트 — ScanTabs 의 밑줄 패턴(투명 배경 + --primary 밑줄) ───── */
 
 .subTabs {

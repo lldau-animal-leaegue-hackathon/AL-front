@@ -9,7 +9,8 @@ import { Icon } from "@/components/Icon";
 import { IngredientChip } from "@/components/IngredientChip/IngredientChip";
 import { IngredientDetailModal } from "@/components/IngredientDetail/IngredientDetailModal";
 import { IngredientProducts } from "@/components/IngredientProducts/IngredientProducts";
-import { useProducts, useShelfReport } from "@/lib/data";
+import { ApiError } from "@/api/client";
+import { generateShelfReport, useProducts, useShelfReport } from "@/lib/data";
 import { SKIN_TYPES } from "@/lib/prompts/interactions";
 import type { IngredientPair } from "@/api/ai";
 import type { Product } from "@/types/skincare";
@@ -100,19 +101,43 @@ const LONG_WAIT_SECONDS = 20;
  * AI 분석 리포트 — 세 하위 탭.
  *
  *  - 종합: 저장된 `ingredients`·`warnings` 집계(AI 호출 없음, 즉시)
- *  - 피부 타입별 / 시너지·궁합: 선반 상호작용 분석(`/api/ai/report`).
- *    **하위 탭을 처음 열 때만 요청한다** — 최초 생성이 1~2분짜리 AI 호출이라
- *    리포트를 안 여는 사용자에게 태우면 안 된다. 선반이 안 바뀌면 서버 지문
- *    캐시가 즉시 답한다.
+ *  - 피부 타입별 / 시너지·궁합: 선반 상호작용 분석 결과. **캐시만 자동으로 읽는다.**
+ *
+ * AI 생성은 헤더 오른쪽 **분석하기 버튼으로만** 시작한다(사용자 결정 2026-08-20).
+ * 버튼은 "아직 분석 전"(최초 1회)이거나 **제품이 담기고 빠져 지문이 어긋났을 때**
+ * 자연히 나타난다 — 캐시 전용 조회가 `null` 을 주기 때문이다. 분석이 최신이면 없다.
  */
 export function ReportSection() {
   const { ready, value: products, error, errorMessage, retry } = useProducts();
 
   const [subTab, setSubTab] = useState<SubTab>("summary");
-  /** 분석 탭을 한 번이라도 열었는가. 켜진 뒤로는 유지 — 탭을 오가도 재요청이 없다. */
-  const [analysisWanted, setAnalysisWanted] = useState(false);
-  const report = useShelfReport(analysisWanted);
-  const generating = analysisWanted && !report.ready;
+  const report = useShelfReport(); // 캐시 전용 — AI 를 태우지 않는다
+  /** "아직 분석 전"(null) — 분석하기 버튼이 뜨는 조건이다. */
+  const analyzed = report.ready && !report.error && report.value !== null;
+
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      await generateShelfReport(products);
+      // 결과 탭이 보이게 옮겨 준다 — 종합 탭에서 눌렀으면 결과가 안 보인다.
+      setSubTab((tab) => (tab === "summary" ? "synergy" : tab));
+    } catch (cause: unknown) {
+      if (cause instanceof ApiError) {
+        const body = cause.body as { message?: string } | null;
+        setGenerateError(
+          body?.message ?? `분석하지 못했어요 (${cause.status})`,
+        );
+      } else {
+        setGenerateError("분석하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   // 진행 표시 — 스피너만 돌면 멈춘 줄 안다(RoutineForm 과 같은 이유·같은 방식).
   const [elapsed, setElapsed] = useState(0);
@@ -143,10 +168,7 @@ export function ReportSection() {
   const shared = sharedIngredients(products);
   const flagged = warningsByProduct(products);
 
-  const selectTab = (id: SubTab) => {
-    setSubTab(id);
-    if (id !== "summary") setAnalysisWanted(true);
-  };
+  const selectTab = (id: SubTab) => setSubTab(id);
 
   /** 충돌·시너지 공용 목록. 계약상 빈 배열이 정상이라 빈 문구를 밖에서 받는다. */
   const pairList = (pairs: IngredientPair[], empty: string) =>
@@ -174,7 +196,7 @@ export function ReportSection() {
       </ul>
     );
 
-  /** 분석 데이터가 필요한 패널의 공통 게이트(로딩·실패). 통과하면 내용을 그린다. */
+  /** 분석 데이터가 필요한 패널의 공통 게이트(진행·실패·분석 전). 통과하면 내용을 그린다. */
   const analysisGate = (content: () => React.ReactNode) => {
     if (generating) {
       return (
@@ -200,6 +222,15 @@ export function ReportSection() {
           label="분석"
           message={report.errorMessage}
         />
+      );
+    }
+    if (!analyzed) {
+      /* 분석 전(또는 선반이 바뀌어 캐시가 어긋남) — AI 는 버튼으로만 시작한다. */
+      return (
+        <p className={styles.groupEmpty}>
+          아직 분석 전이에요. 위의 <strong>분석하기</strong> 버튼을 누르면 선반
+          전체의 성분 조합을 살펴봐 드려요.
+        </p>
       );
     }
     return content();
@@ -228,7 +259,43 @@ export function ReportSection() {
               : `등록 제품 ${products.length}개 · 성분 ${uniqueIngredientCount}종`}
           </p>
         </div>
+
+        {/*
+          분석하기 — 최초 1회, 그리고 제품이 담기고 빠져 캐시 지문이 어긋나면
+          자연히 다시 나타난다(캐시 전용 조회가 null 을 주므로). 최신이면 없다.
+        */}
+        {products.length > 0 && report.ready && !analyzed && (
+          <button
+            type="button"
+            className={styles.analyze}
+            onClick={handleGenerate}
+            disabled={generating}
+          >
+            {generating ? (
+              <>
+                <Icon
+                  name="progress_activity"
+                  size="sm"
+                  className={styles.spinner}
+                />
+                분석 중… {elapsed}초
+              </>
+            ) : (
+              <>
+                <Icon name="auto_awesome" filled size="sm" />
+                분석하기
+              </>
+            )}
+          </button>
+        )}
       </div>
+
+      {generateError && (
+        <p className={styles.generateError} role="alert">
+          <Icon name="error" size="sm" />
+          {generateError}
+        </p>
+      )}
 
       {products.length === 0 ? (
         <EmptyState

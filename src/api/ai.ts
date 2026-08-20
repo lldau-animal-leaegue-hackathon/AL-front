@@ -147,11 +147,14 @@ export function recommendConcernIngredients(input: { wonder: string }) {
 
 /**
  * 선반 전체 상호작용 분석 (시너지·충돌·타입별 주의·추가 추천).
- * **선반은 서버가 직접 읽으므로 body 가 없다.** 캐시 히트면 수백 ms,
- * 최초 생성이면 1~2분 — 화면에 진행 표시가 필요하다.
+ * **선반은 서버가 직접 읽는다.**
+ *
+ * 기본은 **캐시 전용**(수백 ms) — 지문이 맞는 캐시가 없으면 `null` 이 온다
+ * ("아직 분석 전"). `generate: true` 일 때만 AI 를 태운다(1~2분, 진행 표시 필수) —
+ * 분석은 명시적 버튼으로만 시작한다(사용자 결정 2026-08-20).
  */
-export function fetchShelfReport() {
-  return api.post<ShelfReportResponse>("/ai/report", {});
+export function fetchShelfReport(input: { generate?: boolean } = {}) {
+  return api.post<ShelfReportResponse | null>("/ai/report", input);
 }
 
 /** 제품 단독 사용 주의사항 (최대 6개) */

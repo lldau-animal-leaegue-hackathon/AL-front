@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { addProduct } from "@/lib/data";
 import { stepIcon } from "@/lib/stepIcon";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import type { Product } from "@/types/skincare";
 
 // 검색 결과 모달(`ProductSearchModal`)과 같은 껍데기를 쓴다 — 한 파일을 함께 import 한다.
@@ -18,19 +19,29 @@ import styles from "./productModal.module.css";
  * 그래서 여는 데 AI 호출이 없고 **즉시** 뜬다. 스캔 탭의 검색 모달과 다른 점이 이것이다
  * (그쪽은 아직 저장 전이라 성분을 그때 읽는다).
  *
- * ⚠️ 여기 오는 `product.thumbnail` 은 **항상 비어 있다.** 인기 제품 조회가 개인 사진을
- * 가져오지 않기 때문이다(`/api/products/popular` 참조). 이미지는 `product.image` 뿐이다.
+ * 인기 제품에서는 `product.thumbnail` 이 **항상 비어 있다**(개인 사진을 조회하지 않는다 —
+ * `/api/products/popular` 참조). **내 선반에서 열면** thumbnail 이 내 사진이고 나만 보는
+ * 문맥이므로 그걸 우선한다.
+ *
+ * @param alreadyOnShelf 내 선반에서 연 경우. "선반에 추가하기"가 무의미하므로 숨긴다.
  */
 export function PopularProductModal({
   product,
   onClose,
+  alreadyOnShelf = false,
 }: {
   product: Product;
   onClose: () => void;
+  alreadyOnShelf?: boolean;
 }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 모달 뒤 화면이 스크롤되면 안 된다(사용자 요청 2026-08-20).
+  useBodyScrollLock();
+
+  const image = product.thumbnail || product.image;
 
   // Esc 로 닫기 — 오버레이라 브라우저 뒤로가기가 닫아 주지 않는다.
   useEffect(() => {
@@ -91,9 +102,9 @@ export function PopularProductModal({
         <div className={styles.body}>
           <div className={styles.head}>
             <span className={styles.thumb}>
-              {product.image ? (
+              {image ? (
                 <Image
-                  src={product.image}
+                  src={image}
                   alt=""
                   width={112}
                   height={112}
@@ -154,38 +165,41 @@ export function PopularProductModal({
           )}
         </div>
 
-        <div className={styles.footer}>
-          {error && (
-            <p className={styles.error} role="alert">
-              <Icon name="error" size="sm" />
-              {error}
-            </p>
-          )}
-
-          <button
-            type="button"
-            className={styles.submit}
-            onClick={saved ? onClose : handleAdd}
-            disabled={saving}
-          >
-            {saving ? (
-              <>
-                <Icon name="progress_activity" className={styles.spinner} />
-                담는 중…
-              </>
-            ) : saved ? (
-              <>
-                <Icon name="check_circle" filled />
-                선반에 담았어요
-              </>
-            ) : (
-              <>
-                <Icon name="add_circle" filled />
-                선반에 추가하기
-              </>
+        {/* 내 선반에서 열었으면 담기 버튼이 무의미하다 — 푸터를 통째로 뺀다(닫기는 X). */}
+        {alreadyOnShelf ? null : (
+          <div className={styles.footer}>
+            {error && (
+              <p className={styles.error} role="alert">
+                <Icon name="error" size="sm" />
+                {error}
+              </p>
             )}
-          </button>
-        </div>
+
+            <button
+              type="button"
+              className={styles.submit}
+              onClick={saved ? onClose : handleAdd}
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <Icon name="progress_activity" className={styles.spinner} />
+                  담는 중…
+                </>
+              ) : saved ? (
+                <>
+                  <Icon name="check_circle" filled />
+                  선반에 담았어요
+                </>
+              ) : (
+                <>
+                  <Icon name="add_circle" filled />
+                  선반에 추가하기
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
