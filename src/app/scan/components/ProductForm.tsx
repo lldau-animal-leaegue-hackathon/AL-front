@@ -39,7 +39,17 @@ function submitLabel(hasLabelFile: boolean): string {
  * effect 로 setState 를 호출해 prop 을 state 에 동기화하는 것보다 단순하고,
  * 같은 카드를 다시 눌러도 폼이 확실히 초기화된다.
  */
-export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
+export function ProductForm({
+  prefill,
+  active,
+  onBusyChange,
+}: {
+  prefill: ProductPrefill | null;
+  /** 이 패널이 현재 탭인지. hidden 뒤에서 카메라·모달이 살아 있으면 안 된다(M5·M6). */
+  active: boolean;
+  /** 검색·등록 진행 여부를 부모에 알린다 — 진행 중 리마운트 방지용(m11). */
+  onBusyChange: (busy: boolean) => void;
+}) {
   const formId = useId();
   const nameId = useId();
   const capacityId = useId();
@@ -88,6 +98,19 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
     phase === "done";
   const busy = searching || modalOpen;
 
+  // 진행 여부를 부모(ScanWorkspace)에 알린다 — 진행 중 인기 카드 선택이 폼을 리마운트하지 않게(m11).
+  useEffect(() => {
+    onBusyChange(busy);
+  }, [busy, onBusyChange]);
+
+  /*
+   * 탭이 숨겨지면 카메라 상태도 닫는다(M5). 스트림 자체는 아래 렌더 게이트
+   * (`active && cameraMode`)의 언마운트가 즉시 끊지만, 상태가 남으면 탭 복귀 때
+   * 카메라가 저절로 다시 열린다. effect 대신 공식 "렌더 중 상태 보정" 패턴을 쓴다
+   * (react-hooks/set-state-in-effect 회피 — 같은 컴포넌트의 조건부 보정은 허용 패턴).
+   */
+  if (!active && cameraMode !== null) setCameraMode(null);
+
   /*
    * 검색이 오래 걸린다 — 실측 18~37초.
    * 스피너만 돌면 멈춘 줄 알기 때문에 경과 시간을 같이 보여준다.
@@ -128,7 +151,9 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
 
   return (
     <section className={styles.section}>
-      {cameraMode && (
+      {/* active 조건은 이중 방어다 — 위 effect 는 렌더 후에 돌아서, 조건이 없으면
+          숨겨진 첫 프레임 동안 스트림이 산 채로 남는다. 언마운트가 즉시 트랙을 끈다. */}
+      {active && cameraMode && (
         <CameraCapture
           mode={cameraMode}
           onCapture={(captured) => {
@@ -149,8 +174,12 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
       {/*
         후보 선택 → 성분 확인 → 등록 → 완료가 모두 이 모달 안에서 일어난다.
         저장 실패 시에도 모달은 열려 있다 — 닫으면 1분 넘게 걸린 결과가 통째로 날아간다.
+
+        active 일 때만 렌더한다(M6) — hidden 패널 뒤에서 마운트를 유지하면
+        useBodyScrollLock 이 안 풀려 보이는 탭까지 전부 스크롤이 잠긴다.
+        phase 상태는 훅에 살아 있으므로 탭에 돌아오면 모달이 그대로 다시 뜬다.
       */}
-      {modalOpen && (
+      {active && modalOpen && (
         <ProductSearchModal
           phase={phase}
           candidates={candidates}

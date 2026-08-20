@@ -26,7 +26,12 @@ function shelfNote(product: Product, flagged: boolean): string | null {
   return product.productCompany ?? null;
 }
 
-export function ShelfSection() {
+export function ShelfSection({
+  active,
+}: {
+  /** 이 패널이 현재 탭인지. hidden 뒤에서 모달이 살아 있으면 스크롤 락이 안 풀린다(M6). */
+  active: boolean;
+}) {
   const { ready, value: products, error, errorMessage, retry } = useProducts();
   /** 카드를 누르면 상세 모달(인기 탭과 같은 모달, 담기 버튼만 없음). */
   const [detail, setDetail] = useState<Product | null>(null);
@@ -52,8 +57,10 @@ export function ShelfSection() {
 
   return (
     <ul className={styles.grid}>
-      {/* 인기 탭과 같은 상세 모달 — 내 선반이므로 담기 버튼은 뺀다. */}
-      {detail && (
+      {/* 인기 탭과 같은 상세 모달 — 내 선반이므로 담기 버튼은 뺀다.
+          active 일 때만 렌더(M6) — hidden 뒤에 남으면 useBodyScrollLock 이 페이지 전체를 잠근다.
+          detail 상태는 유지하므로 탭에 돌아오면 모달이 다시 뜬다. */}
+      {active && detail && (
         <PopularProductModal
           product={detail}
           onClose={() => setDetail(null)}

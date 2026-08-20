@@ -23,8 +23,11 @@ import styles from "./ProductSearch.module.css";
  * (거기서 검색·성분 추출을 거쳐 담기면 그 제품이 카탈로그에 들어간다).
  */
 export function ProductSearch({
+  active,
   onSelect,
 }: {
+  /** 이 패널이 현재 탭인지. hidden 뒤에서 모달이 살아 있으면 스크롤 락이 안 풀린다(M6). */
+  active: boolean;
   /** 시드 카드를 고르면 등록 폼을 채운다. 시드에는 성분이 없어 폼을 반드시 거친다. */
   onSelect: (product: { name: string; brand: string }) => void;
 }) {
@@ -47,7 +50,9 @@ export function ProductSearch({
 
   return (
     <>
-      {detail && (
+      {/* active 일 때만 렌더(M6) — hidden 뒤에 남으면 useBodyScrollLock 이 페이지 전체를 잠근다.
+          detail 상태는 유지하므로 탭에 돌아오면 모달이 다시 뜬다. */}
+      {active && detail && (
         <PopularProductModal product={detail} onClose={() => setDetail(null)} />
       )}
 

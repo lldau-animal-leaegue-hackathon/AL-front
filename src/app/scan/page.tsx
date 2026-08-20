@@ -53,7 +53,7 @@ export default async function ScanPage({ searchParams }: PageProps<"/scan">) {
         <section hidden={active !== "shelf"}>
           <h2 className={styles.sectionTitle}>내 선반</h2>
           <div className={styles.sectionBody}>
-            <ShelfSection />
+            <ShelfSection active={active === "shelf"} />
           </div>
         </section>
 
