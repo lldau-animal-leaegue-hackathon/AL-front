@@ -13,6 +13,7 @@
  */
 
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { readdir, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -169,11 +170,17 @@ export async function runClaude(
    *
    * ⚠️ `--bare` 는 쓰지 말 것. 인증이 API 키 전용으로 바뀌어 구독 강제 정책과 충돌한다.
    */
+  // 세션 ID 를 **사전 생성**해 넘긴다 (2026-08-20 실측: 봉투의 session_id 가 지정값과 일치).
+  // 봉투를 받아야만 ID 를 아는 구조면 타임아웃·spawn 실패·파싱 실패 경로에서
+  // 트랜스크립트(제품 사진 base64 사본)를 지울 방법이 없다.
+  const sessionId = randomUUID();
   const args = [
     "-p",
     "--output-format",
     "json",
     "--strict-mcp-config",
+    "--session-id",
+    sessionId,
     "--tools",
     allowedTools.join(","),
   ];
@@ -181,30 +188,37 @@ export async function runClaude(
     args.push("--allowedTools", allowedTools.join(","));
   }
 
-  const stdout = await spawnClaude(args, prompt, timeoutMs);
-
-  let envelope: Envelope;
+  let envelope: Envelope | undefined;
   try {
-    envelope = JSON.parse(stdout) as Envelope;
-  } catch {
-    throw new Error(
-      `claude 응답 봉투를 JSON 으로 읽지 못했습니다: ${stdout.slice(0, 300)}`,
-    );
+    const stdout = await spawnClaude(args, prompt, timeoutMs);
+
+    try {
+      envelope = JSON.parse(stdout) as Envelope;
+    } catch {
+      throw new Error(
+        `claude 응답 봉투를 JSON 으로 읽지 못했습니다: ${stdout.slice(0, 300)}`,
+      );
+    }
+
+    if (envelope.is_error) {
+      throw new Error(
+        `claude 응답 오류: ${JSON.stringify(envelope).slice(0, 500)}`,
+      );
+    }
+
+    const result = (envelope.result ?? "").trim();
+    if (!result) throw new Error("claude 응답이 비어 있습니다.");
+
+    return result;
+  } finally {
+    // finally 라서 성공·실패 **모든 경로**(타임아웃 signal·exit≠0·봉투 파싱 실패 포함)에서
+    // 지운다 — 실패한 호출도 이미지 사본은 남기기 때문이다.
+    if (cleanupSession) {
+      await removeSessionTranscript(sessionId);
+      // CLI 가 지정값과 다른 ID 로 저장하는 회귀에 대비해 봉투 쪽도 지운다.
+      if (envelope?.session_id && envelope.session_id !== sessionId) {
+        await removeSessionTranscript(envelope.session_id);
+      }
+    }
   }
-
-  // 에러 판정보다 **먼저** 지운다 — 실패한 호출도 이미지 사본은 남기기 때문이다.
-  if (cleanupSession && envelope.session_id) {
-    await removeSessionTranscript(envelope.session_id);
-  }
-
-  if (envelope.is_error) {
-    throw new Error(
-      `claude 응답 오류: ${JSON.stringify(envelope).slice(0, 500)}`,
-    );
-  }
-
-  const result = (envelope.result ?? "").trim();
-  if (!result) throw new Error("claude 응답이 비어 있습니다.");
-
-  return result;
 }
