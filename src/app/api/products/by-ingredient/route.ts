@@ -12,6 +12,7 @@
 
 import { dbErrorResponse, selectRows } from "@/lib/db/pool";
 import { toProduct } from "@/lib/db/rows";
+import { ingredientAliases } from "@/lib/ingredientNames";
 
 export const runtime = "nodejs";
 
@@ -25,15 +26,23 @@ const MAX_NAME_LENGTH = 60;
  * 다른 필드(제품명 등)에 우연히 들어간 글자까지 걸린다.
  * 부분 일치를 쓰는 이유는 표기가 흔들리기 때문이다 — "판테놀" / "디판테놀" / "판테놀(비타민B5)".
  *
+ * ⭐ 별칭 확장(M9): 지식 조회(`/api/knowledge/ingredient`)는 `sameIngredient` 로 복합 표기
+ * ("비타민씨(아스코빅애씨드)")를 잇는데, 이 라우트만 원시 검색이면 사전 → "이 성분이 든 내 제품"
+ * 흐름이 항상 빈 결과가 된다. `ingredientAliases` 로 표기를 펼쳐 각각 OR 검색한다 —
+ * 별칭 수만큼 `?` 를 늘릴 뿐, 값은 전부 바인딩이다(인젝션 없음).
+ *
  * 인덱스를 타지 못하지만 카탈로그 규모가 작아 문제되지 않는다.
  * ponytail: 느려지면 성분 전용 테이블로 정규화한다.
  */
-const BY_INGREDIENT_SQL = `
+const byIngredientSql = (aliasCount: number) => `
   SELECT p.id, p.name, p.brand, p.category, p.ingredients, p.warnings, p.image,
          COUNT(s.id) AS shelf_count
     FROM products p
     LEFT JOIN shelf_items s ON s.product_id = p.id
-   WHERE JSON_SEARCH(p.ingredients, 'one', CONCAT('%', ?, '%')) IS NOT NULL
+   WHERE ${Array.from(
+     { length: aliasCount },
+     () => `JSON_SEARCH(p.ingredients, 'one', CONCAT('%', ?, '%')) IS NOT NULL`,
+   ).join("\n      OR ")}
    GROUP BY p.id, p.name, p.brand, p.category, p.ingredients, p.warnings,
             p.image, p.updated_at
    ORDER BY shelf_count DESC, p.updated_at DESC
@@ -54,7 +63,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const rows = await selectRows(BY_INGREDIENT_SQL, [name]);
+    // name 이 비어 있지 않으므로 별칭은 최소 1개다(원문 자신이 항상 포함된다).
+    const aliases = ingredientAliases(name);
+    const rows = await selectRows(byIngredientSql(aliases.length), aliases);
 
     /*
      * ⭐ 빈 배열이 정상이다. **카탈로그에 그 성분이 든 제품이 아직 없다는 뜻**이지

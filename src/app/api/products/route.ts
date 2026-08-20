@@ -37,7 +37,37 @@ const LIST_SQL = `
 export async function GET() {
   try {
     const rows = await selectRows(LIST_SQL, [await currentUserId()]);
-    return Response.json(rows.map(toProduct).filter((p) => p !== null));
+    const products = rows.map(toProduct).filter((p) => p !== null);
+
+    /*
+     * 주의사항 재큐잉(M4) — 큐는 인메모리라 재시작·배포로 유실되고, 그러면 warnings 가
+     * NULL 로 고착돼 홈이 영구 "분석 중"이 된다. 조회 때마다 밀린 행을 다시 태운다.
+     * 큐의 Set 이 대기·실행 중 id 를 걸러 멱등이고, 응답을 기다리지 않는다(등록 UX 와 동일).
+     */
+    for (const p of products) {
+      if (p.warnings !== undefined) continue;
+      if (p.ingredients.length === 0) {
+        // 큐는 빈 성분을 받지 않는다(규칙 6). 이관 등으로 남은 행은 POST 와 같은 고정 문구로 채운다.
+        void execute(
+          `UPDATE products SET warnings = ? WHERE id = ? AND warnings IS NULL`,
+          [JSON.stringify([NO_INGREDIENTS_WARNING]), p.id],
+        ).catch((error: unknown) => {
+          console.warn(
+            `[api/products] "${p.productName}" 고정 문구 저장 실패:`,
+            error,
+          );
+        });
+        continue;
+      }
+      enqueueWarningsGeneration({
+        id: p.id,
+        name: p.productName,
+        category: p.category,
+        ingredients: p.ingredients,
+      });
+    }
+
+    return Response.json(products);
   } catch (error) {
     return dbErrorResponse("api/products GET", error);
   }
