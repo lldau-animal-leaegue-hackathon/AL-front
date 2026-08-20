@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -28,9 +28,13 @@ function progressLabel(elapsed: number): string {
   return elapsed >= 35 ? "거의 다 됐어요" : "제품 찾는 중";
 }
 
-/** 성분표 유무에 따라 버튼이 실제로 할 일을 말한다(사용자 피드백 2026-08-20: "AI"를 명시). */
+/**
+ * 성분표 유무에 따라 버튼이 실제로 할 일을 말한다.
+ * 사진이 없으면 하는 일은 **제품 후보 찾기**다(성분은 고른 뒤에 읽는다) —
+ * "AI 성분 검색"은 단계를 건너뛴 이름이라 제품 검색으로 고쳤다(사용자 피드백 2026-08-21).
+ */
 function submitLabel(hasLabelFile: boolean): string {
-  return hasLabelFile ? "AI 성분 읽기" : "AI 성분 검색";
+  return hasLabelFile ? "AI 성분 읽기" : "제품 검색";
 }
 
 /**
@@ -81,6 +85,7 @@ export function ProductForm({
     shelfCount,
     search,
     selectCandidate,
+    registerTypedName,
     backToCandidates,
     confirm,
     dismiss,
@@ -188,6 +193,10 @@ export function ProductForm({
           shelfCount={shelfCount}
           error={error}
           onSelect={selectCandidate}
+          typedName={productName}
+          onUseTypedName={() =>
+            void registerTypedName({ productName, productCompany })
+          }
           onBack={backToCandidates}
           onConfirm={confirm}
           onRegisterAnother={clearForm}

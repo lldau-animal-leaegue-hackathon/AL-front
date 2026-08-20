@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useState } from "react";
 
@@ -188,11 +188,35 @@ export function useProductRegister() {
         setCandidates(raw.candidates);
         setPhase("choosing");
       } catch (cause: unknown) {
-        setPhase("idle");
+        /*
+         * ⭐ 검색이 실패해도 **막다른 길로 두지 않는다.**
+         * 예전에는 idle 로 되돌려 사용자가 할 수 있는 게 없었다(외부 장애면 몇 시간
+         * 등록 자체가 막힌다). 이제 후보 0건 상태로 모달을 열어 "입력한 이름 그대로
+         * 등록" 경로를 준다 — 검색은 편의일 뿐, **등록을 막을 이유가 없다.**
+         */
+        setCandidates([]);
+        setPhase("choosing");
         setError(toMessage(cause, "제품을 찾지 못했어요"));
       }
     },
     [extract],
+  );
+
+  /**
+   * 검색 결과가 없거나 원하는 제품이 없을 때 — **사용자가 입력한 이름 그대로** 진행한다.
+   * 성분은 뒤 단계(카탈로그 → 공식몰 → AI)가 알아서 채우고, 못 찾으면 빈 배열로 저장된 뒤
+   * 나중에 성분표 사진으로 보완된다.
+   */
+  const registerTypedName = useCallback(
+    async (input: { productName: string; productCompany?: string }) => {
+      await extract({
+        productName: input.productName.trim(),
+        productCompany: input.productCompany?.trim() || undefined,
+        productFile,
+        labelFile: null,
+      });
+    },
+    [extract, productFile],
   );
 
   /** 2단계 — 후보를 고르면 그 제품의 성분을 읽는다. */
@@ -279,6 +303,7 @@ export function useProductRegister() {
     shelfCount: products.value.length,
     search,
     selectCandidate,
+    registerTypedName,
     backToCandidates,
     confirm,
     dismiss,

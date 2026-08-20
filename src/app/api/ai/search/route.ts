@@ -13,6 +13,7 @@ import { acquire, release } from "@/lib/ai/guard";
 import { currentUserId } from "@/lib/auth/anonUser";
 import { parseJsonObject } from "@/lib/claude/parseJson";
 import { runClaude } from "@/lib/claude/runner";
+import { selectRows } from "@/lib/db/pool";
 import { isAllowedImageUrl } from "@/lib/images";
 import {
   buildProductSearchPrompt,
@@ -122,6 +123,64 @@ async function fetchHwahae(query: string): Promise<Response> {
       cache: "no-store",
     },
   );
+}
+
+/**
+ * **우리 카탈로그에서 먼저 찾는다** — 외부(화해)에 의존하지 않는 경로.
+ *
+ * 왜 필요한가(2026-08-20 실측): 화해 오리진이 죽자 후보 검색이 통째로 막혔다. 그런데
+ * 이미 누군가 등록한 제품은 우리 DB 에 성분·이미지까지 다 있다 — **외부가 죽어도 고를 수
+ * 있는 후보**다. 게다가 카탈로그 히트는 성분 추출도 0초라(카탈로그 우선 조회) 화해보다
+ * 결과가 낫다. 그래서 화해가 살아 있어도 이쪽을 먼저 보고, 부족한 만큼만 화해로 채운다.
+ *
+ * 정렬은 **담긴 수(shelf_count) 내림차순** — 많이 담긴 제품이 대개 사용자가 찾던 것이다.
+ */
+async function searchCatalog(query: string): Promise<Candidate[]> {
+  const like = `%${query.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+  const rows = await selectRows(
+    `SELECT p.name, p.brand, p.image,
+            (SELECT COUNT(*) FROM shelf_items s WHERE s.product_id = p.id) AS shelf_count
+       FROM products p
+      WHERE p.name LIKE ? ESCAPE '\\\\' OR p.brand LIKE ? ESCAPE '\\\\'
+      ORDER BY shelf_count DESC, p.created_at DESC
+      LIMIT ?`,
+    [like, like, MAX_CANDIDATES],
+  );
+
+  return rows.flatMap((row) => {
+    if (typeof row !== "object" || row === null) return [];
+    const item: Record<string, unknown> = { ...row };
+    const name = typeof item.name === "string" ? item.name.trim() : "";
+    if (!name) return [];
+    return [
+      {
+        product_name: name,
+        brand: typeof item.brand === "string" && item.brand ? item.brand : null,
+        // 용량은 저장하지 않는다(컬럼 없음) — 화면은 없으면 그냥 뺀다.
+        volume: null,
+        // 카탈로그 이미지는 서버가 이미 검증해 임베딩한 data URL 이다.
+        image_url: typeof item.image === "string" ? item.image : null,
+      },
+    ];
+  });
+}
+
+/** 같은 제품이 카탈로그·화해 양쪽에서 나오면 한 번만 보여 준다. */
+function mergeCandidates(
+  primary: Candidate[],
+  extra: Candidate[],
+): Candidate[] {
+  const key = (c: Candidate) =>
+    `${c.product_name.toLowerCase().replace(/\s+/g, "")}`;
+  const seen = new Set(primary.map(key));
+  const merged = [...primary];
+  for (const candidate of extra) {
+    if (seen.has(key(candidate))) continue;
+    seen.add(key(candidate));
+    merged.push(candidate);
+    if (merged.length >= MAX_CANDIDATES) break;
+  }
+  return merged;
 }
 
 /**
@@ -271,13 +330,25 @@ export async function POST(request: Request) {
       return Response.json({ candidates: hit.candidates });
     }
 
-    // 1차: 직파싱(0.5~2초). 빈 배열도 정상 결과라 그대로 반환한다.
+    /*
+     * 1차: **우리 카탈로그**. 외부가 죽어도 항상 되는 경로이고, 히트하면 성분 추출까지
+     * 0초다. 실패해도 아래 화해 경로가 있으므로 조용히 빈 배열로 넘긴다.
+     */
+    let local: Candidate[] = [];
+    try {
+      local = await searchCatalog(query);
+    } catch (error: unknown) {
+      console.warn("[api/ai/search] 카탈로그 검색 실패:", error);
+    }
+
+    // 2차: 화해 직파싱(0.5~2초). 빈 배열도 정상 결과다.
     let unavailable = false;
     try {
       const direct = await searchHwahaeDirect(query);
       if (direct.status === "ok") {
-        cache.set(query, { at: Date.now(), candidates: direct.candidates });
-        return Response.json({ candidates: direct.candidates });
+        const merged = mergeCandidates(local, direct.candidates);
+        cache.set(query, { at: Date.now(), candidates: merged });
+        return Response.json({ candidates: merged });
       }
       unavailable = direct.status === "unavailable";
     } catch (error: unknown) {
@@ -287,10 +358,24 @@ export async function POST(request: Request) {
     }
 
     /*
-     * 화해가 일시적으로 응답하지 않는 상태. AI 폴백은 **같은 주소를 같은 IP 로** 치므로
+     * 화해가 일시적으로 응답하지 않는 상태.
+     *
+     * ⭐ 카탈로그에 후보가 있으면 **그것만으로 서비스를 계속한다.** 외부 장애가 곧
+     *   기능 정지가 되면 안 된다 — 이미 등록된 제품을 고르는 것은 오히려 더 빠르고 정확하다.
+     *   화면에는 평소와 똑같이 후보 목록이 뜬다(사용자는 장애를 몰라도 된다).
+     */
+    if (unavailable && local.length > 0) {
+      console.info(
+        `[api/ai/search] 화해 일시 실패 — 카탈로그 후보 ${local.length}건으로 대체`,
+      );
+      // 외부가 죽은 동안의 결과라 캐시하지 않는다(복구되면 더 나은 결과를 줘야 한다).
+      return Response.json({ candidates: local });
+    }
+
+    /*
+     * 외부도 죽고 카탈로그에도 없다. AI 폴백은 **같은 주소를 같은 IP 로** 치므로
      * 결과가 같고(빈 배열) 레이트 리밋만 악화시킨다 — 90초를 쓰는 대신 바로 알린다.
      * ⚠️ "검색 결과가 없어요"로 뭉개면 사용자는 **제품이 없는 줄 알고 포기한다.**
-     *    지금 실패한 것과 카탈로그에 없는 것은 다른 상황이라 다르게 말해야 한다.
      */
     if (unavailable) {
       return Response.json(
@@ -343,7 +428,8 @@ export async function POST(request: Request) {
        * ⭐ 빈 배열은 실패가 아니라 정상 응답이다(프롬프트 규칙 3: 화해에 없으면 빈 배열).
        *    화면은 "찾지 못했어요 — 직접 입력하기"로 이어 간다.
        */
-      const narrowed = candidates.slice(0, MAX_CANDIDATES);
+      // 카탈로그 후보를 앞에 두고 AI 결과로 채운다(중복 제거).
+      const narrowed = mergeCandidates(local, candidates);
       // 폴백 결과도 캐시한다 — 90초짜리 호출을 같은 검색어로 반복하지 않는다.
       globalForSearch.__alSearchCache?.set(query, {
         at: Date.now(),

@@ -38,6 +38,8 @@ export function ProductSearchModal({
   onRegisterAnother,
   onClose,
   onRetakeLabel,
+  typedName,
+  onUseTypedName,
 }: {
   phase: RegisterPhase;
   candidates: ProductCandidate[];
@@ -52,6 +54,10 @@ export function ProductSearchModal({
   onClose: () => void;
   /** 성분을 못 찾았을 때 — 모달을 닫고 성분표 촬영으로 보낸다. */
   onRetakeLabel: () => void;
+  /** 사용자가 폼에 입력한 제품명 — 후보에 없을 때 그대로 등록하는 데 쓴다. */
+  typedName: string;
+  /** 검색을 건너뛰고 입력한 이름으로 진행한다. */
+  onUseTypedName: () => void;
 }) {
   const busy = phase === "extracting" || phase === "saving";
 
@@ -111,7 +117,12 @@ export function ProductSearchModal({
 
         <div className={styles.body}>
           {phase === "choosing" && (
-            <CandidateList candidates={candidates} onSelect={onSelect} />
+            <CandidateList
+              candidates={candidates}
+              onSelect={onSelect}
+              typedName={typedName}
+              onUseTypedName={onUseTypedName}
+            />
           )}
 
           {phase === "extracting" && <Extracting />}
@@ -188,22 +199,42 @@ export function ProductSearchModal({
 function CandidateList({
   candidates,
   onSelect,
+  typedName,
+  onUseTypedName,
 }: {
   candidates: ProductCandidate[];
   onSelect: (candidate: ProductCandidate) => void;
+  typedName: string;
+  onUseTypedName: () => void;
 }) {
+  /** 후보에 원하는 제품이 없을 때의 탈출구 — 어떤 제품이든 등록은 가능해야 한다. */
+  const typedOption = typedName.trim() ? (
+    <button
+      type="button"
+      className={styles.typedOption}
+      onClick={onUseTypedName}
+    >
+      <Icon name="edit" size="sm" />
+      <span>
+        찾는 제품이 없나요? <strong>{typedName}</strong> 이름 그대로 등록하기
+      </span>
+    </button>
+  ) : null;
+
   /*
-   * ⭐ 빈 배열은 실패가 아니라 정상 응답이다(프롬프트 규칙 3: 화해에 없으면 []).
-   *    막다른 길을 만들지 않도록 다음 행동을 알려 준다.
+   * ⭐ 빈 배열은 실패가 아니라 정상 응답이다(카탈로그·화해에 없으면 []).
+   *    막다른 길을 만들지 않도록 **다음 행동을 버튼으로** 준다.
    */
   if (candidates.length === 0) {
     return (
-      <p className={styles.empty}>
-        검색 결과가 없어요.
-        <br />
-        이름을 조금 다르게 적어 보거나, 제품 사진을 함께 올리면 성분표를 직접
-        읽어 등록할 수 있어요.
-      </p>
+      <>
+        <p className={styles.empty}>
+          검색 결과가 없어요.
+          <br />
+          입력한 이름 그대로 등록하거나, 성분표 사진을 올려 직접 읽을 수 있어요.
+        </p>
+        {typedOption}
+      </>
     );
   }
 
@@ -261,6 +292,9 @@ function CandidateList({
           </li>
         ))}
       </ul>
+
+      {/* 후보가 있어도 원하는 게 아닐 수 있다 — 목록 아래에 같은 탈출구를 둔다. */}
+      {typedOption}
     </>
   );
 }
