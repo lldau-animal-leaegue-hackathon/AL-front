@@ -3,6 +3,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
+import { conditionLabel } from "@/app/routine/condition";
 import { TIME_ICON, TIME_LABEL } from "@/app/routine/routineTime";
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
@@ -125,8 +126,9 @@ export function NextStepCard() {
                 : first.routineName}
             </p>
             <ul className={styles.tags}>
+              {/* 저장값("고민 집중")이 아니라 표시명("기타 루틴")을 쓴다 — RoutineCard 와 동일 규칙 */}
               <li className={`${card.label} ${styles.tag}`}>
-                {routine.condition}
+                {conditionLabel(routine.condition)}
               </li>
               <li className={`${card.label} ${styles.tag}`}>
                 총 {routine.steps.length}단계

@@ -164,8 +164,15 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
           onRegisterAnother={clearForm}
           onClose={phase === "done" ? clearForm : dismiss}
           onRetakeLabel={() => {
-            // 성분을 못 찾았을 때의 다음 행동 — 모달을 닫고 바로 성분표 촬영으로 보낸다.
-            // 폼 입력은 남아 있으므로 촬영 후 "AI 성분 읽기"를 누르면 검색 없이 바로 읽는다.
+            /*
+             * 성분을 못 찾았을 때의 다음 행동 — 모달을 닫고 바로 성분표 촬영으로 보낸다.
+             * ⚠️ 고른 후보의 정체성(이름·제조사)을 폼에 되채운 뒤 닫는다 —
+             * 안 하면 재제출이 사용자가 처음 친 부분 문자열("토너")로 회귀한다(재검토 N1).
+             */
+            if (found) {
+              setProductName(found.productName);
+              if (found.productCompany) setProductCompany(found.productCompany);
+            }
             dismiss();
             setCameraMode("label");
           }}

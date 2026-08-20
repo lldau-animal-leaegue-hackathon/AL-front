@@ -33,17 +33,22 @@ function AIWorkingOverlay({
 }) {
   useBodyScrollLock();
   return (
-    <div className={styles.overlay} role="status" aria-live="polite">
+    /*
+     * ⚠️ 라이브 리전을 루트에 두지 않는다(재검토 N6) — 안에 매초 바뀌는 초 카운터가
+     * 있어 스크린리더가 생성 90초 내내 반복 낭독했다. 상태 전환 문구(제목·20초 힌트)만
+     * role="status" 로 알리고, 카운터는 보조기기에서 숨긴다.
+     */
+    <div className={styles.overlay}>
       <div className={styles.overlayCard}>
         <Icon name="auto_awesome" filled className={styles.aiIcon} />
-        <p className={styles.overlayTitle}>
+        <p className={styles.overlayTitle} role="status">
           AI가 {focus ? "기타 루틴을" : "루틴을"} 짜고 있어요
         </p>
-        <p className={styles.overlayMeta}>
+        <p className={styles.overlayMeta} aria-hidden="true">
           제품과 성분을 하나씩 따져 보는 중 · {elapsed}초
         </p>
         {elapsed >= LONG_WAIT_SECONDS && (
-          <p className={styles.overlayHint}>
+          <p className={styles.overlayHint} role="status">
             보통 1~2분 걸립니다. 화면을 닫지 말고 잠시만 기다려 주세요.
           </p>
         )}
@@ -53,7 +58,7 @@ function AIWorkingOverlay({
 }
 
 /**
- * @param focus 고민 집중 케어를 만드는 중인가. 등록된 고민을 미리 채우고,
+ * @param focus 기타 루틴(저장값 "고민 집중")을 만드는 중인가. 등록된 고민을 미리 채우고,
  *   결과를 `condition = "고민 집중"` 으로 저장해 **기본 루틴과 따로 남긴다.**
  */
 export function RoutineForm({ focus = false }: { focus?: boolean }) {
@@ -62,7 +67,7 @@ export function RoutineForm({ focus = false }: { focus?: boolean }) {
   const eveningId = useId();
 
   /*
-   * 집중 케어는 "내 고민"에 등록한 문장으로 시작한다 — 같은 고민을 두 번 적게 하지 않는다.
+   * 기타 루틴은 "내 고민"에 등록한 문장으로 시작한다 — 같은 고민을 두 번 적게 하지 않는다.
    * `draft === null` 이 "아직 손대지 않음"이다. `useEffect` 로 채우면 프로필이 늦게
    * 도착했을 때 사용자가 입력하던 내용을 덮어쓴다.
    */

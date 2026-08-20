@@ -324,9 +324,16 @@ export async function saveRoutines(routines: RoutineInput[]): Promise<void> {
   await mutate(KEYS.routines);
 }
 
-/** condition 을 주면 그 세트만 지운다(루틴 삭제 버튼 — 사용자 피드백 2026-08-20). */
-export async function deleteRoutines(condition?: string): Promise<void> {
-  await deleteRoutinesRequest(condition ? { condition } : undefined);
+/**
+ * 세트(condition) 단위 삭제 — 루틴 삭제 버튼(사용자 피드백 2026-08-20).
+ * 배열을 받는 이유: 기본 루틴 그룹은 "고민 집중이 아닌 전부"라 이관 데이터의
+ * 임의 condition 이 섞일 수 있다. 화면에 보이는 그룹과 같은 범위를 지우려면
+ * 그 그룹의 condition 들을 각각 지워야 한다(재검토 N2).
+ */
+export async function deleteRoutines(conditions: string[]): Promise<void> {
+  for (const condition of conditions) {
+    await deleteRoutinesRequest({ condition });
+  }
   await mutate(KEYS.routines);
 }
 

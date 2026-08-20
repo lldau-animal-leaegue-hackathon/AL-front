@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
@@ -31,6 +31,16 @@ function DeleteConfirmModal({
   onClose: () => void;
 }) {
   useBodyScrollLock();
+
+  /*
+   * 열릴 때 포커스를 모달 안(취소)으로 옮긴다(재검토 N5) — 안 하면 포커스가
+   * 스크림 뒤 트리거에 남아 Enter 재입력이 모달을 또 열려 하고, 스크린리더는
+   * 다이얼로그가 열린 것을 모른다. 닫을 때 복원은 트리거 쪽(DeleteRoutineSet)이 한다.
+   */
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -62,6 +72,7 @@ function DeleteConfirmModal({
 
         <div className={styles.confirmActions}>
           <button
+            ref={cancelRef}
             type="button"
             className={styles.confirmCancel}
             onClick={onClose}
@@ -83,23 +94,34 @@ function DeleteConfirmModal({
   );
 }
 
-/** 세트(condition) 단위 삭제 — 버튼을 누르면 확인 모달이 뜬다. */
+/**
+ * 세트 단위 삭제 — 버튼을 누르면 확인 모달이 뜬다.
+ * `conditions` 는 화면 그룹에 실제로 보이는 condition 목록이다 — 그룹 판정(부정형)과
+ * 삭제 범위가 어긋나지 않게 한다(재검토 N2).
+ */
 function DeleteRoutineSet({
-  condition,
+  conditions,
   label,
 }: {
-  condition: string;
+  conditions: string[];
   label: string;
 }) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [failed, setFailed] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  /** 취소로 닫으면 포커스를 트리거로 복원한다(N5). 삭제 성공 시엔 버튼째 사라지므로 무해한 no-op. */
+  function close() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
 
   async function handleConfirm() {
     setDeleting(true);
     setFailed(false);
     try {
-      await deleteRoutines(condition);
+      await deleteRoutines(conditions);
       // 성공하면 routines 캐시 갱신으로 이 섹션의 목록이 비워진다.
       setOpen(false);
     } catch {
@@ -113,6 +135,7 @@ function DeleteRoutineSet({
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         className={styles.delete}
         onClick={() => {
@@ -130,7 +153,7 @@ function DeleteRoutineSet({
           deleting={deleting}
           failed={failed}
           onConfirm={handleConfirm}
-          onClose={() => setOpen(false)}
+          onClose={close}
         />
       )}
     </>
@@ -257,7 +280,7 @@ export function RoutineList() {
           </Link>
           {basic.length > 0 && (
             <DeleteRoutineSet
-              condition={ROUTINE_CONDITION.basic}
+              conditions={[...new Set(basic.map((r) => r.condition))]}
               label="기본 루틴"
             />
           )}
@@ -291,7 +314,7 @@ export function RoutineList() {
           </Link>
           {focus.length > 0 && (
             <DeleteRoutineSet
-              condition={ROUTINE_CONDITION.focus}
+              conditions={[ROUTINE_CONDITION.focus]}
               label="기타 루틴"
             />
           )}

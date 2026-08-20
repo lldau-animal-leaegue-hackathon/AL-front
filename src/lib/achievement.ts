@@ -63,14 +63,25 @@ export function weeklyAchievement(
   const lastWeek = thisWeek - WEEK_MS;
   const planned = plannedPerWeek(routines);
 
-  const done = countSteps(runs, thisWeek, thisWeek + WEEK_MS);
-  const lastDone = countSteps(runs, lastWeek, thisWeek);
+  /*
+   * 분모(예정)가 현재 루틴 기준이므로 분자(완료)도 현재 루틴의 수행만 센다 —
+   * 세트 삭제로 고아가 된 기록이 달성률을 부풀리지 않게 한다(재검토 N3:
+   * 기타만 수행 후 기타 삭제 → 안 한 기본 루틴 기준 100%가 되던 문제).
+   * 부작용: 루틴을 다시 만들면 id 가 바뀌어 그 주 달성률이 리셋된다 —
+   * 바뀐 예정표에 옛 수행을 섞어 세는 것보다 정직하다.
+   */
+  const ids = new Set(routines.map((routine) => routine.id));
+  const owned = runs.filter((run) => ids.has(run.routineId));
+
+  const done = countSteps(owned, thisWeek, thisWeek + WEEK_MS);
+  const lastDone = countSteps(owned, lastWeek, thisWeek);
 
   // 하루에 여러 번 해도 100%를 넘지 않게 자른다 — 101% 는 지표로 의미가 없다.
   const percent =
     planned === 0 ? null : Math.min(100, Math.round((done / planned) * 100));
 
-  const hadLastWeek = runs.some((run) => {
+  // 델타도 같은 분자 기준(owned)으로 판단해야 주간 비교가 성립한다.
+  const hadLastWeek = owned.some((run) => {
     const at = new Date(run.finishedAt).getTime();
     return !Number.isNaN(at) && at >= lastWeek && at < thisWeek;
   });

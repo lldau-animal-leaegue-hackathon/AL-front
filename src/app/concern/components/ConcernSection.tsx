@@ -243,7 +243,7 @@ export function ConcernSection() {
         </p>
         <Link className={styles.cta} href="/routine/new?focus=1">
           <Icon name="auto_awesome" filled size="sm" />
-          집중 케어 만들기
+          기타 루틴 만들기
         </Link>
       </section>
     </>
