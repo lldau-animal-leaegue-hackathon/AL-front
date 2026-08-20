@@ -40,7 +40,13 @@
       (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN / DEPLOY_HOST / DEPLOY_USER /
       DEPLOY_SSH_KEY) ③ 서버 docker login 1회 ④ taeyeop → main 머지.
       ~~GitHub deploy key 등록~~ — Docker Hub 방식 채택으로 폐기(2026-08-20).
-- [ ] 첫 배포 확인 — Actions 로그, 사이트 200, /api 스모크, AI 1건 실호출.
+- [x] 첫 배포 — 완료 2026-08-20 13:18(Actions 자동). 이후 재배포로 재현성도 확인.
+      **삽질 기록**: ① Dockerfile 이 없는 public/ 을 COPY(로컬 도커로 사전 검증하는
+      절차를 이후 도입) ② CI 시크릿 스캔이 훅과 패턴 드리프트(169.254 예외) ③ 배포
+      트리거용 임시 커밋이 개행 없이 들어가 format:check 실패 — 셋 다 수정 커밋됨.
+- [x] 검증 — 4탭 200 · DB 라우트(컨테이너→db 네트워크) 정상 · 쿠키
+      Secure/HttpOnly/SameSite=lax(X-Forwarded-Proto 경유) · AI 실호출 200
+      (컨테이너 안 claude 가 마운트된 인증 사용, 무의미 입력에 빈 배열 = 계약 준수).
 
 ## 검증 (첫 배포 후)
 
