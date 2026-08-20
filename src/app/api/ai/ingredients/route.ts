@@ -17,6 +17,7 @@ import { currentUserId } from "@/lib/auth/anonUser";
 import { isStringArray, parseJsonObject } from "@/lib/claude/parseJson";
 import { runClaude } from "@/lib/claude/runner";
 import { selectRows } from "@/lib/db/pool";
+import { findIngredientsFromBrandSite } from "@/lib/ingredients/brandSites";
 import { buildIngredientsPrompt } from "@/lib/prompts/ingredients";
 
 // 자식 프로세스를 띄우므로 Edge 런타임에서는 동작하지 않는다.
@@ -152,6 +153,29 @@ export async function POST(request: Request) {
         "[api/ai/ingredients] 카탈로그 조회 실패, AI 로 진행:",
         error,
       );
+    }
+
+    /*
+     * 2단계 — 브랜드 공식몰의 **전성분 표기**(화장품법상 표시 의무 정보).
+     * 카탈로그에 없고 사진도 없을 때만 본다. 모델 기억보다 근거가 확실하고
+     * 수 초면 끝난다(AI 는 20~50초). 실패는 조용히 다음 단계로 넘어간다.
+     *
+     * 카테고리는 이 경로로 알 수 없으므로 AI 를 태우지 않고 "미분류"로 둔다 —
+     * 성분만으로도 충돌·시너지 분석이라는 핵심 가치가 성립한다.
+     */
+    const fromBrand = await findIngredientsFromBrandSite(
+      productName,
+      productCompany,
+    );
+    if (fromBrand) {
+      console.info(
+        `[api/ai/ingredients] 공식몰에서 전성분 ${fromBrand.length}개 확보 — AI 생략`,
+      );
+      return Response.json({
+        product_name: productName,
+        category: "미분류",
+        ingredients: fromBrand,
+      });
     }
   }
 
