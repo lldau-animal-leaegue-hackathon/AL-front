@@ -318,6 +318,8 @@ function ResultView({
             직접 찍은 사진이 우선, 없으면 검색 결과 이미지. 둘 다 없으면 카테고리 아이콘.
             (담을 때 서버가 검색 이미지를 받아 data URL 로 바꿔 저장하므로,
              담긴 뒤에는 어느 쪽이든 같은 모양이 된다.)
+            ⚠️ 저장 전 미리보기는 외부(화해 CDN) 원본 URL 을 직접 로드한다 —
+            저장 시 서버가 data URL 로 임베딩하는 정책의 **의도된 예외**다(m28).
           */}
           {result.thumbnail || result.imageUrl ? (
             <Image

@@ -39,23 +39,27 @@ export function ConcernDictionary() {
         />
       )}
 
-      <button
-        type="button"
-        className={styles.head}
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        <span className={styles.headText}>
-          <h2 className={styles.heading}>고민별 성분 사전</h2>
-          <span className={styles.lead}>
-            자주 찾는 고민의 성분을 기다림 없이 바로 볼 수 있어요.
+      {/* button 안에 h2 를 두면 콘텐츠 모델 위반이라, h2 가 button 을 감싼다(m9).
+          제목 폰트는 h2(.heading)에서 상속된다 — button 은 font: inherit(전역 리셋). */}
+      <h2 className={styles.heading}>
+        <button
+          type="button"
+          className={styles.head}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
+          <span className={styles.headText}>
+            <span>고민별 성분 사전</span>
+            <span className={styles.lead}>
+              자주 찾는 고민의 성분을 기다림 없이 바로 볼 수 있어요.
+            </span>
           </span>
-        </span>
-        <Icon
-          name={open ? "expand_less" : "expand_more"}
-          className={styles.chevron}
-        />
-      </button>
+          <Icon
+            name={open ? "expand_less" : "expand_more"}
+            className={styles.chevron}
+          />
+        </button>
+      </h2>
 
       {open && (
         <>

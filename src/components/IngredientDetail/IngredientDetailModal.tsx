@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
@@ -40,6 +40,29 @@ export function IngredientDetailModal({
   // 모달이 떠 있는 동안 배경 스크롤을 잠근다(모달 공통 규칙).
   useBodyScrollLock();
 
+  /*
+   * 열릴 때 포커스를 모달 안(닫기)으로 옮기고, 닫힐 때 열었던 트리거로 복원한다
+   * (DeleteConfirmModal 과 같은 규율). 복원은 호출부가 여럿(ConcernDictionary·
+   * ReportSection)이라 각자에게 맡기지 않고 모달이 직접 한다.
+   */
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const trigger = document.activeElement;
+    closeRef.current?.focus();
+    return () => {
+      if (trigger instanceof HTMLElement) trigger.focus();
+    };
+  }, []);
+
+  // Esc 로 닫기 — 다른 모달 3종과 같은 규칙.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   const value = knowledge.value;
   const hasAny =
     value !== null &&
@@ -62,6 +85,7 @@ export function IngredientDetailModal({
         <div className={styles.bar}>
           <h2 className={styles.title}>{current}</h2>
           <button
+            ref={closeRef}
             type="button"
             className={styles.close}
             onClick={onClose}

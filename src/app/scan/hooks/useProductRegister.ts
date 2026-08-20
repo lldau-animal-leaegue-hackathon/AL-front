@@ -9,7 +9,7 @@ import {
 } from "@/api/ai";
 import { ApiError } from "@/api/client";
 import { addProduct, useProducts } from "@/lib/data";
-import { fileToDataUrl, resizeToThumbnail } from "@/lib/imageResize";
+import { fileToLabelDataUrl, resizeToThumbnail } from "@/lib/imageResize";
 import type { Product } from "@/types/skincare";
 
 export type RegisterInput = {
@@ -111,12 +111,13 @@ export function useProductRegister() {
       try {
         /*
          * 두 사진의 쓰임이 다르다.
-         *  - 성분표: **원본**을 AI 에 보낸다. 글씨 해상도가 곧 정확도다.
+         *  - 성분표: 가능한 한 원본을 AI 에 보낸다(글씨 해상도가 곧 정확도).
+         *    단, 갤러리 원본이 크거나 HEIF 면 fileToLabelDataUrl 이 재인코딩한다(m12).
          *  - 제품:   256px 썸네일로 줄여 저장만 한다(Q7).
          * 둘은 서로 다른 파일이므로 각자 한 번씩만 변환한다.
          */
         const [labelImage, thumbnail] = await Promise.all([
-          input.labelFile ? fileToDataUrl(input.labelFile) : undefined,
+          input.labelFile ? fileToLabelDataUrl(input.labelFile) : undefined,
           input.productFile ? resizeToThumbnail(input.productFile) : undefined,
         ]);
 
