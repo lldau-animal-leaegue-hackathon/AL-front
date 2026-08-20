@@ -153,6 +153,20 @@
 - **Step 4** — 시너지 탭의 추가 추천 성분 → `IngredientProducts` 연결.
 - **Step 5** — `design-debt.md` 작성(감사 결과 옮김, 이번에 안 고친 것 명시).
 
+## AI 호출의 DB 우선 현황 (2026-08-20 확정 — 사용자 지시 "저장했으면 DB 에서")
+
+| 엔드포인트 | DB 우선 | 방식 |
+| --- | --- | --- |
+| `/api/ai/concern` | ✅ | `skin_profiles.concern_ingredients` — wonder 일치 시 즉시(44ms) |
+| `/api/ai/report` | ✅ | `shelf_reports` 지문 캐시 + 캐시 전용 모드(생성은 버튼만) |
+| `/api/ai/warnings` | ✅ | 결과는 `products.warnings` 저장, 생성은 등록 시 서버 큐. 클라이언트 직접 호출 0건 |
+| `/api/ai/ingredients` | ✅ | **카탈로그 우선**(사진 없을 때) — 같은 제품을 남이 등록했으면 그 성분을 즉시(50~258ms) |
+| `/api/ai/routine` | ⛔ 의도적 제외 | "다시 만들기" = 새 결과 기대. 캐시하면 같은 루틴만 나와 버튼이 거짓말이 된다 |
+| `/api/ai/search` | ⛔ 의도적 제외 | 웹 신선도가 가치이고 질의가 제각각이라 적중률 ~0. 카탈로그 검색은 화면에 별도로 이미 있다 |
+
+사진이 온 성분 추출은 카탈로그를 건너뛴다 — 사용자가 자기 제품의 성분표를 근거로
+내민 것이라(리뉴얼 등 카탈로그와 다를 수 있음) 사진을 읽는 것이 맞다.
+
 ## 검증
 
 - `npm run check` + `npm run build` (신규 라우트 → `next typegen` 선행 필수)

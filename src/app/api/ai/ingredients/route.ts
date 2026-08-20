@@ -16,6 +16,7 @@ import { acquire, release } from "@/lib/ai/guard";
 import { currentUserId } from "@/lib/auth/anonUser";
 import { isStringArray, parseJsonObject } from "@/lib/claude/parseJson";
 import { runClaude } from "@/lib/claude/runner";
+import { selectRows } from "@/lib/db/pool";
 import { buildIngredientsPrompt } from "@/lib/prompts/ingredients";
 
 // 자식 프로세스를 띄우므로 Edge 런타임에서는 동작하지 않는다.
@@ -47,9 +48,114 @@ function decodeDataUrl(
   return { extension, bytes: Buffer.from(match[2], "base64") };
 }
 
+/**
+ * 카탈로그에서 성분을 찾는다 — **AI 를 태우기 전의 DB 우선 경로**(사용자 지시 2026-08-20).
+ *
+ * 같은 제품을 누군가 이미 등록했다면 성분이 카탈로그(`products.ingredients`)에 있다.
+ * 그건 실제 성분표 사진에서 추출된 값이라, 이름만으로 모델 지식에 묻는 것보다 **더 정확**하고
+ * 20~50초와 구독 비용이 0이 된다.
+ *
+ * 매칭 규칙:
+ *  - 회사가 오면 (name, brand) 정확 일치 — 저장 시 brand 는 trim·빈 문자열 정규화이므로
+ *    같은 규칙으로 맞춘다(products POST 와 동일).
+ *  - 회사가 없으면 이름만으로 찾되 **정확히 1건일 때만** 쓴다 — 동명 타사 제품 오매칭 방지.
+ *  - 성분이 비어 있으면(아직 추출 전) 캐시로 치지 않는다.
+ */
+async function readCatalog(
+  productName: string,
+  productCompany: string | undefined,
+): Promise<{ name: string; category: string; ingredients: string[] } | null> {
+  const brand = productCompany?.trim() ?? "";
+  const rows = await selectRows(
+    brand
+      ? `SELECT name, category, ingredients FROM products
+          WHERE name = ? AND brand = ? AND JSON_LENGTH(ingredients) > 0`
+      : `SELECT name, category, ingredients FROM products
+          WHERE name = ? AND JSON_LENGTH(ingredients) > 0`,
+    brand ? [productName, brand] : [productName],
+  );
+  if (rows.length !== 1) return null;
+
+  const row = rows[0];
+  if (typeof row !== "object" || row === null) return null;
+  const item: Record<string, unknown> = { ...row };
+  // mysql2 는 JSON 컬럼을 파싱해 주기도, 문자열로 주기도 한다.
+  const raw =
+    typeof item.ingredients === "string"
+      ? (JSON.parse(item.ingredients) as unknown)
+      : item.ingredients;
+  if (!isStringArray(raw) || raw.length === 0) return null;
+
+  return {
+    name: typeof item.name === "string" ? item.name : productName,
+    category: typeof item.category === "string" ? item.category : "미분류",
+    ingredients: raw,
+  };
+}
+
 export async function POST(request: Request) {
-  // 사용자당 동시 1건. claude 프로세스 1개가 뜨는 비용이라 중복 실행을 막는다.
   const userId = await currentUserId();
+
+  // content-length 가 없는 요청(예: 청크 전송)은 검사 없이 통과시킨다 —
+  // 상한을 강제하지 못하는 유일한 경로이지만, 흔치 않고 다른 방어(가드·타임아웃)가 남아 있다.
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
+    return Response.json(
+      { message: "요청 본문이 너무 큽니다(최대 8MB)." },
+      { status: 413 },
+    );
+  }
+
+  let body: Body;
+  try {
+    body = (await request.json()) as Body;
+  } catch {
+    return Response.json({ message: "JSON 본문이 아닙니다." }, { status: 400 });
+  }
+
+  const productName =
+    typeof body.productName === "string" ? body.productName.trim() : "";
+  if (!productName) {
+    return Response.json(
+      { message: "productName 은 필수입니다." },
+      { status: 400 },
+    );
+  }
+
+  const capacity =
+    typeof body.capacity === "string" ? body.capacity : undefined;
+  const productCompany =
+    typeof body.productCompany === "string" ? body.productCompany : undefined;
+
+  const hasImage =
+    typeof body.productImg === "string" && body.productImg.length > 0;
+
+  /*
+   * 카탈로그 우선 — **성분표 사진이 없을 때만.** 사진이 왔다는 것은 사용자가 자기 제품의
+   * 성분표를 근거로 내밀었다는 뜻이다(리뉴얼 제품 등 카탈로그와 다를 수 있다) —
+   * 그때는 사진을 읽는다. 가드보다 먼저 본다: AI 를 태우지 않는 요청을 429 로 막을
+   * 이유가 없다(concern·report 와 같은 순서). 조회 실패는 AI 경로로 계속 간다.
+   */
+  if (!hasImage) {
+    try {
+      const catalog = await readCatalog(productName, productCompany);
+      if (catalog) {
+        // 응답 계약은 AI 경로와 동일(snake_case) — 클라이언트는 차이를 모른다.
+        return Response.json({
+          product_name: catalog.name,
+          category: catalog.category,
+          ingredients: catalog.ingredients,
+        });
+      }
+    } catch (error: unknown) {
+      console.warn(
+        "[api/ai/ingredients] 카탈로그 조회 실패, AI 로 진행:",
+        error,
+      );
+    }
+  }
+
+  // 사용자당 동시 1건. claude 프로세스 1개가 뜨는 비용이라 중복 실행을 막는다.
   if (!acquire(userId)) {
     return Response.json(
       {
@@ -60,45 +166,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    // content-length 가 없는 요청(예: 청크 전송)은 검사 없이 통과시킨다 —
-    // 상한을 강제하지 못하는 유일한 경로이지만, 흔치 않고 다른 방어(가드·타임아웃)가 남아 있다.
-    const contentLength = request.headers.get("content-length");
-    if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
-      return Response.json(
-        { message: "요청 본문이 너무 큽니다(최대 8MB)." },
-        { status: 413 },
-      );
-    }
-
-    let body: Body;
-    try {
-      body = (await request.json()) as Body;
-    } catch {
-      return Response.json(
-        { message: "JSON 본문이 아닙니다." },
-        { status: 400 },
-      );
-    }
-
-    const productName =
-      typeof body.productName === "string" ? body.productName.trim() : "";
-    if (!productName) {
-      return Response.json(
-        { message: "productName 은 필수입니다." },
-        { status: 400 },
-      );
-    }
-
-    const capacity =
-      typeof body.capacity === "string" ? body.capacity : undefined;
-    const productCompany =
-      typeof body.productCompany === "string" ? body.productCompany : undefined;
-
     let workdir: string | null = null;
     let imagePath: string | undefined;
 
     try {
-      if (typeof body.productImg === "string" && body.productImg.length > 0) {
+      if (hasImage && typeof body.productImg === "string") {
         const decoded = decodeDataUrl(body.productImg);
         if (!decoded) {
           return Response.json(
