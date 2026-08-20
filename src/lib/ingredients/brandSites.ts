@@ -51,7 +51,16 @@ export function splitIngredients(text: string): string[] {
     const isDecimalComma =
       /\d/.test(text[i - 1] ?? "") && /\d/.test(text[i + 1] ?? "");
 
-    if (char === "," && depth === 0 && !isDecimalComma) {
+    /*
+     * 줄바꿈도 구분자로 본다. 고시 표기·JSON-LD 설명은 목록이 끝난 뒤 **줄을 바꿔**
+     * 홍보 문구를 붙인다(`…향료\n순한 사용감의 크림.`). 공백으로만 합치면 마지막 성분이
+     * 그 문구와 한 항목이 되어 아래 오염 필터에 **함께** 걸린다 — 전성분 말미의
+     * 향료·보존제(대표적 민감 유발 성분)가 조용히 사라지는데, 남은 목록은 여전히
+     * `looksLikeIngredients` 를 통과해 **완전한 목록 행세**를 한다(m14).
+     */
+    const isLineBreak = char === "\n" || char === "\r";
+
+    if (depth === 0 && (isLineBreak || (char === "," && !isDecimalComma))) {
       items.push(buffer);
       buffer = "";
       continue;
@@ -131,12 +140,62 @@ function fromJsonLd(html: string): string[] | null {
   for (const block of blocks) {
     const raw = block[1];
     if (!raw.includes("정제수")) continue;
-    const match = /"description"\s*:\s*"([^"]*정제수[^"]*)"/.exec(raw);
-    if (!match) continue;
-    const items = splitIngredients(match[1]);
-    if (looksLikeIngredients(items)) return items;
+    for (const description of descriptionsOf(raw)) {
+      if (!description.includes("정제수")) continue;
+      const items = splitIngredients(description);
+      if (looksLikeIngredients(items)) return items;
+    }
   }
   return null;
+}
+
+/**
+ * JSON-LD 블록에서 `description` 문자열을 전부 꺼낸다.
+ *
+ * ⚠️ **정규식으로 값만 뜯지 않는다.** 예전에 `"description"\s*:\s*"([^"]*정제수[^"]*)"` 로
+ * 뜯었는데, JSON 이스케이프가 살아 있어 세 가지가 깨졌다(m14):
+ *  - `\"` 를 만나면 `[^"]*` 가 거기서 멈춰 **목록이 중간에서 잘리는데**, 잘린 목록도
+ *    `looksLikeIngredients` 를 통과해 완전한 목록 행세를 했다.
+ *  - `\/`(PHP·Cafe24 기본 이스케이프)의 백슬래시가 성분명에 그대로 남아 화면에 노출됐다.
+ *  - `\r\n` 이 실제 줄바꿈이 아니라 두 글자라 정규화에 안 걸렸다.
+ * JSON 은 JSON 파서로 읽는다 — 이스케이프 규칙을 손으로 다시 구현하지 않는다.
+ */
+function descriptionsOf(raw: string): string[] {
+  const found: string[] = [];
+  try {
+    collectDescriptions(JSON.parse(raw), found);
+  } catch {
+    /*
+     * 유효하지 않은 JSON-LD 를 싣는 몰이 있다(후행 쉼표·이스케이프 안 된 줄바꿈).
+     * 그때만 정규식으로 떨어지되, `(?:[^"\\]|\\.)*` 로 **이스케이프된 따옴표를 건너뛰어**
+     * 잘림을 막고 값은 직접 되돌린다.
+     */
+    const match = /"description"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(raw);
+    if (match) found.push(unescapeJson(match[1]));
+  }
+  return found;
+}
+
+/** `description` 은 최상위에 없을 수도 있다(`@graph`·배열 형태). 재귀로 훑는다. */
+function collectDescriptions(node: unknown, out: string[]): void {
+  if (Array.isArray(node)) {
+    for (const item of node) collectDescriptions(item, out);
+    return;
+  }
+  if (!node || typeof node !== "object") return;
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "description" && typeof value === "string") out.push(value);
+    else collectDescriptions(value, out);
+  }
+}
+
+/** 따옴표를 다시 씌워 JSON 파서에 맡긴다. 그래도 안 되면 흔한 이스케이프만 되돌린다. */
+function unescapeJson(value: string): string {
+  try {
+    return JSON.parse(`"${value}"`) as string;
+  } catch {
+    return value.replace(/\\[rn]/g, " ").replace(/\\(.)/g, "$1");
+  }
 }
 
 /**
@@ -211,6 +270,49 @@ type BrandAdapter = {
 };
 
 const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, "");
+
+/**
+ * 용량·수량 표기. 제품을 특정하지 못하므로 매칭에서 뺀다 —
+ * `100ml` 하나로 전혀 다른 제품이 후보가 됐다(M3 실측).
+ */
+const CAPACITY_TOKEN = /^\d+(\.\d+)?(ml|g|kg|l|mg|매|개|호|p|ea)?$/i;
+
+/**
+ * 제품명 → 매칭 토큰. **`normalize` 를 쓰지 않는다** — 공백을 먼저 지우면 한글 이름이
+ * 통째로 토큰 1개가 되어 토큰 매칭 자체가 성립하지 않는다(M3 의 원인).
+ */
+function nameTokens(productName: string): string[] {
+  return productName
+    .toLowerCase()
+    .split(/[^가-힣a-z0-9]+/)
+    .filter((token) => token.length >= 2 && !CAPACITY_TOKEN.test(token));
+}
+
+/**
+ * 받아 온 상세 페이지가 **요청한 그 제품인지** 확인한다.
+ *
+ * 성분은 화면에 사실로 표시되고 충돌 분석의 입력이 되며, 등록되면 공용 카탈로그를 통해
+ * 다른 사용자에게도 나간다. 그래서 **틀린 성분은 빈 성분보다 나쁘다** — 확인이 안 되면 버린다.
+ * 후보 선정이 느슨한 어댑터(사이트맵 기반)를 위한 마지막 관문이자, 검색 랭킹을 믿는
+ * Cafe24 경로에도 같이 거는 방어다.
+ *
+ * 과반 일치를 요구한다: 전부 일치는 사용자가 적은 이름과 공식 표기가 조금만 달라도 깨지고,
+ * 하나만 일치는 `토너` 같은 흔한 단어로 통과해 버린다.
+ */
+function titleMatches(html: string, productName: string): boolean {
+  const title =
+    /<meta[^>]+(?:property|name)=["']og:title["'][^>]+content=["']([^"']+)["']/i.exec(
+      html,
+    )?.[1] ?? /<title[^>]*>([^<]+)<\/title>/i.exec(html)?.[1];
+  if (!title) return false;
+
+  const tokens = nameTokens(productName);
+  if (tokens.length === 0) return false;
+
+  const haystack = normalize(title);
+  const hits = tokens.filter((token) => haystack.includes(token)).length;
+  return hits * 2 >= tokens.length;
+}
 
 /**
  * 세트·기획 상품 슬러그. Cafe24 SEO 링크는 경로에 한글 상품명이 그대로 들어가서
@@ -291,14 +393,28 @@ const ADAPTERS: readonly BrandAdapter[] = [
     findDetailUrls: async (productName) => {
       const xml = await fetchHtml("https://tonymoly.com/sitemap/sitemap.xml");
       if (!xml) return [];
-      const target = normalize(productName);
+      const tokens = nameTokens(productName);
+      if (tokens.length === 0) return [];
+
       const urls: string[] = [];
       for (const m of xml.matchAll(/<loc>([^<]*\/products\/[^<]*)<\/loc>/g)) {
         const url = m[1];
-        // 슬러그는 영문이라 한글 제품명과 직접 비교가 안 된다 — 숫자·영문 토큰으로 느슨히 본다.
-        const slug = normalize(decodeURIComponent(url));
-        const tokens = target.match(/[가-힣a-z0-9]{2,}/g) ?? [];
-        if (tokens.length > 0 && tokens.some((t) => slug.includes(t))) {
+        /*
+         * 사이트맵은 **관련도 순서가 없다** — 검색엔진 랭킹이 있는 Cafe24 경로와 달리
+         * 여기서 느슨하게 고르면 문서 순서상 앞의 것이 그대로 후보가 된다.
+         *
+         * ⚠️ 예전에는 URL 전체를 normalize 한 뒤 `some(...includes)` 로 봤는데 두 가지가 틀렸다(M3):
+         *  - `normalize` 가 **토큰화 전에 공백을 지워** 한글 이름이 통째로 토큰 1개가 됐다.
+         *    주석이 말하던 "토큰으로 느슨히 본다"가 실제로는 일어나지 않아 어댑터가 사실상 죽어 있었다.
+         *  - 구두점으로 파편이 생기면(`… - 100ml`) 그 파편 하나가 **아무 제품에나** 걸렸다.
+         *    실측: `100ml` 이 `master-lab-hyaluronic-acid-100ml` 에 매치.
+         * 이제 슬러그만 보고 **모든 토큰이 들어 있을 때만** 후보로 삼는다. 한글 이름은
+         * 영문 슬러그와 맞지 않아 후보가 안 나오는데, 그게 정직한 결과다(AI 경로가 받는다).
+         */
+        const slug = decodeURIComponent(url).split("/products/")[1] ?? "";
+        if (!slug) continue;
+        const haystack = slug.toLowerCase();
+        if (tokens.every((token) => haystack.includes(token))) {
           urls.push(url);
           if (urls.length >= 3) break;
         }
@@ -330,6 +446,8 @@ export async function findIngredientsFromBrandSite(
     for (const url of urls) {
       const html = await fetchHtml(url);
       if (!html) continue;
+      // 성분을 뽑기 **전에** 그 제품이 맞는지 본다 — 뽑고 나면 버리기 아까워진다(M3).
+      if (!titleMatches(html, productName)) continue;
       const items = parseIngredients(html);
       if (items) return items;
     }
