@@ -6,15 +6,19 @@ on:
   push:
     branches: ["main"]
 
-# 같은 브랜치에 새 커밋이 올라오면 진행 중이던 이전 실행을 취소합니다.
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   ci:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    # 같은 브랜치에 새 커밋이 올라오면 진행 중이던 이전 실행을 취소합니다.
+    # ⚠️ 워크플로 레벨에 두면 secret-scan 까지 취소된다 — 연속 푸시 시 첫 푸시의
+    #    diff 범위(before_A..after_A)가 영영 스캔되지 않는 구멍이 생긴다(다음 실행은
+    #    after_A..after_B 만 본다). 그래서 취소는 ci 잡에만 걸고,
+    #    secret-scan 은 concurrency 없이 모든 푸시에서 완주시킨다.
+    concurrency:
+      group: ci-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout
