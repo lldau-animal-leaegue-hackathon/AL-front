@@ -11,6 +11,8 @@
   left: 0;
   /* 히어로 하단의 다음 버튼 줄(패딩 16 + 버튼 56 + 여유)을 침범하지 않는다 */
   bottom: 96px;
+  /* 사진(0)·스크림(1) 위 — RoutineRunner.module.css 의 쌓임 규칙과 한 세트다 */
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
