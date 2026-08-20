@@ -28,7 +28,9 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
+# ⚠️ 이 레포에는 public/ 이 없다(정적 파일은 전부 app 라우터가 든다).
+#    나중에 public/ 을 만들면 여기에 COPY 를 추가할 것 — 없는 채 COPY 하면 빌드가 죽는다
+#    (2026-08-20 첫 배포 실패 원인).
 COPY --from=builder /app/next.config.ts ./
 
 # node(uid 1000) = 호스트 ubuntu(uid 1000) — 마운트된 ~/.claude 를 읽고 쓸 수 있다.
