@@ -161,16 +161,21 @@ jobs:
           if [ "$MODE" = "diff" ]; then
             RANGE="${BASE_SHA}${RANGE_OP}${HEAD_SHA}"
             echo "diff 범위: $RANGE"
+            # ⚠️ 아래 `|| true` 를 지우지 말 것. GitHub Actions 의 `shell: bash` 는
+            # `-eo pipefail` 로 돈다 — 추가된 줄이 없는 파일(바이너리 diff, 삭제만 있는 diff)에서
+            # grep 이 1 을 반환하면 파이프라인 전체가 실패로 취급돼 **스캔이 그 파일에서 조용히
+            # 중단되고 잡이 exit 1** 이 된다. 시크릿을 찾아서가 아니라 스크립트가 죽어서 빨간불이
+            # 되므로 원인을 오해하기 쉽다(2026-08-21 스크린샷 PNG 4장 추가 때 실제 발생).
             while IFS= read -r f; do
               [ -n "$f" ] && [ -f "$f" ] || continue
-              content=$(git diff -U0 "$RANGE" -- "$f" 2>/dev/null | grep '^+' | grep -v '^+++')
+              content=$(git diff -U0 "$RANGE" -- "$f" 2>/dev/null | grep '^+' | grep -v '^+++' || true)
               check_file "$f" "$content"
             done < <(git diff --name-only --diff-filter=ACMR "$RANGE" -- . ':!.githooks')
           else
             echo "diff 범위를 구할 수 없어 전체 추적 파일을 스캔합니다."
             while IFS= read -r f; do
               [ -n "$f" ] && [ -f "$f" ] || continue
-              content=$(cat "$f" 2>/dev/null)
+              content=$(cat "$f" 2>/dev/null || true)
               check_file "$f" "$content"
             done < <(git ls-files -- . ':!.githooks')
           fi
