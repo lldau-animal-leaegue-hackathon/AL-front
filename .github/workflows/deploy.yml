@@ -1,4 +1,4 @@
-# main 푸시/머지 → Actions 가 이미지를 빌드해 Docker Hub 로 올리고,
+# main 에서 CI 가 성공하면 → Actions 가 이미지를 빌드해 Docker Hub 로 올리고,
 # 서버는 pull 만 한다 (사용자 결정 2026-08-20 — deploy key 없이).
 #
 # 서버에서 빌드하지 않는 이유: 디스크·CPU 를 다른 서비스와 나눠 쓰는 단일 서버라
@@ -16,8 +16,13 @@
 
 name: Deploy
 
+# push 직결이면 CI 와 병렬 독립이라 시크릿 스캔·린트·빌드가 실패한 커밋도
+# 배포된다 — CI 완주(성공)를 게이트로 삼는다. 성공 여부는 잡의 if 에서 거른다
+# (types: completed 는 실패·취소로 끝나도 발화한다).
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 # 연달아 머지돼도 배포는 한 번에 하나씩.
@@ -27,9 +32,15 @@ concurrency:
 
 jobs:
   build-push:
+    # main 의 CI 가 성공했을 때만. deploy 잡은 needs 로 이 게이트를 물려받는다.
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # workflow_run 이벤트의 기본 checkout 은 기본 브랜치 최신 커밋이다 —
+          # CI 를 통과한 바로 그 커밋을 빌드하도록 head_sha 로 고정한다.
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - uses: docker/setup-buildx-action@v3
 
@@ -43,9 +54,11 @@ jobs:
           context: .
           push: true
           # latest = 배포 대상, sha = 롤백 지점. 서버는 latest 만 pull 한다.
+          # sha 태그도 checkout 과 같은 head_sha 기준 — github.sha 는 이 이벤트에선
+          # 기본 브랜치 최신이라 빌드된 내용과 어긋날 수 있다.
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/youtine:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/youtine:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/youtine:${{ github.event.workflow_run.head_sha }}
           # GitHub Actions 캐시 — 의존성이 안 바뀌면 재빌드가 분 단위로 준다.
           cache-from: type=gha
           cache-to: type=gha,mode=max

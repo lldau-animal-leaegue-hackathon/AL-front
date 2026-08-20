@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { ProductCandidate } from "@/api/ai";
@@ -36,6 +37,7 @@ export function ProductSearchModal({
   onConfirm,
   onRegisterAnother,
   onClose,
+  onRetakeLabel,
 }: {
   phase: RegisterPhase;
   candidates: ProductCandidate[];
@@ -48,6 +50,8 @@ export function ProductSearchModal({
   onConfirm: () => void;
   onRegisterAnother: () => void;
   onClose: () => void;
+  /** 성분을 못 찾았을 때 — 모달을 닫고 성분표 촬영으로 보낸다. */
+  onRetakeLabel: () => void;
 }) {
   const busy = phase === "extracting" || phase === "saving";
 
@@ -113,7 +117,11 @@ export function ProductSearchModal({
           {phase === "extracting" && <Extracting />}
 
           {(phase === "found" || phase === "saving") && result && (
-            <ResultView result={result} />
+            <ResultView
+              result={result}
+              // 저장 중에는 모달을 떠나는 버튼을 주지 않는다(닫기와 같은 규칙).
+              onRetakeLabel={phase === "found" ? onRetakeLabel : undefined}
+            />
           )}
 
           {phase === "done" && saved && (
@@ -151,14 +159,25 @@ export function ProductSearchModal({
           )}
 
           {phase === "done" && (
-            <button
-              type="button"
-              className={styles.submit}
-              onClick={onRegisterAnother}
-            >
-              <Icon name="add_circle" filled />
-              다른 제품 등록하기
-            </button>
+            <>
+              {/*
+                방금 제품이 늘었다 — 새 제품을 반영해 루틴을 다시 짜는 것이 자연스러운
+                다음 행동이다(사용자 피드백 2026-08-20: 닫기(X)와 "더 등록하기"의 기능이
+                같아서 헷갈렸다). 더 등록하기는 보조 버튼으로 내린다.
+              */}
+              <Link href="/routine/new" className={styles.submit}>
+                <Icon name="auto_awesome" filled />
+                루틴 다시 짜기
+              </Link>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={onRegisterAnother}
+              >
+                <Icon name="add_circle" />
+                다른 제품 등록하기
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -180,8 +199,10 @@ function CandidateList({
   if (candidates.length === 0) {
     return (
       <p className={styles.empty}>
-        검색 결과가 없어요. 이름을 조금 다르게 적어 보거나, 제품 사진을 함께
-        올리면 성분표를 직접 읽어 등록할 수 있어요.
+        검색 결과가 없어요.
+        <br />
+        이름을 조금 다르게 적어 보거나, 제품 사진을 함께 올리면 성분표를 직접
+        읽어 등록할 수 있어요.
       </p>
     );
   }
@@ -189,7 +210,9 @@ function CandidateList({
   return (
     <>
       <p className={styles.lead}>
-        찾은 제품 {candidates.length}개예요. 담을 제품을 골라 주세요.
+        찾은 제품 {candidates.length}개예요.
+        <br />
+        담을 제품을 골라 주세요.
       </p>
 
       <ul className={styles.candidates}>
@@ -284,7 +307,13 @@ function SavedView({
   );
 }
 
-function ResultView({ result }: { result: SearchResult }) {
+function ResultView({
+  result,
+  onRetakeLabel,
+}: {
+  result: SearchResult;
+  onRetakeLabel?: () => void;
+}) {
   return (
     <>
       <div className={styles.head}>
@@ -293,6 +322,8 @@ function ResultView({ result }: { result: SearchResult }) {
             직접 찍은 사진이 우선, 없으면 검색 결과 이미지. 둘 다 없으면 카테고리 아이콘.
             (담을 때 서버가 검색 이미지를 받아 data URL 로 바꿔 저장하므로,
              담긴 뒤에는 어느 쪽이든 같은 모양이 된다.)
+            ⚠️ 저장 전 미리보기는 외부(화해 CDN) 원본 URL 을 직접 로드한다 —
+            저장 시 서버가 data URL 로 임베딩하는 정책의 **의도된 예외**다(m28).
           */}
           {result.thumbnail || result.imageUrl ? (
             <Image
@@ -335,10 +366,24 @@ function ResultView({ result }: { result: SearchResult }) {
         이 상태로도 담을 수 있다(이름만 저장).
       */}
       {result.ingredients.length === 0 ? (
-        <p className={styles.empty}>
-          성분 정보를 찾지 못했어요. 성분표 사진을 올리면 정확히 읽을 수
-          있습니다.
-        </p>
+        <>
+          <p className={styles.empty}>
+            성분 정보를 찾지 못했어요.
+            <br />
+            성분표 사진을 올리면 정확히 읽을 수 있습니다.
+          </p>
+          {/* 문구로만 안내하면 막다른 길이다 — 바로 촬영으로 이어지는 버튼을 준다. */}
+          {onRetakeLabel && (
+            <button
+              type="button"
+              className={styles.emptyAction}
+              onClick={onRetakeLabel}
+            >
+              <Icon name="photo_camera" filled size="sm" />
+              성분표 촬영하기
+            </button>
+          )}
+        </>
       ) : (
         <ul className={styles.ingredients}>
           {result.ingredients.map((ingredient) => (

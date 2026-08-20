@@ -55,10 +55,11 @@ export type RoutineStepResponse = {
 export type RoutineResponse = {
   morning: RoutineStepResponse[];
   evening: RoutineStepResponse[];
-};
-
-export type WarningsResponse = {
-  warning: string[];
+  /**
+   * wonder 요약 키워드(2~8자 요구) — 루틴 이름 "블랙헤드 - 저녁 루틴" 조합용.
+   * 라우트가 길이 위반(2~20자 밖)을 null 로 강등한다(프롬프트 규칙 9, 2026-08-20 추가).
+   */
+  concern_summary: string | null;
 };
 
 /** 고민에 도움이 되는 성분 1건 — 프롬프트 출력 스키마 그대로 */
@@ -157,11 +158,5 @@ export function fetchShelfReport(input: { generate?: boolean } = {}) {
   return api.post<ShelfReportResponse | null>("/ai/report", input);
 }
 
-/** 제품 단독 사용 주의사항 (최대 6개) */
-export function fetchWarnings(input: {
-  productName: string;
-  category: string;
-  ingredients: string[];
-}) {
-  return api.post<WarningsResponse>("/ai/warnings", input);
-}
+// fetchWarnings 는 삭제했다 — 주의사항 생성이 서버 등록 시점 큐로 옮겨가
+// 클라이언트 호출처 0건(리뷰 R4). /api/ai/warnings 라우트는 서버 큐 계약의 정본으로 남는다.

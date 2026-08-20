@@ -14,7 +14,11 @@ fail() {
 }
 
 # 이 훅 자신은 검사에서 뺀다 — 탐지 패턴이 들어 있어 반드시 자기 자신에 걸린다.
-files=$(git diff --cached --name-only --diff-filter=ACMR | grep -v '^\.githooks/')
+files=$(git diff --cached --name-only --diff-filter=ACMR -- . ':!.githooks')
+
+# 검사 대상이 없으면 여기서 끝낸다 — 이 가드 없이 아래 diff 에 도달하면
+# pathspec 없는 diff 가 전체(.githooks 자신 포함)를 스캔해 훅이 자기 자신을 차단한다.
+[ -n "$files" ] || exit 0
 
 # ── 1) .env 계열 파일 ────────────────────────────────────────────────
 # 앞 점을 뺀 `env.local` 같은 변형까지 잡는다(실측으로 뚫렸던 경로다).
@@ -32,7 +36,9 @@ fi
 
 # 추가된 줄만 본다 — 기존 줄을 옮기기만 한 diff 에서 오탐하지 않게.
 # (파일을 통째로 옮기면 전 줄이 추가로 보이므로 그때는 걸린다. 의도한 동작이다.)
-added=$(git diff --cached -U0 -- $files | grep '^+' | grep -v '^+++')
+# 파일명 목록($files)을 셸 인자로 되돌리지 않는다 — 공백 파일명이 단어 분리로
+# 깨져 스캔이 누락된다. git pathspec 으로 같은 범위(.githooks 제외)를 직접 거른다.
+added=$(git diff --cached -U0 -- . ':!.githooks' | grep '^+' | grep -v '^+++')
 
 # ── 2) 자격 증명 문자열 ──────────────────────────────────────────────
 if printf '%s' "$added" | grep -qE 'AKIA[0-9A-Z]{16}|BEGIN [A-Z ]*PRIVATE KEY|sk-ant-[A-Za-z0-9_-]{20}|gh[pousr]_[A-Za-z0-9]{30}|xox[baprs]-[A-Za-z0-9-]{10}|AIza[0-9A-Za-z_-]{30}|eyJ[A-Za-z0-9_-]{20,}\.eyJ'; then

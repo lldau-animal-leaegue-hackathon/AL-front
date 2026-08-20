@@ -28,13 +28,28 @@ function progressLabel(elapsed: number): string {
   return elapsed >= 35 ? "거의 다 됐어요" : "제품 찾는 중";
 }
 
+/** 성분표 유무에 따라 버튼이 실제로 할 일을 말한다(사용자 피드백 2026-08-20: "AI"를 명시). */
+function submitLabel(hasLabelFile: boolean): string {
+  return hasLabelFile ? "AI 성분 읽기" : "AI 성분 검색";
+}
+
 /**
  * `prefill` 은 **초기값으로만** 쓴다.
  * 검색에서 제품을 고르면 부모가 `key` 를 바꿔 이 컴포넌트를 리마운트한다 —
  * effect 로 setState 를 호출해 prop 을 state 에 동기화하는 것보다 단순하고,
  * 같은 카드를 다시 눌러도 폼이 확실히 초기화된다.
  */
-export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
+export function ProductForm({
+  prefill,
+  active,
+  onBusyChange,
+}: {
+  prefill: ProductPrefill | null;
+  /** 이 패널이 현재 탭인지. hidden 뒤에서 카메라·모달이 살아 있으면 안 된다(M5·M6). */
+  active: boolean;
+  /** 검색·등록 진행 여부를 부모에 알린다 — 진행 중 리마운트 방지용(m11). */
+  onBusyChange: (busy: boolean) => void;
+}) {
   const formId = useId();
   const nameId = useId();
   const capacityId = useId();
@@ -83,6 +98,19 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
     phase === "done";
   const busy = searching || modalOpen;
 
+  // 진행 여부를 부모(ScanWorkspace)에 알린다 — 진행 중 인기 카드 선택이 폼을 리마운트하지 않게(m11).
+  useEffect(() => {
+    onBusyChange(busy);
+  }, [busy, onBusyChange]);
+
+  /*
+   * 탭이 숨겨지면 카메라 상태도 닫는다(M5). 스트림 자체는 아래 렌더 게이트
+   * (`active && cameraMode`)의 언마운트가 즉시 끊지만, 상태가 남으면 탭 복귀 때
+   * 카메라가 저절로 다시 열린다. effect 대신 공식 "렌더 중 상태 보정" 패턴을 쓴다
+   * (react-hooks/set-state-in-effect 회피 — 같은 컴포넌트의 조건부 보정은 허용 패턴).
+   */
+  if (!active && cameraMode !== null) setCameraMode(null);
+
   /*
    * 검색이 오래 걸린다 — 실측 18~37초.
    * 스피너만 돌면 멈춘 줄 알기 때문에 경과 시간을 같이 보여준다.
@@ -123,7 +151,9 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
 
   return (
     <section className={styles.section}>
-      {cameraMode && (
+      {/* active 조건은 이중 방어다 — 위 effect 는 렌더 후에 돌아서, 조건이 없으면
+          숨겨진 첫 프레임 동안 스트림이 산 채로 남는다. 언마운트가 즉시 트랙을 끈다. */}
+      {active && cameraMode && (
         <CameraCapture
           mode={cameraMode}
           onCapture={(captured) => {
@@ -144,8 +174,12 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
       {/*
         후보 선택 → 성분 확인 → 등록 → 완료가 모두 이 모달 안에서 일어난다.
         저장 실패 시에도 모달은 열려 있다 — 닫으면 1분 넘게 걸린 결과가 통째로 날아간다.
+
+        active 일 때만 렌더한다(M6) — hidden 패널 뒤에서 마운트를 유지하면
+        useBodyScrollLock 이 안 풀려 보이는 탭까지 전부 스크롤이 잠긴다.
+        phase 상태는 훅에 살아 있으므로 탭에 돌아오면 모달이 그대로 다시 뜬다.
       */}
-      {modalOpen && (
+      {active && modalOpen && (
         <ProductSearchModal
           phase={phase}
           candidates={candidates}
@@ -158,43 +192,24 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
           onConfirm={confirm}
           onRegisterAnother={clearForm}
           onClose={phase === "done" ? clearForm : dismiss}
+          onRetakeLabel={() => {
+            /*
+             * 성분을 못 찾았을 때의 다음 행동 — 모달을 닫고 바로 성분표 촬영으로 보낸다.
+             * ⚠️ 고른 후보의 정체성(이름·제조사)을 폼에 되채운 뒤 닫는다 —
+             * 안 하면 재제출이 사용자가 처음 친 부분 문자열("토너")로 회귀한다(재검토 N1).
+             */
+            if (found) {
+              setProductName(found.productName);
+              if (found.productCompany) setProductCompany(found.productCompany);
+            }
+            dismiss();
+            setCameraMode("label");
+          }}
         />
       )}
 
-      {/*
-        검색 버튼을 제목 줄 오른쪽에 둔다. 폼 밖이지만 `form` 속성으로 연결돼 있어
-        submit 이 정상 동작한다(엔터 제출도 유지된다).
-      */}
       <div className={styles.intro}>
-        <div className={styles.introRow}>
-          <h2 className={styles.heading}>제품 등록</h2>
-
-          <button
-            className={styles.submit}
-            type="submit"
-            form={formId}
-            disabled={busy}
-          >
-            {searching ? (
-              <>
-                <Icon name="progress_activity" className={styles.spinner} />
-                {elapsed}초
-              </>
-            ) : (
-              <>
-                <Icon name={labelFile ? "document_scanner" : "search"} filled />
-                {/* 성분표가 있으면 검색을 건너뛴다 — 버튼도 실제로 할 일을 말한다. */}
-                {labelFile ? "성분 읽기" : "검색"}
-              </>
-            )}
-          </button>
-        </div>
-
-        {/*
-          설명은 **버튼과 같은 줄에 두지 않는다.** 그렇게 하면 컬럼이 195px 로 좁아져
-          문장 하나가 저절로 접히고 `<br>` 의도가 무력화된다(390px 실측 3줄).
-          전폭을 쓰면 문장 단위로 정확히 2줄이 된다.
-        */}
+        <h2 className={styles.heading}>제품 등록</h2>
         <p className={styles.lead}>
           제품 이름만 있어도 찾을 수 있어요.
           <br />
@@ -255,7 +270,9 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
             제품 사진
           </label>
           <p className={styles.fieldHint}>
-            선반에서 제품을 알아보는 데 쓰여요. 성분은 읽지 않아요.
+            선반에서 제품을 알아보는 데 쓰여요.
+            <br />
+            성분은 읽지 않아요.
           </p>
           <div className={styles.photoRow}>
             <input
@@ -310,17 +327,32 @@ export function ProductForm({ prefill }: { prefill: ProductPrefill | null }) {
           {labelFile && <p className={styles.fileName}>{labelFile.name}</p>}
         </div>
 
-        {/*
-          진행 상황은 버튼이 좁아 초만 보여 준다. 무엇을 하는 중인지는 여기서 말한다
-          — 실측 18~37초라 아무 설명이 없으면 멈춘 줄 안다.
-        */}
-        {searching && (
+        {/* 15초를 넘기면 왜 오래 걸리는지와 빠른 길을 알려 준다 — 진행 문구 자체는 버튼이 맡는다. */}
+        {searching && elapsed >= 15 && (
           <p className={styles.hint}>
-            {progressLabel(elapsed)}…
-            {elapsed >= 15 &&
-              " 실제 판매 중인 제품을 찾고 있어요. 성분표 사진을 올리면 검색을 건너뛰고 바로 읽을 수 있습니다."}
+            실제 판매 중인 제품을 찾고 있어요.
+            <br />
+            성분표 사진을 올리면 검색을 건너뛰고 바로 읽을 수 있습니다.
           </p>
         )}
+
+        {/*
+          마지막에 누르는 버튼이라는 것이 읽히도록 **폼 맨 아래 전폭**으로 둔다
+          (사용자 피드백 2026-08-20 — 상단에 있으니 제출 버튼처럼 안 보였다).
+        */}
+        <button className={styles.submit} type="submit" disabled={busy}>
+          {searching ? (
+            <>
+              <Icon name="progress_activity" className={styles.spinner} />
+              {progressLabel(elapsed)}… {elapsed}초
+            </>
+          ) : (
+            <>
+              <Icon name={labelFile ? "document_scanner" : "search"} filled />
+              {submitLabel(Boolean(labelFile))}
+            </>
+          )}
+        </button>
       </form>
 
       {/* 검색 실패. 성분 추출·저장 실패는 모달 안에서 보여 준다(그쪽이 결과를 들고 있다). */}

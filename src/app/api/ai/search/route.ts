@@ -38,6 +38,113 @@ type Candidate = {
   image_url: string | null;
 };
 
+/* ── 화해 직접 파싱 (사용자 승인 2026-08-20 Q4) ──────────────────────
+ * 검색 결과 페이지는 SSR 이라 `__NEXT_DATA__` JSON 에 후보가 통째로 박혀 온다
+ * (실측: 0.5~2초, 첫 5개 = MAX_CANDIDATES, 판촉 문구 없는 정식 명칭).
+ * LLM 경로(18~37초)의 10~40배 빠르므로 **직파싱을 먼저** 시도하고,
+ * 구조 실패(비 200·키 경로 부재·파싱 실패)일 때만 기존 AI 경로로 폴백한다.
+ *
+ * ⚠️ 폴백 진입은 반드시 warn 로그를 남긴다 — 화해가 App Router 로 이관하는 순간
+ *    전 요청이 조용히 18~37초로 회귀하는데, 로그가 없으면 영영 모른다.
+ * ⚠️ EC2(데이터센터 IP)에서의 WAF 차단 여부는 미확인(가정용 IP 실측만 있음) —
+ *    차단돼도 폴백이 받치지만, 배포 후 서버 로그에서 직파싱 성공을 1회 확인할 것.
+ */
+
+const HWAHAE_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+
+/** 중첩 키 경로를 unknown 안전하게 내려간다 — `as` 캐스팅 없이 좁히기 위한 헬퍼. */
+function dig(value: unknown, ...keys: string[]): unknown {
+  let current = value;
+  for (const key of keys) {
+    if (typeof current !== "object" || current === null) return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current;
+}
+
+/** 화해 항목 1개 → 우리 Candidate. 이름이 없으면 버린다(AI 경로의 narrowCandidate 와 같은 규율). */
+function hwahaeItemToCandidate(value: unknown): Candidate | null {
+  if (typeof value !== "object" || value === null) return null;
+  const item = value as Record<string, unknown>;
+
+  const productName =
+    typeof item.productName === "string" ? item.productName.trim() : "";
+  if (!productName) return null;
+
+  // 브랜드는 "토리든 (Torriden)" 형태다 — 화면·매칭은 한글 표기만 쓴다.
+  const rawBrand = typeof item.brand === "string" ? item.brand.trim() : "";
+  const brand = rawBrand ? rawBrand.replace(/\s*\([^)]*\)\s*$/, "") : null;
+
+  // "50ml / 1.69 fl. oz." → "50ml". 형식이 흔들려도 첫 세그먼트만 취한다.
+  const rawCapacity =
+    typeof item.product_capacity === "string" ? item.product_capacity : "";
+  const volume = rawCapacity
+    ? (rawCapacity.split("/")[0]?.trim() ?? null)
+    : null;
+
+  const rawImage =
+    typeof item.imageUrl === "string" ? item.imageUrl.trim() : "";
+  const imageUrl = rawImage && isAllowedImageUrl(rawImage) ? rawImage : null;
+
+  return {
+    product_name: productName,
+    brand,
+    volume: volume || null,
+    image_url: imageUrl,
+  };
+}
+
+/**
+ * 직파싱 본체. **빈 배열은 정상 결과다**(화해에 없음) — AI 폴백 대상이 아니다.
+ * `null` 을 돌려줄 때만(구조 실패) 호출부가 AI 로 폴백한다.
+ */
+async function searchHwahaeDirect(query: string): Promise<Candidate[] | null> {
+  const response = await fetch(
+    `https://www.hwahae.co.kr/search?q=${encodeURIComponent(query)}`,
+    {
+      headers: { "user-agent": HWAHAE_UA },
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) {
+    console.warn(`[api/ai/search] 직파싱 HTTP ${response.status} — AI 폴백`);
+    return null;
+  }
+
+  const html = await response.text();
+  const match = html.match(
+    /<script id="__NEXT_DATA__" type="application\/json"[^>]*>(.*?)<\/script>/s,
+  );
+  if (!match) {
+    console.warn(
+      "[api/ai/search] __NEXT_DATA__ 없음 — AI 폴백(화해 구조 변경?)",
+    );
+    return null;
+  }
+
+  let data: unknown;
+  try {
+    data = JSON.parse(match[1]);
+  } catch {
+    console.warn("[api/ai/search] __NEXT_DATA__ 파싱 실패 — AI 폴백");
+    return null;
+  }
+
+  // 키 경로 실측(2026-08-20): props.pageProps.products.products[]
+  const list = dig(data, "props", "pageProps", "products", "products");
+  if (!Array.isArray(list)) {
+    console.warn("[api/ai/search] products 키 경로 부재 — AI 폴백");
+    return null;
+  }
+
+  return list
+    .map(hwahaeItemToCandidate)
+    .filter((item): item is Candidate => item !== null)
+    .slice(0, MAX_CANDIDATES);
+}
+
 /**
  * LLM 은 스키마를 보장하지 않는다. 프론트로 내보내기 전에 서버에서 좁힌다.
  * 이름이 없는 항목은 화면에 그릴 수 없으므로 **버린다**(전체를 실패로 만들지 않는다).
@@ -119,6 +226,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // 1차: 직파싱(0.5~2초). 빈 배열도 정상 결과라 그대로 반환한다 — null(구조 실패)만 폴백.
+    try {
+      const direct = await searchHwahaeDirect(query);
+      if (direct !== null) {
+        return Response.json({ candidates: direct });
+      }
+    } catch (error: unknown) {
+      // 타임아웃·네트워크 오류 — AI 경로가 그대로 받는다.
+      console.warn("[api/ai/search] 직파싱 실패 — AI 폴백:", error);
+    }
+
+    // 2차(폴백): 기존 헤드리스 Claude 경로. 프롬프트·검증 규율은 그대로다.
     try {
       const raw = await runClaude(buildProductSearchPrompt({ query }), {
         // 이 엔드포인트만 웹 도구를 연다. 다른 도구는 주지 않는다.

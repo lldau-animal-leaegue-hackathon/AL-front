@@ -163,7 +163,7 @@
 
   /* 라이트·다크 둘 다 지원한다고 브라우저에 알린다 — OS 설정에 맞춰 스크롤바·
      <input type="date"> 같은 네이티브 위젯 색도 함께 전환된다.
-     다크 값 자체는 아래 `@media (prefers-color-scheme: dark)` 블록에서 재정의한다(R-Step 6). */
+     다크 값 자체는 아래 `:root[data-theme="dark"]` 블록에서 재정의한다(R-Step 6 → 수동 전환 개편). */
   color-scheme: light dark;
 }
 
@@ -185,71 +185,73 @@
  *
  * :root 토큰만 재정의한다 — 컴포넌트가 전부 var(--x)를 쓰므로 이것만으로 전 화면이
  * 전환된다. 컴포넌트 CSS에 hex 하드코딩이 남아 있으면 거기만 다크에서 깨진다.
+ *
+ * ⚠️ 미디어쿼리가 아니라 **`data-theme` 속성**으로 전환한다(수동 전환 지원 —
+ * 사용자 요청 2026-08-20). 속성은 layout.tsx 의 부트스트랩 스크립트가 페인트 전에
+ * 정한다: 저장된 선택(al:v1:theme) > OS 설정. 설정 모달(TopAppBar)이 런타임에 바꾼다.
  * --------------------------------------------------------------- */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* surface / 배경 계층 — 대응표 값 + 새로 계산한 중성 표면 단계 */
-    --surface: #101415; /* 신규 계산 (t6) */
-    --surface-dim: #101415; /* 신규 계산 — 다크 스킴에서는 dim이 base와 같다 (M3) */
-    --surface-bright: #363a3b; /* 신규 계산 (t24) */
-    --surface-container-lowest: #0b0f10; /* 신규 계산 (t4) */
-    --surface-container-low: #191c1d; /* 대응표 = 라이트 --on-surface(10) */
-    --surface-container: #1d2021; /* 신규 계산 (t12) */
-    --surface-container-high: #272b2c; /* 신규 계산 (t17) */
-    --surface-container-highest: #323637; /* 신규 계산 (t22) */
-    --surface-variant: #424844; /* 신규 계산 */
-    --on-surface: #e1e3e4; /* 대응표 = 라이트 --surface-container-highest(90) */
-    --on-surface-variant: #c2c8c2; /* 대응표 = 라이트 --outline-variant(80) */
-    --inverse-surface: #e1e3e4; /* 대응표 = 라이트 --surface-container-highest(90) */
-    --inverse-on-surface: #2e3132; /* 대응표 = 라이트 --inverse-surface(20) */
-    --scrim: #000000; /* 다크에서는 더 깊은 검정 — 뒤 화면과 확실히 분리된다 */
-    --outline: #8c928c; /* 신규 계산 (t60) */
-    --outline-variant: #424844; /* 대응표 = 라이트 --on-surface-variant(30) */
+:root[data-theme="dark"] {
+  /* surface / 배경 계층 — 대응표 값 + 새로 계산한 중성 표면 단계 */
+  --surface: #101415; /* 신규 계산 (t6) */
+  --surface-dim: #101415; /* 신규 계산 — 다크 스킴에서는 dim이 base와 같다 (M3) */
+  --surface-bright: #363a3b; /* 신규 계산 (t24) */
+  --surface-container-lowest: #0b0f10; /* 신규 계산 (t4) */
+  --surface-container-low: #191c1d; /* 대응표 = 라이트 --on-surface(10) */
+  --surface-container: #1d2021; /* 신규 계산 (t12) */
+  --surface-container-high: #272b2c; /* 신규 계산 (t17) */
+  --surface-container-highest: #323637; /* 신규 계산 (t22) */
+  --surface-variant: #424844; /* 신규 계산 */
+  --on-surface: #e1e3e4; /* 대응표 = 라이트 --surface-container-highest(90) */
+  --on-surface-variant: #c2c8c2; /* 대응표 = 라이트 --outline-variant(80) */
+  --inverse-surface: #e1e3e4; /* 대응표 = 라이트 --surface-container-highest(90) */
+  --inverse-on-surface: #2e3132; /* 대응표 = 라이트 --inverse-surface(20) */
+  --scrim: #000000; /* 다크에서는 더 깊은 검정 — 뒤 화면과 확실히 분리된다 */
+  --outline: #8c928c; /* 신규 계산 (t60) */
+  --outline-variant: #424844; /* 대응표 = 라이트 --on-surface-variant(30) */
 
-    /* primary */
-    --primary: #afcebb; /* 대응표 = 라이트 --inverse-primary(80) */
-    --on-primary: #1b3527; /* 신규 계산 — 톤10~30 사이 보간 */
-    --primary-container: #314c3e; /* 대응표 = 라이트 --on-primary-fixed-variant(30) */
-    --on-primary-container: #cbead6; /* 대응표 = 라이트 --primary-fixed(90) */
-    --inverse-primary: #466253; /* 대응표 = 라이트 --primary(40) */
+  /* primary */
+  --primary: #afcebb; /* 대응표 = 라이트 --inverse-primary(80) */
+  --on-primary: #1b3527; /* 신규 계산 — 톤10~30 사이 보간 */
+  --primary-container: #314c3e; /* 대응표 = 라이트 --on-primary-fixed-variant(30) */
+  --on-primary-container: #cbead6; /* 대응표 = 라이트 --primary-fixed(90) */
+  --inverse-primary: #466253; /* 대응표 = 라이트 --primary(40) */
 
-    /* secondary */
-    --secondary: #ddc2a5; /* 대응표 = 라이트 --secondary-fixed-dim(80) */
-    --on-secondary: #3e2d18; /* 신규 계산 — 톤10~30 사이 보간 */
-    --secondary-container: #56432e; /* 대응표 = 라이트 --on-secondary-fixed-variant(30) */
-    --on-secondary-container: #fbdec0; /* 대응표 = 라이트 --secondary-fixed(90) */
+  /* secondary */
+  --secondary: #ddc2a5; /* 대응표 = 라이트 --secondary-fixed-dim(80) */
+  --on-secondary: #3e2d18; /* 신규 계산 — 톤10~30 사이 보간 */
+  --secondary-container: #56432e; /* 대응표 = 라이트 --on-secondary-fixed-variant(30) */
+  --on-secondary-container: #fbdec0; /* 대응표 = 라이트 --secondary-fixed(90) */
 
-    /* tertiary */
-    --tertiary: #b6c7e7; /* 대응표 = 라이트 --tertiary-fixed-dim(80) */
-    --on-tertiary: #20304a; /* 신규 계산 — 톤10~30 사이 보간 */
-    --tertiary-container: #374762; /* 대응표 = 라이트 --on-tertiary-fixed-variant(30) */
-    --on-tertiary-container: #d5e3ff; /* 대응표 = 라이트 --tertiary-fixed(90) */
+  /* tertiary */
+  --tertiary: #b6c7e7; /* 대응표 = 라이트 --tertiary-fixed-dim(80) */
+  --on-tertiary: #20304a; /* 신규 계산 — 톤10~30 사이 보간 */
+  --tertiary-container: #374762; /* 대응표 = 라이트 --on-tertiary-fixed-variant(30) */
+  --on-tertiary-container: #d5e3ff; /* 대응표 = 라이트 --tertiary-fixed(90) */
 
-    /* error — 대응표에 없어 M3 표준 톤 80/20을 그대로 쓴다 */
-    --error: #ffb4ab;
-    --on-error: #690005;
-    --error-container: #93000a; /* 대응표 = 라이트 --on-error-container(30) */
-    --on-error-container: #ffdad6; /* 대응표 = 라이트 --error-container(90) */
+  /* error — 대응표에 없어 M3 표준 톤 80/20을 그대로 쓴다 */
+  --error: #ffb4ab;
+  --on-error: #690005;
+  --error-container: #93000a; /* 대응표 = 라이트 --on-error-container(30) */
+  --on-error-container: #ffdad6; /* 대응표 = 라이트 --error-container(90) */
 
-    /* 기존 화면이 쓰는 별칭 4개 — 빠뜨리면 그 화면만 라이트로 남는다 */
-    --background: #101415;
-    --foreground: #e1e3e4;
-    --muted: #c2c8c2;
-    --border: #424844;
+  /* 기존 화면이 쓰는 별칭 4개 — 빠뜨리면 그 화면만 라이트로 남는다 */
+  --background: #101415;
+  --foreground: #e1e3e4;
+  --muted: #c2c8c2;
+  --border: #424844;
 
-    /* BottomNav·StepActions의 backdrop-filter 배경. 라이트 값(흰 85%)을 그대로 두면
+  /* BottomNav·StepActions의 backdrop-filter 배경. 라이트 값(흰 85%)을 그대로 두면
        다크에서 "흰 판"이 뜬다. */
-    --glass-fill: rgb(29 32 33 / 85%);
+  --glass-fill: rgb(29 32 33 / 85%);
 
-    /* 그림자는 어두운 배경에서 거의 안 보인다(라이트 값은 불투명도 4~8%라 다크에서는
+  /* 그림자는 어두운 배경에서 거의 안 보인다(라이트 값은 불투명도 4~8%라 다크에서는
        사실상 무효). elevation의 주 표현은 --surface-container-* 단계 차이이고,
        그림자는 어디까지나 보조로만 진하게 남긴다. */
-    --shadow-card: 0 4px 20px rgb(0 0 0 / 40%);
-    --shadow-card-hover: 0 8px 32px rgb(0 0 0 / 40%);
+  --shadow-card: 0 4px 20px rgb(0 0 0 / 40%);
+  --shadow-card-hover: 0 8px 32px rgb(0 0 0 / 40%);
 
-    /* 스크롤바·<input type="date"> 같은 네이티브 위젯도 다크로 전환한다 */
-    color-scheme: dark;
-  }
+  /* 스크롤바·<input type="date"> 같은 네이티브 위젯도 다크로 전환한다 */
+  color-scheme: dark;
 }
 
 /* ---------------------------------------------------------------

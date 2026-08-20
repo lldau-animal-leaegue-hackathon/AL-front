@@ -38,18 +38,22 @@ function isSameDay(iso: string, day: Date): boolean {
  * 그 결과 **아무것도 안 한 사용자에게도 지난 요일이 전부 체크로 보였다**(2026-08-18 실측).
  * 근거 없는 진행률을 지어내지 않는다는 원칙(Q10)을 정면으로 위배하는 자리였다.
  *
- * 서버 타임존이 UTC여도 사용자 기준 날짜가 맞도록 Asia/Seoul 로 고정한다.
+ * 주 프레임은 **기기 로컬 시간대** 기준이다 — 완료 판정(isSameDay)과
+ * RoutineList 의 "오늘 완료"가 로컬로 비교하므로, 여기만 Asia/Seoul 로
+ * 고정하면 해외 기기에서 체크가 다른 요일에 찍혔다(리뷰 m14).
+ * 클라이언트 컴포넌트라 이 계산은 사용자 기기에서 돈다.
  */
 function buildWeek(runs: readonly RoutineRun[]): Day[] {
-  const seoul = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }),
-  );
+  const today = new Date();
   // getDay()는 일요일이 0이라 월요일 시작으로 보정한다
-  const offsetToMonday = (seoul.getDay() + 6) % 7;
+  const offsetToMonday = (today.getDay() + 6) % 7;
 
   return DAY_LABELS.map((_, index) => {
-    const date = new Date(seoul);
-    date.setDate(seoul.getDate() - offsetToMonday + index);
+    const date = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() - offsetToMonday + index,
+    );
 
     const done = runs.some((run) => isSameDay(run.finishedAt, date));
     const isToday = index === offsetToMonday;

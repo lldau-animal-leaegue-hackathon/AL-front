@@ -27,22 +27,37 @@ export function ScanWorkspace({ active }: { active: ScanTab }) {
   // 카드를 고를 때마다 증가시켜 ProductForm 을 리마운트한다.
   // prop → state 동기화를 effect 로 하지 않기 위한 장치다(같은 카드를 다시 눌러도 초기화된다).
   const [formKey, setFormKey] = useState(0);
+  // 폼이 검색·등록 진행 중인지. 진행 중에는 리마운트하면 안 된다(m11).
+  const [formBusy, setFormBusy] = useState(false);
 
   return (
     <>
       {/* id 는 옛 `/scan#add` 북마크의 착지점이다. 기본 탭이라 그대로 보인다. */}
       <div id="add" hidden={active !== "add"}>
-        <ProductForm key={formKey} prefill={prefill} />
+        <ProductForm
+          key={formKey}
+          prefill={prefill}
+          active={active === "add"}
+          onBusyChange={setFormBusy}
+        />
       </div>
 
       <div hidden={active !== "popular"}>
         <ProductSearch
+          active={active === "popular"}
           onSelect={(product) => {
-            setPrefill({
-              productName: product.name,
-              productCompany: product.brand,
-            });
-            setFormKey((key) => key + 1);
+            /*
+             * 진행 중이면 리마운트하지 않는다 — 18~37초짜리 AI 검색이 통째로 날아가고,
+             * 서버 동시 실행 가드는 여전히 점유돼 재검색이 429 로 막힌다(m11).
+             * 탭만 옮겨 진행 중인 검색을 마저 보여 준다.
+             */
+            if (!formBusy) {
+              setPrefill({
+                productName: product.name,
+                productCompany: product.brand,
+              });
+              setFormKey((key) => key + 1);
+            }
             // 폼은 다른 탭에 있다. 데려가지 않으면 채워 놓고 안 보여 주는 꼴이 된다.
             router.push("/scan?tab=add");
           }}

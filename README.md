@@ -1,187 +1,217 @@
-# AL-front
+# 유틴 (youtine)
 
-**스킨케어 루틴 앱** 프론트엔드. Next.js 16 App Router 기반입니다.
-_(저장소 이름의 "Animal League" 는 초기 프로젝트명이 남은 것입니다.)_
+**내가 이미 가진 화장품만으로, 내 피부 고민과 쓸 수 있는 시간에 맞춘 스킨케어 루틴을 AI가 짜 주고 그대로 따라 하게 해 주는 앱.**
 
-> 👋 **처음 합류했다면 [docs/ONBOARDING.md](./docs/ONBOARDING.md) 를 먼저 읽으세요.**
+> 저장소·패키지 이름의 `al-front`("Animal League")는 초기 프로젝트명이 남은 것입니다. 서비스명은 **유틴**입니다.
 >
-> ⛔ **이 저장소는 퍼블릭입니다.** clone 직후 보안 훅을 설치하세요.
-> 안 하면 훅이 돌지 않아 비밀번호·서버 주소가 그대로 커밋됩니다.
->
-> ```bash
-> git config core.hooksPath .githooks
-> ```
+> 🔗 **배포 데모 주소는 제출 폼에 기재했습니다.** 이 저장소는 공개 기준으로 다루기 때문에 서버 주소·도메인을 커밋하지 않습니다([보안](#보안) 참고).
 
-## 요구 사항
+---
 
-| 항목 | 버전       | 비고                                                  |
-| ---- | ---------- | ----------------------------------------------------- |
-| Node | **24 LTS** | `.nvmrc` 참고. 최소 20.9.0 이상 (Next.js 16 요구사항) |
-| npm  | 10 이상    | Node 24 에 포함                                       |
+## 1. 문제
 
-> ⚠️ **Node 20 은 2026년 4월 30일에 지원이 종료(EOL)되어 더 이상 보안 패치를 받지 못합니다.**
-> 현재 Node 24 가 Active LTS 입니다 (2028년 4월까지 지원). Node 22 는 이미 유지보수 단계입니다.
->
-> ```bash
-> nvm install 24 && nvm use 24
-> ```
->
-> Windows 는 [nvm-windows](https://github.com/coreybutler/nvm-windows) 를 사용하세요.
-> `package.json` 의 `engines` 는 Next.js 의 실제 최소 요구사항인 `>=20.9.0` 으로 두어
-> 당장 설치가 막히지는 않지만, **24 로 올리는 것을 권장합니다.**
+스킨케어는 "무엇을 살까"보다 **"가진 걸 어떤 순서로, 얼마나, 언제 쓰느냐"** 에서 실패합니다.
 
-## 시작하기
+| 문제                         | 실제로 벌어지는 일                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------------------- |
+| 정보는 넘치는데 내 것이 아님 | 유튜브·블로그 루틴은 그 사람이 가진 제품 기준. 내 화장대엔 절반이 없다                 |
+| 성분 충돌을 판단 못 함       | 레티놀과 AHA를 같은 밤에 쓰면 안 된다는 걸 알려면 성분표를 읽고 상호작용을 알아야 한다 |
+| 시간이 없음                  | 아침 3분 쓰는 사람에게 7단계 루틴은 지키지 못할 계획                                   |
+
+## 2. 해결
+
+**제품 등록 → 루틴 생성 → 루틴 수행**. 각 단계에 LLM이 한 번씩 개입합니다.
+
+| 단계          | 사용자가 하는 일                | AI가 하는 일                                        |
+| ------------- | ------------------------------- | --------------------------------------------------- |
+| **제품 등록** | 제품명 (+ 성분표 사진, 선택)    | 성분 목록 추출 · 카테고리 분류 · 단독 사용 주의사항 |
+| **루틴 생성** | 피부 고민 + 아침/저녁 가용 시간 | 보유 제품만으로 아침·저녁 루틴 생성(순서·시간·주의) |
+| **루틴 수행** | 단계별로 따라 하기              | 사용법 체크리스트 · 타이머 · 전문가 팁 · 주의사항   |
+
+### 설계 원칙 — "지어내지 않는다"
+
+이 앱의 신뢰는 **AI가 모르는 것을 모른다고 말하게 만드는 것**에 달려 있습니다. 프롬프트 레벨에서 강제합니다.
+
+- **없는 제품을 추천하지 않는다** — 루틴 생성은 "제공된 products만 사용"이 규칙. 커머스가 아니라 _가진 것을 잘 쓰게 하는_ 도구입니다.
+- **성분을 지어내지 않는다** — 근거가 없으면 빈 배열을 반환하게 하고, 화면은 "성분표 사진을 올려 주세요"로 이어집니다. **빈 응답은 실패가 아니라 정상 계약**입니다.
+- **시간 예산을 지킨다** — 사용자가 말한 가용 시간을 넘지 않게 단계 수를 조절합니다.
+- **의학적 진단을 하지 않는다** — 증상이 심하면 피부과 상담 권고를 넣도록 규칙화(규제 리스크 회피).
+- **근거 없는 숫자를 화면에 띄우지 않는다** — 예: 수행 기록이 없으면 달성률을 "0%"가 아니라 "아직 기록 없음"으로 구분해 보여 줍니다.
+
+## 3. 화면
+
+- **홈** — 다음에 할 루틴, 주간 달성률, 내 제품의 성분 주의 알림
+- **스캔** — 제품 등록 / 인기 제품 / 내 선반 / AI 분석 리포트(성분 충돌·시너지·피부 타입별 주의)
+- **루틴** — 기본·기타 루틴, 주간 스트립, 수행 기록. 수행 화면은 제품 사진 위에 큰 타이머와 단계 이동
+- **내 고민** — 고민 등록 → 도움 성분 추천 → 그 성분이 든 내 제품 → 고민 맞춤 루틴 생성
+
+## 4. 아키텍처
+
+```
+                     브라우저 (Next.js App Router · CSS Modules)
+                                    │  같은 오리진 /api/*  (CORS 불필요)
+                                    ▼
+        ┌───────────── Next.js Route Handlers (src/app/api/**) ─────────────┐
+        │                                                                   │
+        │   /api/products  /api/routines  /api/runs  /api/knowledge/*       │
+        │        │                                        │                 │
+        │        ▼                                        ▼                 │
+        │   ┌─────────┐   캐시 히트 → AI 호출 없음    ┌──────────┐          │
+        │   │ MariaDB │◄──────────────────────────────│  /api/ai │          │
+        │   └─────────┘   캐시 미스만 ─────────────►  └────┬─────┘          │
+        └───────────────────────────────────────────────────┼───────────────┘
+                                                            ▼
+                                            헤드리스 Claude (`claude -p`)
+                                            구독 인증 · 자식 프로세스 · JSON only
+```
+
+**별도 백엔드 서버가 없습니다.** 프론트·백엔드·DB 접근을 한 저장소에서 만듭니다.
+
+### AI 계층에서 신경 쓴 것
+
+| 주제                   | 무엇을 했나                                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **비용**               | 5종 AI 엔드포인트를 **DB 우선**으로 전환. 고민 추천은 사용자별 캐시, 리포트는 선반 지문(SHA-256) 캐시, 성분 추출은 공유 카탈로그 우선 조회             |
+| **응답 속도**          | 제품 검색은 LLM 웹 도구(18–37초) 대신 **서버가 검색 페이지를 직접 파싱**(0.5–2초, 실측 10–40배). 구조가 바뀌면 자동으로 기존 AI 경로로 폴백            |
+| **계약 검증**          | 프롬프트 원문(`src/lib/prompts/*.ts`)이 정본. LLM은 스키마를 보장하지 않으므로 **런타임 검증**을 별도로 두고, 규칙 위반은 크래시가 아니라 경고 후 진행 |
+| **동시 실행**          | 사용자당 동시 1건 가드(429). 주의사항 생성은 사용자를 막지 않도록 **서버 백그라운드 직렬 큐**로 분리                                                   |
+| **자격 증명·개인정보** | API 키를 쓰지 않고 구독 인증(`~/.claude` 볼륨 마운트). 성분표 사진이 남는 세션 트랜스크립트를 **모든 실패 경로에서** 삭제                              |
+
+### 저장소 구조
+
+```
+src/
+├─ app/                      App Router (폴더 = URL 경로)
+│  ├─ (home)/                홈 — 다음 단계·달성률·성분 알림
+│  ├─ scan/                  제품 등록 · 인기 · 내 선반 · AI 리포트 (URL 쿼리 탭)
+│  ├─ routine/               루틴 목록 · 생성 · 수행([routineId]/[step]) · 완료
+│  ├─ concern/               내 고민 → 도움 성분 → 관련 제품
+│  ├─ api/                   ⭐ 백엔드. Route Handler
+│  │  ├─ ai/                 성분추출·루틴·주의사항·고민성분·리포트·제품검색
+│  │  ├─ products/ routines/ runs/ profile/ knowledge/ migrate/
+│  ├─ globals.css            전역 리셋 + 디자인 토큰(다크 팔레트 포함)
+│  └─ icon.svg               파비콘(파일 컨벤션)
+├─ components/               여러 라우트가 공유하는 UI
+├─ lib/
+│  ├─ prompts/               ⭐ 프롬프트 원문 = AI 계약의 정본
+│  ├─ claude/                헤드리스 CLI 러너 · 응답 봉투 파싱
+│  ├─ ai/                    동시 실행 가드 · 주의사항 백그라운드 큐
+│  ├─ db/                    커넥션 풀 · 입력 상한 · 행 매핑
+│  └─ data.ts                SWR 데이터 계층(쓰기 후 캐시 무효화 규칙)
+├─ api/                      브라우저 → /api/* 호출 래퍼(raw 응답 그대로 반환)
+└─ types/                    도메인 타입
+db/migrations/               스키마 001~005 (앱 기동 시 순서대로 적용)
+docs/plans/                  설계 결정 기록 (아래 문서 지도)
+```
+
+`@/` 는 `src/` 를 가리킵니다.
+
+## 5. 기술 스택
+
+| 영역   | 선택                                                                |
+| ------ | ------------------------------------------------------------------- |
+| 프론트 | Next.js 16 (App Router, Turbopack) · React 19 · TypeScript 5.9      |
+| 스타일 | **CSS Modules 전용** (Tailwind 미사용) + `globals.css` 디자인 토큰  |
+| 상태   | SWR (서버 데이터) · localStorage (기기별 임시 상태)                 |
+| 백엔드 | Next.js Route Handlers · MariaDB (mysql2)                           |
+| AI     | 헤드리스 Claude Code CLI (`claude -p`, 구독 인증)                   |
+| 배포   | GitHub Actions → Docker Hub → 단일 EC2 (Docker Compose + nginx TLS) |
+
+### 왜 최신 버전이 아닌 것들이 있나
+
+일부러 "가장 최신"을 피한 항목이 있습니다. **최신을 쓰면 오히려 깨지기 때문**입니다.
+
+| 패키지      | 채택      | 최신     | 최신을 안 쓴 이유                                                                                      |
+| ----------- | --------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| TypeScript  | `~5.9.3`  | `7.0.2`  | TS 7은 Go로 재작성돼 **JS API가 없어** `typescript-eslint` 가 동작하지 않습니다(린트가 통째로 죽음)    |
+| ESLint      | `^9.39.5` | `10.8.1` | `eslint-config-next` 가 의존하는 플러그인들이 아직 ESLint 9까지만 지원 — 설치 단계에서 충돌            |
+| @types/node | `^24`     | `26.2.0` | 타입 메이저는 런타임 메이저와 맞춥니다. Node 24에 없는 API가 타입만 통과해 런타임에 터지는 걸 막습니다 |
+
+`next`/`react`/`react-dom` 은 정확한 버전으로 고정했습니다(마이너 드리프트로 빌드가 깨지는 것 방지). 업데이트는 Dependabot 주간 PR 로 검토합니다.
+
+## 6. 품질 관리
+
+테스트 러너는 두지 않았습니다(해커톤 기간 판단). 대신 **자동 검사와 리뷰 절차**로 대체했습니다.
+
+- **CI** (`.github/workflows/ci.yml`) — PR·main push 마다 포맷 → 린트 → 타입체크 → 빌드. 로컬은 `npm run check` 한 번으로 동일 검사.
+- **시크릿 스캔 2중화** — 커밋 훅(`.githooks/pre-commit`)과 CI 잡이 같은 규칙으로 자격 증명·서버 주소·공인 IP를 차단합니다. 훅을 설치하지 않은 사람도 CI에서 걸립니다.
+- **배포 게이트** — CI가 성공해야만 Deploy 워크플로가 이미지를 퍼블리시합니다.
+- **적대적 코드리뷰** — 도메인별 파인더로 전수 스캔 후 **발견마다 반박 검증**(재현 시나리오를 못 만들면 기각)을 거칩니다. 최근 라운드에서 확정 37건(주요 9 + 경미 28)을 수정했고, 결과와 근거는 [`docs/plans/2026-08-20-full-review/`](docs/plans/2026-08-20-full-review/README.md) 에 남아 있습니다.
+- **AI 계약 검증** — 프롬프트를 고치면 실측표를 갱신하고 실제 엔드포인트를 호출해 응답 스키마를 대조합니다.
+
+### 코드 컨벤션
+
+- 주석은 **한글, WHAT이 아니라 WHY** — "무엇을 하는지"가 아니라 "왜 이렇게 했는지, 무엇을 하면 깨지는지"를 남깁니다.
+- `any` 금지(`unknown` + 좁히기), hex 하드코딩 금지(디자인 토큰), 커밋 전 `npm run check`.
+
+## 7. 문서 지도
+
+설계 결정은 코드가 아니라 문서에 남깁니다. 각 문서에 **결정 근거·트레이드오프·검증 결과**가 있습니다.
+
+| 문서                                                                                                  | 내용                                                   |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [`presentation/SERVICE.md`](presentation/SERVICE.md)                                                  | 서비스 정의·문제·플로우 (기획 정본)                    |
+| [`docs/ONBOARDING.md`](docs/ONBOARDING.md)                                                            | 새 팀원용 첫 문서                                      |
+| [`docs/plans/2026-08-18-skincare-core/`](docs/plans/2026-08-18-skincare-core/README.md)               | 앱 코어 설계 — AI 연동·데이터 모델·화면 구성 (+반응형) |
+| [`docs/plans/2026-08-18-server-storage/`](docs/plans/2026-08-18-server-storage/README.md)             | localStorage → MariaDB 이전 설계                       |
+| [`docs/plans/2026-08-20-ingredient-knowledge/`](docs/plans/2026-08-20-ingredient-knowledge/README.md) | 성분 지식 DB(시드 100건) + 디자인 부채 백로그          |
+| [`docs/plans/2026-08-20-deploy-youtine/`](docs/plans/2026-08-20-deploy-youtine/README.md)             | 배포 파이프라인 설계와 실패 기록                       |
+| [`docs/plans/2026-08-20-full-review/`](docs/plans/2026-08-20-full-review/README.md)                   | 전면 코드리뷰 결과(확정 37건)와 수정 커밋 지도         |
+| [`AGENTS.md`](AGENTS.md)                                                                              | 이 저장소에서 AI 에이전트가 따르는 규칙                |
+| [`DESIGN.md`](DESIGN.md)                                                                              | 디자인 시스템(색·타이포·컴포넌트 스펙)                 |
+
+## 8. 시작하기
+
+| 항목 | 버전       | 비고                                                       |
+| ---- | ---------- | ---------------------------------------------------------- |
+| Node | **24 LTS** | `.nvmrc` 참고. 최소 20.9.0 (Next.js 16 요구사항)           |
+| npm  | 10 이상    | Node 24에 포함                                             |
+| DB   | MariaDB    | `docker compose up -d db` 후 `db/migrations` 순서대로 적용 |
 
 ```bash
 git config core.hooksPath .githooks   # ⛔ 보안 훅. clone 마다 1회, 반드시 먼저
-npm ci                                # package-lock.json 기준으로 정확히 설치
+npm ci                                # package-lock.json 기준 정확 설치
 cp .env.example .env.local            # PowerShell: Copy-Item .env.example .env.local
 npm run dev                           # http://localhost:3000
 ```
 
-## 스크립트
+> AI 기능을 로컬에서 쓰려면 [Claude Code CLI](https://claude.com/claude-code) 가 설치·로그인돼 있어야 합니다
+> (`claude -p` 를 서버가 자식 프로세스로 실행합니다). 없으면 AI 라우트만 502가 나고 나머지 화면은 정상 동작합니다.
 
-| 명령                    | 설명                                                        |
-| ----------------------- | ----------------------------------------------------------- |
-| `npm run dev`           | 개발 서버 (Turbopack)                                       |
-| `npm run build`         | 프로덕션 빌드                                               |
-| `npm start`             | 빌드 결과 실행                                              |
-| `npm run dev:webpack`   | Turbopack 대신 webpack 으로 개발 서버 (아래 참고)           |
-| `npm run build:webpack` | Turbopack 대신 webpack 으로 빌드                            |
-| `npm run lint`          | ESLint 검사                                                 |
-| `npm run lint:fix`      | ESLint 자동 수정                                            |
-| `npm run typecheck`     | 라우트 타입 생성 후 `tsc --noEmit`                          |
-| `npm run format`        | Prettier 자동 정렬                                          |
-| `npm run format:check`  | Prettier 검사만 (CI 용)                                     |
-| **`npm run check`**     | **타입 + 린트 + 포맷을 한 번에 검사 — PR 올리기 전에 실행** |
+### 스크립트
 
-## 폴더 구조
+| 명령                                    | 설명                                       |
+| --------------------------------------- | ------------------------------------------ |
+| `npm run dev`                           | 개발 서버 (Turbopack)                      |
+| `npm run build` / `start`               | 프로덕션 빌드 / 실행                       |
+| `npm run lint` / `lint:fix`             | ESLint 검사 / 자동 수정                    |
+| `npm run typecheck`                     | 라우트 타입 생성 후 `tsc --noEmit`         |
+| `npm run format` / `format:check`       | Prettier 정렬 / 검사만(CI용)               |
+| **`npm run check`**                     | **타입 + 린트 + 포맷 일괄 — PR 전에 실행** |
+| `npm run dev:webpack` / `build:webpack` | Turbopack 문제 시 우회                     |
 
-```
-src/
-├─ app/                # App Router. 폴더 = URL 경로
-│  ├─ layout.tsx       # 전역 레이아웃 (metadata, 폰트)
-│  ├─ page.tsx         # "/"
-│  ├─ page.module.css  # "/" 전용 스타일
-│  ├─ globals.css      # 전역 리셋 + 디자인 토큰 (여기만 전역)
-│  ├─ error.tsx        # 렌더링 에러 화면
-│  ├─ not-found.tsx    # 404 화면
-│  └─ status.module.css # error·not-found 공용 스타일
-├─ api/              # 백엔드 호출 모듈. 도메인별로 파일을 나눕니다
-│  └─ client.ts      # 공용 fetch 래퍼 (api.get / api.post ...)
-└─ lib/
-   └─ env.ts         # 환경변수를 한 곳에서 읽고 검증
-```
+### 환경변수
 
-`@/` 는 `src/` 를 가리킵니다. (`import { api } from "@/api/client"`)
+`.env.local` 에 작성하며 커밋되지 않습니다. 키를 추가하면 `.env.example` 에도 (값 없이) 추가합니다.
 
-### API 모듈 작성 예시
+| 키                                | 노출 범위           | 설명                                         |
+| --------------------------------- | ------------------- | -------------------------------------------- |
+| `DB_HOST` `DB_PORT`               | 서버 전용           | MariaDB 접속                                 |
+| `DB_NAME` `DB_USER` `DB_PASSWORD` | 서버 전용           | **팀 채널로 따로 전달.** 저장소에 없음       |
+| `CLAUDE_BIN`                      | 서버 전용           | 헤드리스 `claude` 경로. PATH에 있으면 불필요 |
+| `NEXT_PUBLIC_API_BASE_URL`        | **브라우저에 노출** | 클라이언트가 호출할 API 베이스 경로          |
 
-```ts
-// src/api/user.ts
-import { api } from "./client";
+> `NEXT_PUBLIC_` 접두사가 붙은 값은 브라우저 번들에 **평문으로** 들어갑니다. 비밀 키에는 붙이지 마세요.
 
-export type User = { id: number; nickname: string };
+## 보안
 
-export const getMe = () => api.get<User>("/users/me");
-export const updateNickname = (nickname: string) =>
-  api.patch<User>("/users/me", { nickname });
-```
+이 저장소는 **공개 기준**으로 다룹니다. 한 번 커밋하면 히스토리에 남기 때문입니다.
 
-## 스타일링
+- 서버 주소·도메인·포트 목록, 자격 증명, 로컬 절대 경로를 **커밋·문서·주석 어디에도 쓰지 않습니다.**
+- 접속 수단은 로컬 `~/.ssh/config` 와 `.env.local` 에만 둡니다(둘 다 커밋 대상 아님).
+- 위반은 커밋 훅과 CI 시크릿 스캔이 **자동으로 차단**합니다. `--no-verify` 로 우회하지 않습니다.
+- 익명 사용자는 HttpOnly 쿠키로 식별하고, 모든 사용자 데이터 라우트가 그 식별자로 스코프됩니다.
 
-**이 프로젝트는 Tailwind 를 쓰지 않습니다.** 스타일은 전부 CSS Modules 로 작성합니다.
+## 라이선스
 
-컴포넌트와 같은 폴더에 `Xxx.module.css` 를 두고 import 합니다:
-
-```tsx
-import styles from "./page.module.css";
-
-export default function Page() {
-  return <main className={styles.main}>...</main>;
-}
-```
-
-- 여러 컴포넌트가 같은 모양을 공유하면 CSS Module 하나를 여러 곳에서 import 합니다.
-  (예: `src/app/status.module.css` 를 `error.tsx`·`not-found.tsx` 가 함께 사용)
-- 색·폰트·모서리 같은 공통 값은 `src/app/globals.css` 의 `:root` 에 CSS 변수로 정의하고
-  `var(--background)` 로 참조합니다. **hex 하드코딩은 하지 마세요.**
-- 새 색을 추가할 땐 `:root` 와 `prefers-color-scheme: dark` **양쪽 다** 정의합니다.
-
-> ⚠️ Tailwind 의 preflight 가 없으므로 **전역 리셋을 `globals.css` 가 직접 들고 있습니다.**
-> `box-sizing`·`margin: 0`·`button`/`a` 초기화 등을 지우면 전 화면이 틀어집니다.
-
-### 폰트
-
-현재 Pretendard 를 jsDelivr CDN 으로 불러옵니다 (`src/app/layout.tsx`).
-외부 요청을 없애고 레이아웃 이동(CLS)을 줄이려면 폰트 파일을 받아
-`next/font/local` 로 바꾸세요:
-
-```ts
-import localFont from "next/font/local";
-
-const pretendard = localFont({
-  src: "../../public/fonts/PretendardVariable.woff2",
-  variable: "--font-sans",
-  display: "swap",
-});
-// <html className={pretendard.variable}>
-```
-
-> `globals.css` 의 `--font-sans` 변수를 그대로 덮어쓰면 나머지 코드는 고칠 필요가 없습니다.
-
-## 환경변수
-
-`.env.local` 에 작성합니다. **커밋되지 않습니다.**
-키를 추가하면 `.env.example` 에도 (값 없이) 같이 추가해 주세요.
-
-| 키                                | 노출 범위           | 설명                                               |
-| --------------------------------- | ------------------- | -------------------------------------------------- |
-| `DB_HOST` `DB_PORT`               | 서버 전용           | 서버 MariaDB. SSH 터널을 열고 로컬 포트를 가리킨다 |
-| `DB_NAME` `DB_USER` `DB_PASSWORD` | 서버 전용           | **팀 채널로 따로 받는다.** 저장소에 없다           |
-| `CLAUDE_BIN`                      | 서버 전용           | 헤드리스 `claude` 실행 경로. PATH 에 있으면 불필요 |
-| `BACKEND_ORIGIN`                  | 서버 전용           | ⚠️ **지금은 쓰지 않는다** — 비워 둔다 (아래 참고)  |
-| `NEXT_PUBLIC_API_BASE_URL`        | **브라우저에 노출** | 클라이언트가 호출할 API 베이스 경로                |
-
-> `NEXT_PUBLIC_` 접두사가 붙은 값은 브라우저 번들에 **평문으로** 들어갑니다.
-> 비밀 키에는 절대 붙이지 마세요.
-
-### 백엔드 연동
-
-⚠️ **별도 백엔드 서버가 없습니다.** `/api/*` 는 전부 이 저장소의 Route Handler
-(`src/app/api/**`) 가 처리하고, DB 에도 여기서 직접 붙습니다. 프론트·백엔드를 같이 만듭니다.
-
-`BACKEND_ORIGIN` 프록시(`next.config.ts` 의 `rewrites`)는 **남아 있지만 쓰지 않습니다.**
-rewrite 는 파일 기반 라우트보다 나중에 평가되므로 `src/app/api/foo/route.ts` 가 있으면
-그쪽이 이깁니다 — 즉 켜 두어도 무해합니다. 외부 백엔드를 붙일 일이 생기면 그때 되살립니다.
-
-브라우저는 항상 **같은 오리진 `/api/*`** 로만 호출하므로 **CORS 설정이 필요 없습니다.**
-
-## CI
-
-`.github/workflows/ci.yml` 이 PR 과 main push 마다
-포맷 → 린트 → 타입체크 → 빌드를 검사합니다.
-로컬에서 `npm run check` 를 먼저 돌리면 CI 실패를 미리 막을 수 있습니다.
-
-## 버전 선택 근거
-
-Next.js 16 은 **Turbopack 이 기본 번들러**입니다. `--turbopack` 플래그는 필요 없습니다.
-혹시 Windows 에서 Turbopack 관련 문제가 생기면 `npm run dev:webpack` 으로 우회할 수 있습니다.
-
-`next` / `react` / `react-dom` 은 정확한 버전으로 고정했습니다.
-프레임워크 마이너 버전이 예고 없이 올라가 빌드가 깨지는 것을 막기 위해서입니다.
-업데이트는 Dependabot 이 주간 PR 로 제안합니다 (`.github/dependabot.yml`).
-
-### 왜 최신 버전이 아닌 것들이 있나요
-
-일부러 "가장 최신"을 피한 항목이 있습니다. **최신 버전을 쓰면 오히려 깨지기 때문**입니다.
-
-| 패키지      | 채택 버전 | 최신 버전 | 최신을 안 쓴 이유                                                                                                                                                                      |
-| ----------- | --------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TypeScript  | `~5.9.3`  | `7.0.2`   | TS 7 은 Go 로 새로 작성된 버전이라 **JS API 가 없습니다.** `typescript-eslint` 가 지원하지 않아 `npm run lint` 가 규칙 실행 전에 통째로 죽습니다. `create-next-app` 도 `^5` 를 씁니다. |
-| ESLint      | `^9.39.5` | `10.8.1`  | `eslint-config-next` 가 의존하는 `eslint-plugin-react` / `import` / `jsx-a11y` 가 아직 ESLint 9 까지만 지원합니다. 10 을 넣으면 설치 단계에서 의존성 충돌이 납니다.                    |
-| @types/node | `^24`     | `26.2.0`  | 타입 메이저는 Node 런타임 메이저와 맞춰야 합니다. Node 24 에 없는 API 가 타입상으로만 통과해서 런타임에 터지는 걸 막습니다.                                                            |
-
-> TypeScript 를 `6.0.3` 으로 올리는 것도 가능합니다 (실제로 Vercel 은 Next 16.3 을 TS 6.0.2 로 빌드합니다).
-> 이 저장소에서 타입체크·린트·빌드가 모두 통과하는 것을 확인했습니다. 다만 아직 점유율이 낮아 기본값은 5.9 로 두었습니다.
-> **TypeScript 7 로는 올리지 마세요.** `typescript-eslint` 가 지원할 때까지 린트가 동작하지 않습니다.
+[MIT](LICENSE)

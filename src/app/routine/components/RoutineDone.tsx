@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
@@ -31,9 +31,10 @@ const NO_START: RunStart | null = null;
  *    구분하려면 단계마다 진행 상태를 저장해야 하는데 이번 범위에서는 하지 않았다.
  *    주간 달성률(Q10)은 "루틴을 했는가" 단위로는 정확하고, 루틴 안에서 몇 단계를
  *    건너뛰었는지는 반영하지 못한다.
- * 2. 저장 실패(네트워크 오류)를 화면에 띄우지 않는다 — 콘솔에만 남긴다.
- *    제품 등록과 달리 **사용자가 입력한 내용이 날아가는 게 아니라서** 화면을 막을
- *    이유가 없다고 봤다. 실패하면 시작 표시가 남아 다음 진입 때 자동으로 재시도된다.
+ * 2. 저장 실패(네트워크 오류) 시 완료 축하는 유지하되 **실패 배너 + 다시 시도**를 띄운다.
+ *    실패한 채 다른 루틴을 시작하면 단일 슬롯인 시작 표시가 덮여 기록이 영구 유실되므로
+ *    (M7), 화면에서 바로 재시도할 수 있어야 한다. 시작 표시 자체는 성공 전까지 남아
+ *    다음 진입 때도 자동으로 재시도된다.
  */
 export function RoutineDone({ routineId }: { routineId: string }) {
   const { ready, value: routines, error, errorMessage, retry } = useRoutines();
@@ -41,16 +42,17 @@ export function RoutineDone({ routineId }: { routineId: string }) {
   const { value: start } = useStored<RunStart | null>(RUN_START_KEY, NO_START);
   /** StrictMode 이중 실행이나 재렌더로 같은 시작 표시가 두 번 기록 요청되는 것을 막는다. */
   const sentRef = useRef(false);
+  /** 기록 저장 실패 여부 — 성공 UI 는 유지한 채 배너로만 알린다. */
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const routine = routines.find((item) => item.id === routineId);
 
-  /*
-   * 기록은 **외부 시스템(서버) 갱신**이라 effect 가 맞는 자리다.
-   * 결과를 로컬 state 로 미러링하지 않는다 — SWR 캐시가 스스로 변경을 알리므로
-   * 화면은 저장소에서 파생하기만 하면 된다.
+  /**
+   * 기록 전송 — 최초(effect)와 수동 재시도(배너 버튼)가 같은 경로를 탄다.
+   * 성공했을 때만 시작 표시를 소비한다 — 실패하면 표시가 남아 다음에 다시 시도된다.
    */
-  useEffect(() => {
-    if (!ready || !routine) return;
+  const sendRun = useCallback(() => {
+    if (!routine) return;
     // 이미 소비됐다 = 기록 완료(새로고침) 또는 중간 URL 로 바로 들어옴. 시각을 지어내지 않는다.
     if (start?.routineId !== routineId) return;
     if (sentRef.current) return;
@@ -62,13 +64,26 @@ export function RoutineDone({ routineId }: { routineId: string }) {
       finishedAt: new Date().toISOString(),
       completedStepIds: routine.steps.map((step) => step.id),
     })
-      // 성공했을 때만 소비한다 — 실패하면 표시가 남아 다음에 다시 시도된다.
-      .then(() => clearRunStart())
+      .then(() => {
+        setSaveFailed(false);
+        clearRunStart();
+      })
       .catch((err: unknown) => {
         sentRef.current = false;
+        setSaveFailed(true);
         console.error("루틴 수행 기록 저장 실패", err);
       });
-  }, [ready, routine, routineId, start]);
+  }, [routine, routineId, start]);
+
+  /*
+   * 기록은 **외부 시스템(서버) 갱신**이라 effect 가 맞는 자리다.
+   * 결과를 로컬 state 로 미러링하지 않는다 — SWR 캐시가 스스로 변경을 알리므로
+   * 화면은 저장소에서 파생하기만 하면 된다. (실패 배너만 예외로 state 를 둔다.)
+   */
+  useEffect(() => {
+    if (!ready) return;
+    sendRun();
+  }, [ready, sendRun]);
 
   if (!ready) return <DataState loading label="루틴" />;
   if (error)
@@ -99,6 +114,20 @@ export function RoutineDone({ routineId }: { routineId: string }) {
         {routine.steps.length}단계를 모두 마쳤어요
         {minutes !== null && ` · 약 ${minutes}분`}
       </p>
+
+      {saveFailed && (
+        <div className={styles.warn} role="alert">
+          <Icon name="error" size="sm" />
+          <span className={styles.warnText}>
+            기록 저장에 실패했어요.
+            <br />
+            다른 루틴을 시작하면 이 기록이 사라져요.
+          </span>
+          <button type="button" className={styles.warnRetry} onClick={sendRun}>
+            다시 시도
+          </button>
+        </div>
+      )}
 
       <ol className={styles.steps}>
         {routine.steps.map((step) => (

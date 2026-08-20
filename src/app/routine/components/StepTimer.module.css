@@ -1,85 +1,64 @@
+/*
+ * 히어로 타이머 — 사진 영역 상단을 통째로 차지하는 큰 터치 타깃(사용자 요청 2026-08-20).
+ * 옛 "회전하는 원형 버튼"은 남은 시간이 작게 숨어 있어 폐기했다 — 지금은
+ * 진입 즉시 큰 숫자가 보이고, 넓은 영역을 탭해 일시정지/계속한다.
+ * 하단은 히어로 안의 "다음" 버튼 영역이라 bottom 으로 비워 둔다(RoutineRunner.module.css).
+ */
 .timer {
   position: absolute;
-  right: 24px;
-  bottom: 24px;
+  top: 0;
+  right: 0;
+  left: 0;
+  /* 히어로 하단의 다음 버튼 줄(패딩 16 + 버튼 56 + 여유)을 침범하지 않는다 */
+  bottom: 96px;
+  /* 사진(0)·스크림(1) 위 — RoutineRunner.module.css 의 쌓임 규칙과 한 세트다 */
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
-  border: 3px solid var(--surface-container-low);
-  border-radius: var(--radius-full);
-  background: color-mix(
-    in srgb,
-    var(--surface-container-lowest) 90%,
-    transparent
-  );
-  backdrop-filter: blur(var(--glass-blur));
-  box-shadow: var(--shadow-card-hover);
-  transition:
-    border-color 0.3s ease,
-    transform 0.15s ease;
+  gap: 6px;
+  background: transparent;
+  transition: transform 0.15s ease;
 }
 
 .timer:active {
-  transform: scale(0.95);
-}
-
-/* 돌아가는 동안만 상단 테두리를 강조해 회전시킨다 */
-.running {
-  border-top-color: var(--primary);
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .running {
-    animation: none;
-    border-color: var(--primary);
-  }
-}
-
-.finished {
-  border-color: var(--primary);
-  background: var(--primary);
+  transform: scale(0.99);
 }
 
 .time {
-  font: var(--text-body-lg);
+  font-size: clamp(56px, 16vw, 88px);
   font-weight: 700;
-  color: var(--primary);
+  line-height: 1;
+  color: var(--on-surface);
   font-variant-numeric: tabular-nums;
 }
 
-.label {
-  margin-top: 2px;
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1;
+.hint {
+  font: var(--text-label-sm);
   letter-spacing: var(--tracking-label-sm);
   color: var(--on-surface-variant);
 }
 
-.finished .time,
-.finished .label {
-  color: var(--on-primary);
+/*
+ * 제품 사진 위에 얹힌 경우 — 사진 톤과 무관하게 읽히려면 항상 밝은 글자여야 한다.
+ * 카메라 오버레이(#000 예외)와 같은 근거의 토큰 예외다: 사진은 테마를 따르지 않는다.
+ * 대비는 히어로의 스크림(.photoWithImg 그라디언트)이 받친다.
+ */
+.onPhoto .time {
+  color: rgb(255 255 255 / 96%);
+  text-shadow: 0 2px 12px rgb(0 0 0 / 45%);
 }
 
-/* 회전 중에는 안쪽 글자가 같이 돌지 않게 되돌린다 */
-.running .time,
-.running .label {
-  animation: spin 2s linear infinite reverse;
+.onPhoto .hint {
+  color: rgb(255 255 255 / 80%);
+  text-shadow: 0 1px 6px rgb(0 0 0 / 45%);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .running .time,
-  .running .label {
-    animation: none;
-  }
+.finished .time {
+  color: var(--primary);
+}
+
+.onPhoto.finished .time {
+  color: rgb(255 255 255 / 96%);
 }

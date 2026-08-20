@@ -55,7 +55,12 @@ export function RecordsSection() {
       <DataState error onRetry={retry} label="기록" message={errorMessage} />
     );
 
-  if (routines.length === 0) {
+  /*
+   * ⚠️ 루틴이 0이어도 기록이 있으면 기록을 보여준다(재검토 N3) —
+   * 세트 삭제로 루틴만 지워도 수행 기록은 서버에 남는데, 여기서 숨기면
+   * 같은 화면의 WeekStrip 체크와 모순된다("기록 없음" vs "완료 체크").
+   */
+  if (routines.length === 0 && runs.length === 0) {
     return (
       <EmptyState
         icon="history"

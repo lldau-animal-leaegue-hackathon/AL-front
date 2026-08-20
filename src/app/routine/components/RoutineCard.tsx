@@ -2,11 +2,14 @@
 
 import type { Route } from "next";
 import Link from "next/link";
+import { useState } from "react";
 
 import { Icon } from "@/components/Icon";
+import { appendRun } from "@/lib/data";
 import { stepIcon } from "@/lib/stepIcon";
 import type { Routine } from "@/types/skincare";
 
+import { conditionLabel } from "../condition";
 import { TIME_ICON, TIME_LABEL, totalMinutes } from "../routineTime";
 import styles from "./RoutineCard.module.css";
 
@@ -14,9 +17,10 @@ import styles from "./RoutineCard.module.css";
  * 목록의 루틴 한 개.
  * 펼치기는 <details>에 맡긴다 — 열림 상태까지 state로 들 필요가 없다.
  *
- * `done` 은 **수행 기록에서 파생된 값**이다(Step 7). 예전에는 카드가 로컬 state 로
- * 토글하는 버튼을 갖고 있었는데, 새로고침하면 풀리는 가짜 상태인 데다 손으로 켜면
- * 주간 달성률과 어긋났다. 완료는 실제로 루틴을 수행해야 남는다 → 버튼을 없앴다.
+ * `done` 은 **수행 기록에서 파생된 값**이다(Step 7). 예전의 로컬 state 토글 버튼은
+ * 새로고침하면 풀리는 가짜 상태라 없앴다. 지금의 "완료" 버튼은 다르다 —
+ * **실제 수행 기록(appendRun)을 남기므로** 주간 달성률과 항상 일치한다
+ * (사용자 피드백 2026-08-20: 단계 화면을 거치지 않고도 완료 처리하고 싶다).
  */
 export function RoutineCard({
   routine,
@@ -26,6 +30,29 @@ export function RoutineCard({
   done: boolean;
 }) {
   const minutes = totalMinutes(routine.steps);
+
+  const [marking, setMarking] = useState(false);
+  const [markError, setMarkError] = useState(false);
+
+  /** 러너 완주(RoutineDone)와 같은 규칙 — 전 단계를 완료로 기록한다. */
+  async function markDone() {
+    setMarking(true);
+    setMarkError(false);
+    try {
+      const now = new Date().toISOString();
+      await appendRun({
+        routineId: routine.id,
+        startedAt: now,
+        finishedAt: now,
+        completedStepIds: routine.steps.map((step) => step.id),
+      });
+      // 성공하면 runs 캐시 갱신으로 done prop 이 바뀌어 버튼이 사라진다.
+    } catch {
+      setMarkError(true);
+    } finally {
+      setMarking(false);
+    }
+  }
 
   return (
     <li>
@@ -38,7 +65,9 @@ export function RoutineCard({
           <span className={styles.info}>
             <span className={styles.titleRow}>
               <h3 className={styles.name}>{routine.name}</h3>
-              <span className={styles.chip}>{routine.condition}</span>
+              <span className={styles.chip}>
+                {conditionLabel(routine.condition)}
+              </span>
             </span>
             <span className={styles.meta}>
               {TIME_LABEL[routine.time]} · {routine.steps.length}단계
@@ -85,7 +114,28 @@ export function RoutineCard({
             <Icon name="play_arrow" filled />
             {done ? "다시 하기" : "시작하기"}
           </Link>
+
+          {/* 이미 오늘 완료면 기록할 게 없다 — 버튼을 숨긴다. */}
+          {!done && (
+            <button
+              type="button"
+              className={styles.markDone}
+              onClick={markDone}
+              disabled={marking}
+            >
+              <Icon name="check" size="sm" />
+              {marking ? "기록 중…" : "완료"}
+            </button>
+          )}
         </div>
+
+        {markError && (
+          <p className={styles.markError} role="alert">
+            완료를 기록하지 못했어요.
+            <br />
+            잠시 후 다시 시도해 주세요.
+          </p>
+        )}
       </details>
     </li>
   );

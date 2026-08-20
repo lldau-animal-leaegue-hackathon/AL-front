@@ -30,7 +30,6 @@ import {
   fetchProducts,
   fetchProductsByIngredient,
   removeProduct as removeProductRequest,
-  updateProductWarnings,
   type IngredientSource,
 } from "@/api/products";
 import {
@@ -41,7 +40,7 @@ import {
 } from "@/api/knowledge";
 import { fetchSkinProfile, saveSkinProfile } from "@/api/profile";
 import {
-  clearRoutines as clearRoutinesRequest,
+  deleteRoutines as deleteRoutinesRequest,
   fetchRoutines,
   saveRoutines as saveRoutinesRequest,
   type RoutineInput,
@@ -302,21 +301,18 @@ export async function addProduct(input: {
   const created = await createProduct(input);
   // 리포트 무효화는 따로 안 한다 — useShelfReport 의 키에 선반 서명이 들어 있어
   // products 갱신이 곧 키 교체다.
-  await mutate(KEYS.products);
+  // 인기 카탈로그는 담긴 수(shelf_count) 순이라 담기가 곧 순위 변경이다 — 같이 무효화한다(m10).
+  await Promise.all([mutate(KEYS.products), mutate(KEYS.popular)]);
   return created;
 }
 
-export async function setProductWarnings(input: {
-  id: string;
-  warnings: string[];
-}): Promise<void> {
-  await updateProductWarnings(input);
-  await mutate(KEYS.products);
-}
+// setProductWarnings 는 삭제했다 — 주의사항 생성이 서버 큐로 옮겨간 뒤 호출처 0건
+// (리뷰 R4). 클라이언트 생성 패턴을 되살리지 않는다.
 
 export async function removeProduct(input: { id: string }): Promise<void> {
   await removeProductRequest(input);
-  await mutate(KEYS.products); // 리포트 키도 이 갱신으로 같이 바뀐다(선반 서명)
+  // 리포트 키는 products 갱신으로 같이 바뀐다(선반 서명). 인기 카탈로그는 빼기도 순위에 반영(m10).
+  await Promise.all([mutate(KEYS.products), mutate(KEYS.popular)]);
 }
 
 export async function saveRoutines(routines: RoutineInput[]): Promise<void> {
@@ -324,8 +320,16 @@ export async function saveRoutines(routines: RoutineInput[]): Promise<void> {
   await mutate(KEYS.routines);
 }
 
-export async function clearRoutines(): Promise<void> {
-  await clearRoutinesRequest();
+/**
+ * 세트(condition) 단위 삭제 — 루틴 삭제 버튼(사용자 피드백 2026-08-20).
+ * 배열을 받는 이유: 기본 루틴 그룹은 "고민 집중이 아닌 전부"라 이관 데이터의
+ * 임의 condition 이 섞일 수 있다. 화면에 보이는 그룹과 같은 범위를 지우려면
+ * 그 그룹의 condition 들을 각각 지워야 한다(재검토 N2).
+ */
+export async function deleteRoutines(conditions: string[]): Promise<void> {
+  for (const condition of conditions) {
+    await deleteRoutinesRequest({ condition });
+  }
   await mutate(KEYS.routines);
 }
 

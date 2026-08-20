@@ -7,7 +7,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  width: 100%;
+  /* ⚠️ width:100% 를 두지 않는다 — fixed 요소의 100% 는 뷰포트 기준이라
+     사이드바 구간(left:var(--sidebar-w))에서 right:0 을 이기고 우측으로 넘친다(m25 동형). */
   max-width: var(--container-max);
   margin: 0 auto;
   padding: 12px var(--margin-mobile);

@@ -5,13 +5,15 @@ import { AppShell } from "@/components/AppShell/AppShell";
 import "./globals.css";
 import { MigrateLocalData } from "./MigrateLocalData";
 
-const SITE_NAME = "Animal League";
-const SITE_DESCRIPTION = "Animal League 프로젝트";
+// 서비스명 "유틴"(youtine) — 사용자 결정 2026-08-20. 아이콘은 src/app/icon.svg (파일 컨벤션).
+const SITE_NAME = "유틴";
+const SITE_DESCRIPTION =
+  "제품 등록부터 AI 루틴 생성·수행 기록까지 — 나만의 스킨케어 루틴, 유틴(youtine)";
 
 export const metadata: Metadata = {
   title: {
     default: SITE_NAME,
-    // 하위 페이지에서 title: "로그인" 이라고만 쓰면 "로그인 | Animal League" 가 됩니다.
+    // 하위 페이지에서 title: "루틴" 이라고만 쓰면 "루틴 | 유틴" 이 됩니다.
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -54,6 +56,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
+        {/*
+          테마 부트스트랩 — 페인트 전에 data-theme 를 확정해 깜빡임(FOUC)을 막는다.
+          우선순위: 저장된 선택(al:v1:theme — TopAppBar 설정 모달이 쓴다) > OS 설정.
+          globals.css 의 다크 팔레트가 이 속성(:root[data-theme="dark"])에 반응한다.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=null;try{t=JSON.parse(localStorage.getItem("al:v1:theme"))}catch(e){}if(t!=="dark"&&t!=="light"){try{t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){t="light"}}document.documentElement.dataset.theme=t})()`,
+          }}
+        />
+
         {/*
           Pretendard (한글 웹폰트) — CDN 방식.
           폰트 파일을 public/fonts 에 넣고 next/font/local 로 바꾸면

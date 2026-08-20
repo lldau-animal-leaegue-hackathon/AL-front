@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 export default function RoutinePage() {
   return (
     <>
-      <TopAppBar userName="Glow" />
+      <TopAppBar />
 
       <main className={styles.main}>
         <WeekStrip />

@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 
 import { Icon } from "@/components/Icon";
 import { stepIcon } from "@/lib/stepIcon";
@@ -42,6 +45,13 @@ export function ProductCard({
   flagged = false,
   onSelect,
 }: Props) {
+  /*
+   * 로드에 실패한 src 를 기억해 아이콘으로 폴백한다(m26) — 깨진 값이면 브라우저
+   * 기본 깨진 이미지 아이콘이 떴다. src 자체를 기억해야 다른 이미지로 바뀌면
+   * 자동으로 다시 시도한다.
+   */
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
+
   const body = (
     <>
       {flagged && (
@@ -49,7 +59,7 @@ export function ProductCard({
       )}
 
       <span className={styles.thumb}>
-        {image ? (
+        {image && image !== brokenSrc ? (
           // 이미 축소된 data URL 이라 next/image 최적화가 필요 없다.
           <Image
             src={image}
@@ -58,6 +68,7 @@ export function ProductCard({
             height={96}
             unoptimized
             className={styles.image}
+            onError={() => setBrokenSrc(image)}
           />
         ) : (
           <Icon name={stepIcon(category ?? "")} filled />

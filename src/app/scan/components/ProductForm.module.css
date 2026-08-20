@@ -14,21 +14,7 @@
   gap: 6px;
 }
 
-/*
- * 제목과 검색 버튼이 한 줄을 나눠 쓴다.
- * ⚠️ 설명(`.lead`)은 여기 넣지 않는다 — 390px 에서 컬럼이 195px 로 좁아져
- *    문장이 저절로 접히고 문장 단위 줄바꿈이 무너진다(실측).
- */
-.introRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .heading {
-  /* 버튼과 한 줄을 나눠 쓴다. 제목이 길어져도 버튼을 밀어내지 않게 한다. */
-  min-width: 0;
   font: var(--text-headline-md);
   color: var(--on-surface);
 }
@@ -178,21 +164,21 @@
 }
 
 /*
- * 제목 줄 오른쪽에 앉는다. 폼 하단 전폭 버튼이 아니라 제목과 공간을 나눠 쓰는 크기다.
- * 줄어들어도 터치 타깃 44px 은 지킨다(반응형 계획서 R7).
+ * 폼 맨 아래 전폭 — "마지막에 누르는 버튼"으로 읽히게 한다(사용자 피드백 2026-08-20).
+ * 터치 타깃 44px 이상 유지(반응형 계획서 R7).
  */
 .submit {
   display: flex;
-  flex-shrink: 0;
+  width: 100%;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 10px 16px;
+  gap: 8px;
+  min-height: 52px;
+  padding: 14px 24px;
   border-radius: var(--radius-lg);
   background: var(--primary);
   color: var(--on-primary);
-  font: var(--text-body-md);
+  font: var(--text-body-lg);
   font-weight: 600;
   /* 진행 중 "8초" → "12초" 로 자릿수가 바뀔 때 버튼이 흔들리지 않게 */
   font-variant-numeric: tabular-nums;

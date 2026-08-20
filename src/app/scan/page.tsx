@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PageHeader } from "@/components/PageHeader/PageHeader";
+import { TopAppBar } from "@/components/TopAppBar/TopAppBar";
 
 import { ReportSection } from "./components/ReportSection";
 import { ScanTabs, toScanTab } from "./components/ScanTabs";
@@ -38,7 +38,8 @@ export default async function ScanPage({ searchParams }: PageProps<"/scan">) {
 
   return (
     <>
-      <PageHeader title="스캔" />
+      {/* 다른 탭(홈·고민·루틴)과 같은 상단바 — 인사말·설정 진입점을 스캔에서도 제공한다. */}
+      <TopAppBar />
 
       {/*
         Next 는 내비게이션 후 스크롤 대상 요소에 focus() 를 부른다. tabIndex 가 없으면
@@ -53,7 +54,7 @@ export default async function ScanPage({ searchParams }: PageProps<"/scan">) {
         <section hidden={active !== "shelf"}>
           <h2 className={styles.sectionTitle}>내 선반</h2>
           <div className={styles.sectionBody}>
-            <ShelfSection />
+            <ShelfSection active={active === "shelf"} />
           </div>
         </section>
 

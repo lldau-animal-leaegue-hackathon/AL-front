@@ -49,11 +49,8 @@ export const createProduct = (input: {
   ingredientSource?: IngredientSource;
 }) => api.post<Product>("/products", input);
 
-/** 주의사항 지연 생성. 공유 카탈로그를 고치는 것이라 다른 사용자에게도 반영된다. */
-export const updateProductWarnings = (input: {
-  id: string;
-  warnings: string[];
-}) => api.patch<{ ok: boolean }>("/products", input);
+// updateProductWarnings 는 삭제했다 — 주의사항 생성이 서버 큐로 옮겨가 호출처 0건(리뷰 R4).
+// 서버 PATCH 라우트는 남아 있지만 클라이언트 경로를 되살리지 않는다.
 
 /** 내 선반에서만 뺀다. 공유 카탈로그의 제품 자체는 남는다. */
 export const removeProduct = (input: { id: string }) =>

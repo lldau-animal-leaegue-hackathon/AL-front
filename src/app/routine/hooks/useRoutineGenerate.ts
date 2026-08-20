@@ -7,7 +7,7 @@ import { ApiError } from "@/api/client";
 import { saveProfile, saveRoutines, useProducts } from "@/lib/data";
 import type { Routine, RoutineStep, RoutineTime } from "@/types/skincare";
 
-import { ROUTINE_CONDITION, type RoutineCondition } from "../condition";
+import type { RoutineCondition } from "../condition";
 import { TIME_LABEL, totalMinutes } from "../routineTime";
 
 export type GenerateStatus = "idle" | "working" | "done" | "error";
@@ -16,7 +16,7 @@ export type GenerateInput = {
   /** 피부 고민 (프롬프트 `wonder`) */
   wonder: string;
   usableTime: { morning: string; evening: string };
-  /** 기본 루틴인지 고민 집중 케어인지. **저장 시 교체 범위를 정한다.** */
+  /** 기본 루틴인지 기타 루틴인지. **저장 시 교체 범위를 정한다.** */
   condition: RoutineCondition;
 };
 
@@ -59,11 +59,12 @@ function toStep(raw: RoutineStepResponse): RoutineStep {
  * 프롬프트는 `{ morning, evening }` **1벌**을 주는데 저장 모델은 time 당 `Routine` 1개다.
  * 그래서 한 번의 응답을 `Routine` 2개로 펼친다.
  *
- * `name`·`summary`·`condition` 은 **LLM 출력에 없다.** 프롬프트에 새 필드를 요구하지 않고
- * (프롬프트 무수정 원칙) 생성 시점에 만든다:
- *  - `name`   : 시간대 + 성격 고정 문구
+ * `name`·`summary`·`condition` 은 생성 시점에 만든다:
+ *  - `name`   : **고민 요약(concern_summary) + 시간대** — "블랙헤드 - 저녁 루틴"
+ *    (사용자 요청 2026-08-20). 요약이 없으면(LLM 계약 위반 → 라우트가 null 강등)
+ *    시간대만 쓴다 — 요약 때문에 이름이 죽으면 안 된다.
  *  - `summary`: 단계 수·소요 시간에서 **파생**한다. 지어낸 문구가 아니라 실제 값이다.
- *  - `condition`: 호출자가 정한다(기본 / 고민 집중). 프롬프트 입력은 `wonder` 하나뿐이라
+ *  - `condition`: 호출자가 정한다(기본 / 기타). 프롬프트 입력은 `wonder` 하나뿐이라
  *    **결과가 갈리는 것도 `wonder` 때문이다.** 조건은 그 결과를 저장·표시할 칸을 정할 뿐,
  *    AI 에게 다른 지시를 넣지 않는다.
  */
@@ -71,14 +72,20 @@ function toRoutine(
   raws: RoutineStepResponse[],
   time: RoutineTime,
   condition: RoutineCondition,
+  concernSummary: string | null,
 ): Routine {
   const steps = raws.map(toStep);
   const minutes = totalMinutes(steps);
-  const focus = condition === ROUTINE_CONDITION.focus;
+  /*
+   * 이름의 성격 접미는 두지 않는다 — "아침 기타 루틴"은 어색하고, 구명칭
+   * "집중 케어"는 개명(기타 루틴)과 어긋난다(재검토 N7). 기본/기타 구분은
+   * 카드 칩(conditionLabel)과 섹션 헤딩이 이미 하고 있다.
+   */
+  const base = `${TIME_LABEL[time]} 루틴`;
 
   return {
     id: tempId(),
-    name: `${TIME_LABEL[time]} ${focus ? "집중 케어" : "루틴"}`,
+    name: concernSummary ? `${concernSummary} - ${base}` : base,
     condition,
     time,
     summary:
@@ -152,11 +159,12 @@ export function useRoutineGenerate() {
 
         // 한쪽이 비는 경우가 있다(제품이 적으면 저녁만 나오기도 한다).
         // 빈 시간대는 루틴을 만들지 않는다 — 단계 0개짜리 카드는 사용자에게 의미가 없다.
+        const summary = raw.concern_summary ?? null;
         const routines: Routine[] = [];
         if (raw.morning.length > 0)
-          routines.push(toRoutine(raw.morning, "am", input.condition));
+          routines.push(toRoutine(raw.morning, "am", input.condition, summary));
         if (raw.evening.length > 0)
-          routines.push(toRoutine(raw.evening, "pm", input.condition));
+          routines.push(toRoutine(raw.evening, "pm", input.condition, summary));
 
         if (routines.length === 0) {
           setStatus("error");

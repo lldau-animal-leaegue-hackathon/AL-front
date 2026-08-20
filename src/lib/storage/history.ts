@@ -25,10 +25,17 @@ export function markRunStart(routineId: string): void {
   const current = load<RunStart | null>(RUN_START_KEY, null);
   if (current?.routineId === routineId) return;
 
-  save(RUN_START_KEY, {
+  const saved = save(RUN_START_KEY, {
     routineId,
     startedAt: new Date().toISOString(),
   } satisfies RunStart);
+  // 저장 실패(프라이빗 모드 등)면 완료 화면이 시작 표시를 못 찾아 기록이 통째로 빠진다.
+  // 여기서 막을 수단은 없지만, 원인 추적이 가능하도록 흔적은 남긴다.
+  if (!saved) {
+    console.warn(
+      `[history] 수행 시작 표시 저장 실패 — 기록이 누락될 수 있음 (routineId: ${routineId})`,
+    );
+  }
 }
 
 /**

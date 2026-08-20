@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { mutate } from "swr";
 
 import { api } from "@/api/client";
 import { load, remove } from "@/lib/storage/local";
@@ -62,14 +63,47 @@ export function MigrateLocalData() {
 
     void (async () => {
       try {
-        await api.post<{ ok: boolean; migrated: Record<string, number> }>(
-          "/migrate",
-          { products, routines, runs, profile },
-        );
+        const { migrated } = await api.post<{
+          ok: boolean;
+          // 키 이름은 api/migrate/route.ts 의 반환 모양과 같다.
+          migrated: {
+            products: number;
+            routines: number;
+            profile: number;
+            runs: number;
+          };
+        }>("/migrate", { products, routines, runs, profile });
 
-        // 서버가 받았다. 이제 로컬은 지운다 — 두 곳에 두면 어느 쪽이 최신인지 알 수 없다.
+        // 서버는 상한 초과분·검증 탈락분을 조용히 버리고도 ok:true 를 준다.
+        // 카운트가 로컬 건수에 못 미치면 지우지 않는다 — 여기서 지우면 복구 불가 손실이다.
+        const expected = [
+          ["products", products.length],
+          ["routines", routines.length],
+          ["runs", runs.length],
+          ["profile", profile === null ? 0 : 1], // 프로필은 단일 객체라 0/1 로 센다
+        ] as const;
+        const missing = expected
+          .filter(([key, count]) => migrated[key] < count)
+          .map(([key, count]) => `${key} ${count - migrated[key]}건`);
+
+        if (missing.length > 0) {
+          console.warn(
+            `[migrate] 서버가 일부만 받았습니다(${missing.join(", ")} 누락) — 로컬을 유지합니다.`,
+          );
+          return;
+        }
+
+        // 전량 서버에 들어갔다. 이제 로컬은 지운다 — 두 곳에 두면 어느 쪽이 최신인지 알 수 없다.
         // 성공은 조용히 지나간다(사용자가 할 일이 없다). 실패만 아래에서 알린다.
         for (const key of Object.values(OLD_KEYS)) remove(key);
+
+        // 화면은 이미 서버 데이터(SWR)를 그린 뒤다. 재검증하지 않으면 이관분이
+        // 재포커스 전까지 안 보인다. 키 문자열은 src/lib/data.ts 의 KEYS 와 같다.
+        await Promise.all(
+          ["/products", "/routines", "/runs", "/profile"].map((key) =>
+            mutate(key),
+          ),
+        );
       } catch (error: unknown) {
         // 로컬은 그대로 남는다. 다음 진입 때 다시 시도된다.
         console.warn(

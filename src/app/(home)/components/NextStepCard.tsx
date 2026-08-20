@@ -3,6 +3,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
+import { conditionLabel } from "@/app/routine/condition";
 import { TIME_ICON, TIME_LABEL } from "@/app/routine/routineTime";
 import { DataState } from "@/components/DataState/DataState";
 import { Icon } from "@/components/Icon";
@@ -83,7 +84,9 @@ export function NextStepCard() {
         <Icon name="auto_awesome" filled className={styles.emptyIcon} />
         <h3 className={card.cardTitle}>다음 단계</h3>
         <p className={styles.emptyText}>
-          아직 만든 루틴이 없어요. 루틴을 만들면 다음에 할 일을 알려드려요.
+          아직 만든 루틴이 없어요.
+          <br />
+          루틴을 만들면 다음에 할 일을 알려드려요.
         </p>
         <Link className={styles.emptyCta} href="/routine/new">
           <Icon name="add_circle" filled size="sm" />
@@ -125,8 +128,9 @@ export function NextStepCard() {
                 : first.routineName}
             </p>
             <ul className={styles.tags}>
+              {/* 저장값("고민 집중")이 아니라 표시명("기타 루틴")을 쓴다 — RoutineCard 와 동일 규칙 */}
               <li className={`${card.label} ${styles.tag}`}>
-                {routine.condition}
+                {conditionLabel(routine.condition)}
               </li>
               <li className={`${card.label} ${styles.tag}`}>
                 총 {routine.steps.length}단계

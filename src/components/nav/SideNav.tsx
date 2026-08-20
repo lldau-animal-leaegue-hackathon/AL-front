@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Icon } from "@/components/Icon";
+import { YoutineIcon } from "@/components/YoutineIcon";
 
 import { NAV_TABS, isImmersive } from "./tabs";
 import styles from "./SideNav.module.css";
@@ -26,8 +27,9 @@ export function SideNav() {
   return (
     <nav className={styles.nav} aria-label="주요 메뉴">
       <span className={styles.brand}>
-        <Icon name="spa" filled className={styles.brandIcon} />
-        <span className={styles.brandName}>Dermis</span>
+        {/* 브랜드 아이콘 — 파비콘(src/app/icon.svg)과 같은 아트워크 */}
+        <YoutineIcon size={30} className={styles.brandIcon} />
+        <span className={styles.brandName}>유틴</span>
       </span>
 
       <ul className={styles.list}>

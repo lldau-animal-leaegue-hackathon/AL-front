@@ -8,43 +8,83 @@ function format(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-/** 단계별 권장 시간 타이머. 누르면 시작/일시정지, 다 끝나면 눌러서 초기화한다. */
-export function StepTimer({ seconds }: { seconds: number }) {
+/**
+ * 히어로(제품 사진) 위에 얹히는 단계 타이머 — 사용자 요청 2026-08-20:
+ * "시작을 눌러야 도는" 방식이 아니라 **진입 즉시 남은 시간이 크게** 보인다.
+ * 넓은 상단 영역 전체가 터치 타깃이고, 탭하면 일시정지/계속을 오간다.
+ *
+ * 남은 시간은 항상 **시작 시각 기준으로 파생**한다 — 틱 감산은 백그라운드 탭·화면
+ * 꺼짐에서 setInterval 스로틀로 실시간과 어긋난다(리뷰 m13). 일시정지는 그 시점의
+ * 남은 초를 `base` 에 보존했다가 재개 시 이어 센다.
+ */
+export function StepTimer({
+  seconds,
+  onPhoto,
+}: {
+  seconds: number;
+  /** 제품 사진 위에 얹혔는가 — 글자색·스크림 대비가 달라진다. */
+  onPhoto: boolean;
+}) {
   const [left, setLeft] = useState(seconds);
-  const [running, setRunning] = useState(false);
+  // 재개(시작) 시점의 남은 초 — 파생 계산의 기준점
+  const [base, setBase] = useState(seconds);
+  // 실행 중이면 시작 시각(epoch ms), 정지 상태면 null. 진입 즉시 시작한다.
+  const [startedAt, setStartedAt] = useState<number | null>(() => Date.now());
+  const running = startedAt !== null;
 
   useEffect(() => {
-    if (!running) return;
-    const id = setInterval(() => {
-      setLeft((prev) => {
-        if (prev <= 1) {
-          setRunning(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    if (startedAt === null) return;
+    const tick = () => {
+      const remain = base - Math.floor((Date.now() - startedAt) / 1000);
+      if (remain <= 0) {
+        setLeft(0);
+        setStartedAt(null);
+        return;
+      }
+      setLeft(remain);
+    };
+    tick();
+    // 스로틀돼도 복귀 후 첫 틱이 실제 경과를 통째로 반영하므로 1초면 충분하다.
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [running]);
+  }, [startedAt, base]);
 
   const finished = left === 0;
-  const label = finished
-    ? "완료"
+  const hint = finished
+    ? "완료 — 탭하면 다시 시작"
     : running
-      ? "일시정지"
-      : left === seconds
-        ? "시작"
-        : "계속";
+      ? "탭하면 일시정지"
+      : "일시정지됨 — 탭하면 계속";
 
   return (
     <button
       type="button"
-      className={`${styles.timer} ${running ? styles.running : ""} ${finished ? styles.finished : ""}`}
-      onClick={() => (finished ? setLeft(seconds) : setRunning((p) => !p))}
-      aria-label={`타이머 ${label}`}
+      className={[
+        styles.timer,
+        onPhoto ? styles.onPhoto : "",
+        finished ? styles.finished : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onClick={() => {
+        if (finished) {
+          setLeft(seconds);
+          setBase(seconds);
+          setStartedAt(Date.now());
+          return;
+        }
+        if (running) {
+          // 일시정지 — 지금까지의 경과를 남은 초로 굳혀 둔다
+          setBase(left);
+          setStartedAt(null);
+          return;
+        }
+        setStartedAt(Date.now());
+      }}
+      aria-label={`남은 시간 ${format(left)} — ${hint}`}
     >
       <span className={styles.time}>{format(left)}</span>
-      <span className={styles.label}>{label}</span>
+      <span className={styles.hint}>{hint}</span>
     </button>
   );
 }
